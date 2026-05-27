@@ -1,0 +1,231 @@
+name: CI for Autotools/Linux
+
+on:
+  push:
+    paths-ignore:
+      - "**/CMakeLists.txt"
+      - "**.cmake"
+      - "**.cmake.in"
+      - "cmake/**"
+      - "CMake*"
+      - ".github/workflows/ci_cmake.yml"
+      - ".github/workflows/ci_darwin.yml"
+      - ".github/workflows/ci_valgrind.yml"
+  pull_request:
+
+jobs:
+
+  linux-multi1:
+    runs-on: ubuntu-latest
+    name: Build 1 on Linux
+    steps:
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich
+
+    - name: Checkout source code
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Run bootstrap script
+      run: ./bootstrap
+
+    - name: Make check with debug, without shared
+      shell: bash
+      run: |
+        DIR="checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --disable-shared --enable-debug \
+            CFLAGS="-O0 -g -Wall"
+        make -j V=0
+        make -j check V=0
+
+    - name: Make check with MPI and debug
+      shell: bash
+      run: |
+        DIR="checkMPIdebug" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi --enable-debug \
+            CFLAGS="-O0 -g -Wall"
+        make -j V=0
+        make -j check V=0
+
+    - name: Make check with MPI, without debug
+      shell: bash
+      run: |
+        DIR="checkMPI" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi \
+            CFLAGS="-O2"
+        make -j V=0
+        make -j check V=0
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux_multi1_log
+        path: |
+          ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
+
+  linux-multi2:
+    runs-on: ubuntu-latest
+    name: Build 2 on Linux
+    steps:
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich
+
+    - name: Checkout source code
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Run bootstrap script
+      run: ./bootstrap
+
+    - name: Make check with MPI, debug and C++ compiler
+      shell: bash
+      run: |
+        DIR="checkMPIdebugCXX" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi --enable-debug \
+            CFLAGS="-O0" CC=mpicxx
+        make -j V=0
+        make -j check V=0
+
+    - name: Make distcheck without MPI and debug
+      shell: bash
+      run: |
+        DIR="distcheck" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure
+        make -j distcheck V=0
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux_multi2_log
+        path: |
+          ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
+
+  linux-install:
+    runs-on: ubuntu-latest
+    name: Make install on Linux
+    steps:
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich
+
+    - name: Checkout source code
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Fix libsc to specific version
+      shell: bash
+      run: |
+        cd sc
+        git fetch --tags
+        git checkout v2.8.5
+
+    - name: Run bootstrap script
+      run: ./bootstrap
+
+    - name: Install libsc with debug, without shared
+      shell: bash
+      run: |
+        DIR="sc-checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
+        ../sc/configure --disable-shared --enable-debug \
+            CFLAGS="-O0 -g -Wall -pedantic"
+        make -j V=0
+        make -j check V=0
+        make -j install V=0
+        cd ..
+        rm -rf sc/
+
+    - name: Install p4est with debug, without shared
+      shell: bash
+      run: |
+        DIR="p4est-checkdebug_static" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --disable-shared --enable-debug \
+            --with-sc="$PWD/../sc-checkdebug_static/local" \
+            CFLAGS="-O0 -g -Wall -pedantic"
+        make -j V=0
+        make -j check V=0
+        make -j install V=0
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux_install_log
+        path: |
+          ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
+
+  linux-tarball:
+    runs-on: ubuntu-latest
+    name: Pack tarball on Linux
+    steps:
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -yq
+        sudo apt-get install -yq --no-install-recommends \
+            zlib1g-dev libmpich-dev mpich
+
+    - name: Checkout source code
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Identify version
+      shell: bash
+      run: |
+        git tag
+        git describe --abbrev=4 --match 'v*'
+
+    - name: Run bootstrap script
+      run: ./bootstrap
+
+    - name: Configure and make
+      shell: bash
+      run: |
+        DIR="tarball" && mkdir -p "$DIR" && cd "$DIR"
+        ../configure --enable-mpi --enable-debug \
+            CFLAGS="-O0 -g -pedantic -Wall -Wextra -Werror -Wno-unused-parameter \
+                    -Wno-builtin-declaration-mismatch -Wno-implicit-fallthrough"
+        make -j V=0
+        make -j check V=0
+        make -j distcheck V=0
+        mv p4est-*.tar.gz ..
+
+    - name: Upload tarball
+      uses: actions/upload-artifact@v3
+      with:
+        name: p4est_tarball
+        path: ./p4est-*.tar.gz
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux_tarball_log
+        path: |
+          ./**/config.log
+          ./**/test-suite.log
+          ./**/test/*.log
