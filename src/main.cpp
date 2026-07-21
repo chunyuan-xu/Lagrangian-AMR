@@ -88,23 +88,23 @@ using namespace std;
 
 
 
-/*¸ù¾ÝÂß¼­×ø±ê£¬È·¶¨Ðü¹Ò±ßµÄÎ»ÖÃ*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ê£¬È·ï¿½ï¿½ï¿½ï¿½ï¿½Ò±ßµï¿½Î»ï¿½ï¿½*/
 static void get_hanging_edge_info_from_logical_position(const int which_face, const p4est_qcoord_t qx1, const p4est_qcoord_t qy1,
 	const p4est_qcoord_t qx2, const p4est_qcoord_t qy2, const p4est_qcoord_t length,
 	int which_corner[2], int which_side[2], int master_corner[2], int unconstrained_master_corner[2])
 {
 	switch (which_face)
 	{
-	case quad_data_t::EnumEdge::LEFT:/*×ó±ß½ç*/
+	case quad_data_t::EnumEdge::LEFT:/*ï¿½ï¿½ß½ï¿½*/
 		if (qy1 == qy2 + length)
 		{
-			/*quadµÄ×ó±ß½çÏÂ¶¥µãÎªÐüµã*/
+			/*quadï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			master_corner[0] = quad_data_t::EnumCorner::LEFTUP;
 			unconstrained_master_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			which_side[0] = CHalf_edge_data::cside::plus;
 
-			/*quad_asideµÄ×ó±ß½çÉÏ¶¥µãÎªÐüµã*/
+			/*quad_asideï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[1] = quad_data_t::EnumCorner::LEFTUP;
 			master_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			unconstrained_master_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
@@ -112,13 +112,13 @@ static void get_hanging_edge_info_from_logical_position(const int which_face, co
 		}
 		else if (qy1 + length == qy2)
 		{
-			/*quadµÄ×ó±ß½çÉÏ¶¥µãÎªÐüµã*/
+			/*quadï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[0] = quad_data_t::EnumCorner::LEFTUP;
 			master_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			unconstrained_master_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
 			which_side[0] = CHalf_edge_data::cside::minus;
 
-			/*quad_asideµÄ×ó±ß½çÏÂ¶¥µãÎªÐüµã*/
+			/*quad_asideï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			master_corner[1] = quad_data_t::EnumCorner::LEFTUP;
 			unconstrained_master_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
@@ -129,16 +129,16 @@ static void get_hanging_edge_info_from_logical_position(const int which_face, co
 			P4EST_GLOBAL_PRODUCTIONF("wrong in get_hanging_edge_info_from_logical_position!");
 		}
 		break;
-	case quad_data_t::EnumEdge::RIGHT:/*ÓÒ±ß½ç*/
+	case quad_data_t::EnumEdge::RIGHT:/*ï¿½Ò±ß½ï¿½*/
 		if (qy1 == qy2 + length)
 		{
-			/*quadµÄÓÒ±ß½çÏÂ¶¥µãÎªÐüµã*/
+			/*quadï¿½ï¿½ï¿½Ò±ß½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			master_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
 			unconstrained_master_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			which_side[0] = CHalf_edge_data::cside::minus;
 
-			/*quad_asideµÄÓÒ±ß½çÉÏ¶¥µãÎªÐüµã*/
+			/*quad_asideï¿½ï¿½ï¿½Ò±ß½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
 			master_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			unconstrained_master_corner[1] = quad_data_t::EnumCorner::LEFTUP;
@@ -146,13 +146,13 @@ static void get_hanging_edge_info_from_logical_position(const int which_face, co
 		}
 		else if (qy1 + length == qy2)
 		{
-			/*quadµÄÓÒ±ß½çÉÏ¶¥µãÎªÐüµã*/
+			/*quadï¿½ï¿½ï¿½Ò±ß½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
 			master_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			unconstrained_master_corner[0] = quad_data_t::EnumCorner::LEFTUP;
 			which_side[0] = CHalf_edge_data::cside::plus;
 
-			/*quad_asideµÄÓÒ±ß½çÏÂ¶¥µãÎªÐüµã*/
+			/*quad_asideï¿½ï¿½ï¿½Ò±ß½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			master_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
 			unconstrained_master_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
@@ -163,16 +163,16 @@ static void get_hanging_edge_info_from_logical_position(const int which_face, co
 			P4EST_GLOBAL_PRODUCTIONF("wrong in get_hanging_edge_info_from_logical_position!");
 		}
 		break;
-	case quad_data_t::EnumEdge::BOTTOM:/*ÏÂ±ß½ç*/
+	case quad_data_t::EnumEdge::BOTTOM:/*ï¿½Â±ß½ï¿½*/
 		if (qx1 == qx2 + length)
 		{
-			/*quadµÄÏÂ±ß½ç×ó¶¥µãÎªÐüµã*/
+			/*quadï¿½ï¿½ï¿½Â±ß½ï¿½ï¿½ó¶¥µï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			master_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			unconstrained_master_corner[0] = quad_data_t::EnumCorner::LEFTUP;
 			which_side[0] = CHalf_edge_data::cside::minus;
 
-			/*quad_asideµÄÏÂ±ß½çÓÒ¶¥µãÎªÐüµã*/
+			/*quad_asideï¿½ï¿½ï¿½Â±ß½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			master_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			unconstrained_master_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
@@ -180,13 +180,13 @@ static void get_hanging_edge_info_from_logical_position(const int which_face, co
 		}
 		else if (qx1 + length == qx2)
 		{
-			/*quadµÄÏÂ±ß½çÓÒ¶¥µãÎªÐüµã*/
+			/*quadï¿½ï¿½ï¿½Â±ß½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			master_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			unconstrained_master_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
 			which_side[0] = CHalf_edge_data::cside::plus;
 
-			/*quad_asideµÄÏÂ±ß½ç×ó¶¥µãÎªÐüµã*/
+			/*quad_asideï¿½ï¿½ï¿½Â±ß½ï¿½ï¿½ó¶¥µï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			master_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			unconstrained_master_corner[1] = quad_data_t::EnumCorner::LEFTUP;
@@ -197,16 +197,16 @@ static void get_hanging_edge_info_from_logical_position(const int which_face, co
 			P4EST_GLOBAL_PRODUCTIONF("wrong in get_hanging_edge_info_from_logical_position!");
 		}
 		break;
-	case quad_data_t::EnumEdge::UP:/*ÉÏ±ß½ç*/
+	case quad_data_t::EnumEdge::UP:/*ï¿½Ï±ß½ï¿½*/
 		if (qx1 == qx2 + length)
 		{
-			/*quadµÄÉÏ±ß½ç×ó¶¥µãÎªÐüµã*/
+			/*quadï¿½ï¿½ï¿½Ï±ß½ï¿½ï¿½ó¶¥µï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[0] = quad_data_t::EnumCorner::LEFTUP;
 			master_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
 			unconstrained_master_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
 			which_side[0] = CHalf_edge_data::cside::plus;
 
-			/*quad_asideµÄÉÏ±ß½çÓÒ¶¥µãÎªÐüµã*/
+			/*quad_asideï¿½ï¿½ï¿½Ï±ß½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
 			master_corner[1] = quad_data_t::EnumCorner::LEFTUP;
 			unconstrained_master_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
@@ -214,13 +214,13 @@ static void get_hanging_edge_info_from_logical_position(const int which_face, co
 		}
 		else if (qx1 + length == qx2)
 		{
-			/*quadµÄÉÏ±ß½çÓÒ¶¥µãÎªÐüµã*/
+			/*quadï¿½ï¿½ï¿½Ï±ß½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
 			master_corner[0] = quad_data_t::EnumCorner::LEFTUP;
 			unconstrained_master_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
 			which_side[0] = CHalf_edge_data::cside::minus;
 
-			/*quad_asideµÄÉÏ±ß½ç×ó¶¥µãÎªÐüµã*/
+			/*quad_asideï¿½ï¿½ï¿½Ï±ß½ï¿½ï¿½ó¶¥µï¿½Îªï¿½ï¿½ï¿½ï¿½*/
 			which_corner[1] = quad_data_t::EnumCorner::LEFTUP;
 			master_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
 			unconstrained_master_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
@@ -237,10 +237,10 @@ static void get_hanging_edge_info_from_logical_position(const int which_face, co
 	}
 }
 
-/*¶¨Òå»ù±¾¼¸ºÎÁ¿»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_compute_RcpLcpNcp_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	/*1.»ñÈ¡µ±Ç°quadrantµÄÓÃ»§Ö¸Õë*/
+	/*1.ï¿½ï¿½È¡ï¿½ï¿½Ç°quadrantï¿½ï¿½ï¿½Ã»ï¿½Ö¸ï¿½ï¿½*/
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 	CCorner_data	*cndata = (CCorner_data *)&data->m_cndata;
@@ -251,7 +251,7 @@ static void quadrant_compute_RcpLcpNcp_callback(p4est_iter_volume_info_t *info, 
 	p4est_qcoord_t	qx = info->quad->x;
 	p4est_qcoord_t	qy = info->quad->y;
 
-	/*¼ÆËã±ßÖÐµã*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½*/
 	CDoubleVector EdgeMiddle[CNDIM];
 	for (int k = 0; k < CNDIM; k++)
 	{
@@ -286,18 +286,18 @@ static void quadrant_compute_RcpLcpNcp_callback(p4est_iter_volume_info_t *info, 
 		m_plus->Lcp = GeometryAlg::GetPointToPointDistance(m_vara->VecCnData[idcnCoords_cur][k], EdgeMiddle[k]);
 		m_minus->Lcp = GeometryAlg::GetPointToPointDistance(m_vara->VecCnData[idcnCoords_cur][k], EdgeMiddle[kpre]);
 
-		/*NcpPlus¼ÆËã*/
+		/*NcpPlusï¿½ï¿½ï¿½ï¿½*/
 		m_plus->Ncp = GeometryAlg::GetLineNormalVector(m_vara->VecCnData[idcnCoords_cur][k], EdgeMiddle[k]);
 
-		/*NcpMinus¼ÆËã*/
+		/*NcpMinusï¿½ï¿½ï¿½ï¿½*/
 		m_minus->Ncp = GeometryAlg::GetLineNormalVector(EdgeMiddle[kpre], m_vara->VecCnData[idcnCoords_cur][k]);
 	}
 }
 
-/*ËÉ³ÚËã·¨ËùÐèÒªµÄ»ù±¾¼¸ºÎÐÅÏ¢»Øµ÷º¯Êý*/
+/*ï¿½É³ï¿½ï¿½ã·¨ï¿½ï¿½ï¿½ï¿½Òªï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_compute_relaxed_info_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	/*1.»ñÈ¡µ±Ç°quadrantµÄÓÃ»§Ö¸Õë*/
+	/*1.ï¿½ï¿½È¡ï¿½ï¿½Ç°quadrantï¿½ï¿½ï¿½Ã»ï¿½Ö¸ï¿½ï¿½*/
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
@@ -361,7 +361,7 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	quad_data_t		*ghost_data = (quad_data_t *)user_data;
-	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ÐüµãÒ»²àµÄchildrenÍø¸ñÊý¾ÝºÍÁíÒ»²àparentÍø¸ñÊý¾Ý*/
+	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½childrenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½Ò»ï¿½ï¿½parentï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
 	p4est_iter_face_side_t *side[2];
@@ -374,7 +374,7 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 	for (int i = 0; i < 2; i++)
 	{
 		side[i] = p4est_iter_fside_array_index_int(sides, i);
-		if (side[i]->is_hanging == Hanging)/*ÕâÌõ±ßÓÐÐüµã*/
+		if (side[i]->is_hanging == Hanging)/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
 			if (side[i]->is.hanging.quadid[0]<0
@@ -436,7 +436,7 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 				m_parent_cndata = (CCorner_data *)&m_parent_data->m_cndata;
 			}
 
-			CDoubleVector	master_velocity[2];//Ö÷µãaºÍbµÄËÙ¶È
+			CDoubleVector	master_velocity[2];//ï¿½ï¿½ï¿½ï¿½aï¿½ï¿½bï¿½ï¿½ï¿½Ù¶ï¿½
 			switch (parent_face_index)
 			{
 				case quad_data_t::EnumEdge::LEFT:
@@ -476,7 +476,7 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 
 
 
-			/*°´×ÜÄÜ±ÈÀý·ÖÅäFlux_relaxed¸ø¸¸×ÓÍø¸ñ*/
+			/*ï¿½ï¿½ï¿½ï¿½ï¿½Ü±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Flux_relaxedï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 			m_child1_vara->VecCnData[idcnFluxRelaxed][m_which_corner[0]] = child1_total_energy /
 				(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
 			m_child2_vara->VecCnData[idcnFluxRelaxed][m_which_corner[1]] = child2_total_energy /
@@ -762,14 +762,14 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 
 
 
-/*p4est¶¨ÒåµÄwhich_cornerÈçÏÂÍ¼*/
+/*p4estï¿½ï¿½ï¿½ï¿½ï¿½which_cornerï¿½ï¿½ï¿½ï¿½Í¼*/
 //------------
 //2          3|
 //|           |
 //|           |
 //|0         1|
 //-------------
-//ÓÃ»§×Ô¶¨ÒåµÄm_indexÈçÏÂÍ¼
+//ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½m_indexï¿½ï¿½ï¿½ï¿½Í¼
 //------------
 //1          2|
 //|           |
@@ -836,10 +836,10 @@ static void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user
 	p4est_topidx_t	which_tree = info->treeid;
 
 
-	p4est_qcoord_to_vertex(conn, which_tree, qx, qy, data->init_node_coords[0]);//×óÏÂ½Ç
-	p4est_qcoord_to_vertex(conn, which_tree, qx, qy+length, data->init_node_coords[1]);//×óÉÏ½Ç
-	p4est_qcoord_to_vertex(conn, which_tree, qx+length, qy+length, data->init_node_coords[2]);//ÓÒÉÏ½Ç
-	p4est_qcoord_to_vertex(conn, which_tree, qx+length, qy, data->init_node_coords[3]);//ÓÒÏÂ½Ç
+	p4est_qcoord_to_vertex(conn, which_tree, qx, qy, data->init_node_coords[0]);//ï¿½ï¿½ï¿½Â½ï¿½
+	p4est_qcoord_to_vertex(conn, which_tree, qx, qy+length, data->init_node_coords[1]);//ï¿½ï¿½ï¿½Ï½ï¿½
+	p4est_qcoord_to_vertex(conn, which_tree, qx+length, qy+length, data->init_node_coords[2]);//ï¿½ï¿½ï¿½Ï½ï¿½
+	p4est_qcoord_to_vertex(conn, which_tree, qx+length, qy, data->init_node_coords[3]);//ï¿½ï¿½ï¿½Â½ï¿½
 
 	double x_length = p4est_data->m_grid_info.global_nx*p4est_data->m_grid_info.tree_width;
 	double y_length = p4est_data->m_grid_info.global_ny*p4est_data->m_grid_info.tree_height;
@@ -848,12 +848,12 @@ static void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user
 	bool m_bottom_boundary = false;
 	bool m_top_boundary = false;
 	
-	/*¼ÆËãtreeµÄ×ø±êË÷Òý*/
-	int ix = info->treeid%p4est_data->x_tree_number;//x·½ÏòË÷Òý(0µ½p4est_data->x_tree_number-1)
-	int iy = info->treeid / p4est_data->y_tree_number;//y·½ÏòË÷Òý(0µ½p4est_data->y_tree_number-1)
+	/*ï¿½ï¿½ï¿½ï¿½treeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
+	int ix = info->treeid%p4est_data->x_tree_number;//xï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(0ï¿½ï¿½p4est_data->x_tree_number-1)
+	int iy = info->treeid / p4est_data->y_tree_number;//yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(0ï¿½ï¿½p4est_data->y_tree_number-1)
 
 	for (int i = 0; i < CNDIM; i++){
-		/*È«²¿¸ø¶¨Ä¬ÈÏ±ß½çÎª-1*/
+		/*È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½Ï±ß½ï¿½Îª-1*/
 		m_plus = (CHalf_edge_data *)&cndata[i].hdata[CHalf_edge_data::cside::plus];
 		m_minus = (CHalf_edge_data *)&cndata[i].hdata[CHalf_edge_data::cside::minus];
 		m_plus->enumBYD = -1;
@@ -861,9 +861,9 @@ static void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user
 		m_plus->BYDVal = 0.;
 		m_minus->BYDVal = 0.;
 	}
-	//×óÏÂ½ÇÎª(qx, qy),ÓÒÉÏ½ÇÎª£¨qx+length,qy+length£©
+	//ï¿½ï¿½ï¿½Â½ï¿½Îª(qx, qy),ï¿½ï¿½ï¿½Ï½ï¿½Îªï¿½ï¿½qx+length,qy+lengthï¿½ï¿½
 
-	//×ó±ß½ç£¬Âß¼­×ø±êqx==0
+	//ï¿½ï¿½ß½ç£¬ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½qx==0
 	if (p4est_data->which_case == ProblemNo::TriplePoint)
 	{
 		if (data->init_node_coords[0][0] == 0)
@@ -902,7 +902,7 @@ static void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user
 		edata[quad_data_t::EnumEdge::LEFT].EdgeType = p4est_data->LeftBoun;
 	}
 
-	/*ÓÒ±ß½ç£¬Âß¼­×ø±êqx = P4EST_ROOT_LEN - length*/
+	/*ï¿½Ò±ß½ç£¬ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½qx = P4EST_ROOT_LEN - length*/
 	if (m_right_boundary)
 		//if(qx===P4EST_ROOT_LEN - length)
 	{
@@ -915,7 +915,7 @@ static void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user
 		edata[quad_data_t::EnumEdge::RIGHT].EdgeType = p4est_data->RightBoun;
 	}
 
-	/*ÏÂ±ß½ç£¬Âß¼­×ø±êqy = 0*/
+	/*ï¿½Â±ß½ç£¬ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½qy = 0*/
 	if (m_bottom_boundary)
 		//if(qy===0)
 	{
@@ -928,7 +928,7 @@ static void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user
 		edata[quad_data_t::EnumEdge::BOTTOM].EdgeType = p4est_data->BottomBoun;
 	}
 
-	/*ÉÏ±ß½ç£¬Âß¼­×ø±êqy = P4EST_ROOT_LEN - length*/
+	/*ï¿½Ï±ß½ç£¬ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½qy = P4EST_ROOT_LEN - length*/
 	if (m_top_boundary)
 		//if(qy===P4EST_ROOT_LEN - length)
 	{
@@ -942,7 +942,7 @@ static void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user
 	}
 }
 
-/*´ÓÉ­ÁÖ±ß½çÌõ¼þÖÐ»ñµÃÒ¶×ÓÍø¸ñµÄ±ß½çÌõ¼þ*/
+/*ï¿½ï¿½É­ï¿½Ö±ß½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void get_boundary_from_p4est(p4est_t *p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
@@ -991,9 +991,9 @@ static void get_quadrant_boundary_from_p4est(p4est_t *p4est, p4est_quadrant_t *q
 		cndata[i].hdata[CHalf_edge_data::cside::minus].BYDVal = 0.;
 		cndata[i].hdata[CHalf_edge_data::cside::plus].BYDVal = 0.;
 	}
-	//×óÏÂ½ÇÎª(qx, qy),ÓÒÉÏ½ÇÎª£¨qx+length,qy+length£©
+	//ï¿½ï¿½ï¿½Â½ï¿½Îª(qx, qy),ï¿½ï¿½ï¿½Ï½ï¿½Îªï¿½ï¿½qx+length,qy+lengthï¿½ï¿½
 
-	//×ó±ß½ç£¬Âß¼­×ø±êqx==0
+	//ï¿½ï¿½ß½ç£¬ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½qx==0
 	if (qx==0)
 	{
 		cndata[0].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->LeftBoun;
@@ -1002,7 +1002,7 @@ static void get_quadrant_boundary_from_p4est(p4est_t *p4est, p4est_quadrant_t *q
 		cndata[1].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->LeftBounVal;
 	}
 
-	/*ÓÒ±ß½ç£¬Âß¼­×ø±êqx = P4EST_ROOT_LEN - length*/
+	/*ï¿½Ò±ß½ç£¬ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½qx = P4EST_ROOT_LEN - length*/
 	if (qx == P4EST_ROOT_LEN - length)
 	{
 		cndata[3].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->RightBoun;
@@ -1011,7 +1011,7 @@ static void get_quadrant_boundary_from_p4est(p4est_t *p4est, p4est_quadrant_t *q
 		cndata[2].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->RightBounVal;
 	}
 
-	/*ÏÂ±ß½ç£¬Âß¼­×ø±êqy = 0*/
+	/*ï¿½Â±ß½ç£¬ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½qy = 0*/
 	if(qy==0)
 	{
 		cndata[0].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->BottomBoun;
@@ -1020,7 +1020,7 @@ static void get_quadrant_boundary_from_p4est(p4est_t *p4est, p4est_quadrant_t *q
 		cndata[3].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->BottomBounVal;
 	}
 
-	/*ÉÏ±ß½ç£¬Âß¼­×ø±êqy = P4EST_ROOT_LEN - length*/
+	/*ï¿½Ï±ß½ç£¬ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½qy = P4EST_ROOT_LEN - length*/
 	if(qy==P4EST_ROOT_LEN - length)
 	{
 		cndata[1].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->TopBoun;
@@ -1140,7 +1140,7 @@ static int Lagrangian_coarsen_fixed_estimate(p4est_t *p4est, p4est_topidx_t whic
 	int			idCPara;
 	double		parent_gradient;
 
-	/*¸¸Íø¸ñºÍ×ÓÍø¸ñµÄÌÝ¶È±ØÐë¶¼Âú×ãÎó²îÌõ¼þ£¬²ÅÄÜ¼õÊè*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¶È±ï¿½ï¿½ë¶¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½*/
 
 	switch (p4est_data->refine_coarsen_enum)
 	{
@@ -1211,11 +1211,11 @@ static int Lagrangian_refine_err_estimate(p4est_t *p4est, p4est_topidx_t which_t
 
 
 
-	if (level<p4est_data->minus_level)/*Ð¡ÓÚ×îÐ¡Ï¸»¯²ã¼¶£¬±ØÐë¼ÓÃÜ*/
+	if (level<p4est_data->minus_level)/*Ð¡ï¿½ï¿½ï¿½ï¿½Ð¡Ï¸ï¿½ï¿½ï¿½ã¼¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	{
 		return 1;
 	}
-	if(level>=p4est_data->max_level)/*´óÓÚµÈÓÚ×î´óÏ¸»¯²ã¼¶£¬²»ÄÜ¼ÓÃÜ*/
+	if(level>=p4est_data->max_level)/*ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ã¼¶ï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½*/
 	{
 		return 0;
 	}
@@ -1255,7 +1255,7 @@ static int Lagrangian_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_
 	int			idCPara;
 	double		parent_gradient;
 
-	/*¸¸Íø¸ñºÍ×ÓÍø¸ñµÄÌÝ¶È±ØÐë¶¼Âú×ãÎó²îÌõ¼þ£¬²ÅÄÜ¼õÊè*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¶È±ï¿½ï¿½ë¶¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½*/
 
 	switch (p4est_data->refine_coarsen_enum)
 	{
@@ -1284,15 +1284,15 @@ static int Lagrangian_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_
 
 		if (data->m_vara.IntCData[idAllowCoarsening] == p4est_data_t::CoarseningEnum::CoarsingNotAllowed)
 		{
-			return 0;/*²»ÔÊÐí¼õÊè*/
+			return 0;/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		}
 
-		if (level<=p4est_data->minus_level)/*Ð¡ÓÚ×îÐ¡Ï¸»¯²ã¼¶£¬²»ÄÜ¼õÊè*/
+		if (level<=p4est_data->minus_level)/*Ð¡ï¿½ï¿½ï¿½ï¿½Ð¡Ï¸ï¿½ï¿½ï¿½ã¼¶ï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½*/
 		{
 			return 0;
 		}
 
-		if (level > p4est_data->max_level)/*´óÓÚµÈÓÚ×î´óÏ¸»¯²ã¼¶£¬±ØÐë¼õÊè*/
+		if (level > p4est_data->max_level)/*ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ã¼¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			return 1;
 		}
@@ -1336,7 +1336,7 @@ static int Lagrangian_init_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t w
 	int			idCPara;
 	double		parent_gradient;
 
-	/*¸¸Íø¸ñºÍ×ÓÍø¸ñµÄÌÝ¶È±ØÐë¶¼Âú×ãÎó²îÌõ¼þ£¬²ÅÄÜ¼õÊè*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¶È±ï¿½ï¿½ë¶¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½*/
 
 	switch (p4est_data->refine_coarsen_enum)
 	{
@@ -1359,22 +1359,22 @@ static int Lagrangian_init_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t w
 		int			level = children[i]->level;
 		p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
 
-		if (level <= p4est_data->minus_level)/*Ð¡ÓÚ×îÐ¡Ï¸»¯²ã¼¶£¬²»ÄÜ¼õÊè*/
+		if (level <= p4est_data->minus_level)/*Ð¡ï¿½ï¿½ï¿½ï¿½Ð¡Ï¸ï¿½ï¿½ï¿½ã¼¶ï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½*/
 		{
 			return 0;
 		}
 
-		if (level > p4est_data->max_level)/*´óÓÚµÈÓÚ×î´óÏ¸»¯²ã¼¶£¬±ØÐë¼õÊè*/
+		if (level > p4est_data->max_level)/*ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ã¼¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			return 1;
 		}
 
-		/*´óÓÚÌÝ¶ÈãÐÖµ£¬²»ÄÜ¼õÊè*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½Ý¶ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½*/
 		if (data->m_vara.DouCData[idCPara] > p4est_data->coarsen_error) { return 0; }
 		parent_gradient += data->m_vara.DouCData[idCPara];
 	}
 	parent_gradient /= P4EST_CHILDREN;
-	if (parent_gradient > p4est_data->coarsen_error) { return 0; }/*´óÓÚÌÝ¶ÈãÐÖµ£¬²»ÄÜ¼õÊè*/
+	if (parent_gradient > p4est_data->coarsen_error) { return 0; }/*ï¿½ï¿½ï¿½ï¿½ï¿½Ý¶ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½Ü¼ï¿½ï¿½ï¿½*/
 	else { return 1; }
 }
 
@@ -1393,7 +1393,7 @@ static int Lagrangian_coarsen_init_condition(p4est_t *p4est, p4est_topidx_t whic
 
 static void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariable *m_vara)
 {
-	/*¼ÙÉèºóÃæÒª×öÏ¸»¯£¬Ô¤ÏÈ¸ø¶¨childrenµÄ¼¸ºÎÊý¾ÝºÍÎïÀíÊý¾Ý*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½È¸ï¿½ï¿½ï¿½childrenï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	/*children*/
 	/*----------------------------------*/
 	/*|                 |               |*/
@@ -1602,7 +1602,7 @@ static void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariab
 	}
 }
 
-/*³õÊ¼»¯£¬¸ø¶¨³õÊ¼×ø±ê£¬ÎïÀíÁ¿·Ö²¼*/
+/*ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ê£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö²ï¿½*/
 /*1---------2*/
 /*----------*/
 /*----------*/
@@ -1624,7 +1624,7 @@ static void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree,
 
 	p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
 
-	//¼ÆËãÎïÀí¿Õ¼äÖÐµÄµ¥Ôª±ß³¤£¨level¼¶Ï¸·ÖµÄ±ß³¤£©
+	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ÐµÄµï¿½Ôªï¿½ß³ï¿½ï¿½ï¿½levelï¿½ï¿½Ï¸ï¿½ÖµÄ±ß³ï¿½ï¿½ï¿½
 	double dx = 1.0 / (1 << level);
 
 
@@ -1635,11 +1635,11 @@ static void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree,
 	int index_j = int(qy / length);
 	int width_num = (1 << level);
 
-	//½«Âß¼­×ø±ê×ª»¯ÎªÎïÀí×ø±ê
-	p4est_qcoord_to_vertex(connectivity, which_tree, qx, qy, data->init_node_coords[0]);//×óÏÂ½Ç
-	p4est_qcoord_to_vertex(connectivity, which_tree, qx, qy + length, data->init_node_coords[1]);//×óÉÏ½Ç
-	p4est_qcoord_to_vertex(connectivity, which_tree, qx + length, qy + length, data->init_node_coords[2]);//ÓÒÉÏ½Ç
-	p4est_qcoord_to_vertex(connectivity, which_tree, qx + length, qy, data->init_node_coords[3]);//ÓÒÏÂ½Ç
+	//ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	p4est_qcoord_to_vertex(connectivity, which_tree, qx, qy, data->init_node_coords[0]);//ï¿½ï¿½ï¿½Â½ï¿½
+	p4est_qcoord_to_vertex(connectivity, which_tree, qx, qy + length, data->init_node_coords[1]);//ï¿½ï¿½ï¿½Ï½ï¿½
+	p4est_qcoord_to_vertex(connectivity, which_tree, qx + length, qy + length, data->init_node_coords[2]);//ï¿½ï¿½ï¿½Ï½ï¿½
+	p4est_qcoord_to_vertex(connectivity, which_tree, qx + length, qy, data->init_node_coords[3]);//ï¿½ï¿½ï¿½Â½ï¿½
 
 	for (int i = 0; i < CNDIM; i++)
 	{
@@ -1697,7 +1697,7 @@ static void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree,
 	generate_children_info_from_parent(p4est_data, m_vara);
 }
 
-/*Ô¤¹ÀÊ±¼ä²½³¤»Øµ÷º¯Êý*/
+/*Ô¤ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_predict_timestep_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
@@ -1715,17 +1715,17 @@ static void quadrant_predict_timestep_callback(p4est_iter_volume_info_t *info, v
 
 	}
 	
-	/*1£¬¸ù¾ÝCFLÌõ¼þµÃµ½µÄdt*/
+	/*1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CFLï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½dt*/
 	double quad_cfl_dt = PhysicalAlg::get_CourantTimeStep(corner_coords, m_vara->DouCData[idSoundSpeed]);
 
-	/*2£¬¸ù¾ÝÌå»ý±ä»¯ÂÊµÃµ½µÄdt*/
+	/*2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ä»¯ï¿½ÊµÃµï¿½ï¿½ï¿½dt*/
 	double quad_vol_dt = PhysicalAlg::get_VolumeVarationTimeStep(p4est_data->volume_varation_torelarion,
 		m_vara->DouCData[idDivergence]);
 
-	/*3£¬µ¥¸öÊ±¼ä²½³¤µÄÔö³¤ÂÊ²»ÄÜ³¬¹ý0.01*/
+	/*3ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê²ï¿½ï¿½Ü³ï¿½ï¿½ï¿½0.01*/
 	double quad_increased_dt = p4est_data->delta_time * p4est_data->dt_increase_percent;
 
-	/*min º¯ÊýÖ»ÄÜÁ½¸öÁ½¸ö±È½Ï*/
+	/*min ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È½ï¿½*/
 	p4est_data->local_dt = min(quad_cfl_dt,
 		min(quad_vol_dt, quad_increased_dt));
 
@@ -1811,15 +1811,15 @@ predict_timestep(p4est_t *p4est)
 
 
 
-/*É¢¶È»Øµ÷º¯Êý*/
+/*É¢ï¿½È»Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_compute_divergence_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	/*1.»ñÈ¡µ±Ç°quadrantµÄÓÃ»§Ö¸Õë*/
+	/*1.ï¿½ï¿½È¡ï¿½ï¿½Ç°quadrantï¿½ï¿½ï¿½Ã»ï¿½Ö¸ï¿½ï¿½*/
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	
-	/*½Úµã×ø±êcnCoord, ½ÚµãËÙ¶ÈcnVelocity*/
+	/*ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½cnCoord, ï¿½Úµï¿½ï¿½Ù¶ï¿½cnVelocity*/
 	CDoubleVector	cnVelocity[CNDIM];
 	CDoubleVector	cnCoord[CNDIM];
 	for (int k = 0; k < CNDIM; k++)
@@ -1830,7 +1830,7 @@ static void quadrant_compute_divergence_callback(p4est_iter_volume_info_t *info,
 	m_vara->DouCData[idDivergence] = PhysicalAlg::CalculateDivergence(p4est_data->coord_type, cnCoord, cnVelocity);
 }
 
-/*¼ÆËãÍø¸ñµÄÉ¢¶È*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¢ï¿½ï¿½*/
 void ComputeDivergence(p4est_t *p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
@@ -1846,7 +1846,7 @@ void ComputeDivergence(p4est_t *p4est)
 		NULL);
 }
 
-/*ÉùËÙ»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½Ù»Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_compute_soundspeed_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
@@ -2046,13 +2046,13 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 	/*calculate the corner gradient*/
 	for (int i = 0; i < m_size; i++)
 	{
-		/*side[i]°üº¬ÁË¸Ã²àÊýÖµ¼ÆËãËùÐèÒªµÄÐÅÏ¢*/
+		/*side[i]ï¿½ï¿½ï¿½ï¿½ï¿½Ë¸Ã²ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¢*/
 		side[i] = p4est_iter_cside_array_index_int(sides, i);
 		quadid = side[i]->quadid;
 		which_corner = side[i]->corner;
 		cnid = convert_which_corner_to_user_define_index(which_corner);
 
-		/*ÄÃµ½ÓÃ»§×Ô¶¨ÒåÊý¾Ý*/
+		/*ï¿½Ãµï¿½ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		is_ghost = side[i]->is_ghost;
 		if (is_ghost)
 		{
@@ -2064,7 +2064,7 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 		}
 		m_vara = (CVariable  *)&m_data->m_vara;
 
-		m_vara->DouCnData[idCNPara][cnid] = 0.;/*³õÊ¼»¯ÎªÁã*/
+		m_vara->DouCnData[idCNPara][cnid] = 0.;/*ï¿½ï¿½Ê¼ï¿½ï¿½Îªï¿½ï¿½*/
 		for (int j = 0; j < m_size; j++)
 		{
 			if (j == i) { continue; }
@@ -2105,7 +2105,7 @@ quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info
 
 	for (int i = 0; i < m_size; i++)
 	{
-		/*side[i]°üº¬ÁË¸Ã²àÊýÖµ¼ÆËãËùÐèÒªµÄÐÅÏ¢*/
+		/*side[i]ï¿½ï¿½ï¿½ï¿½ï¿½Ë¸Ã²ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¢*/
 		side[i] = p4est_iter_cside_array_index_int(sides, i);
 		quadid_a = side[i]->quadid;
 		p4est_quadrant	*quad_a = side[i]->quad;
@@ -2143,7 +2143,7 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	quad_data_t		*ghost_data = (quad_data_t *)user_data;
-	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ÐüµãÒ»²àµÄchildrenÍø¸ñÊý¾ÝºÍÁíÒ»²àparentÍø¸ñÊý¾Ý*/
+	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½childrenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½Ò»ï¿½ï¿½parentï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
 	p4est_iter_face_side_t *side[2];
@@ -2156,7 +2156,7 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 	if (sides->elem_count != 2) { return; }
 	P4EST_ASSERT(sides->elem_count == 2);
 
-	/*ÓÃÑ¹Á¦»òÕßÃÜ¶ÈµÄÌÝ¶È×÷ÎªÏ¸»¯ºÍ¼õÊèµÄ¼òµ¥×¼Ôò*/
+	/*ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶Èµï¿½ï¿½Ý¶ï¿½ï¿½ï¿½ÎªÏ¸ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ä¼ï¿½×¼ï¿½ï¿½*/
 	switch (p4est_data->refine_coarsen_enum)
 	{
 	case RefineCriteria::PressureGradient:
@@ -2173,12 +2173,12 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 		break;
 	}
 
-	/*Ðüµã±ß*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	for (int i = 0; i < 2; i++)
 	{
 		side[i] = p4est_iter_fside_array_index_int(sides, i);
 		side[1-i] = p4est_iter_fside_array_index_int(sides, 1-i);
-		if (side[i]->is_hanging == Hanging)/*ÕâÌõ±ßÓÐÐüµã*/
+		if (side[i]->is_hanging == Hanging)/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
 			if (side[i]->is.hanging.quadid[0]<0
@@ -2246,26 +2246,26 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 			CDoubleVector	parent_center, child1_center, child2_center;
 			int				children_face, parent_face;
 
-			/*Íø¸ñÖÐÐÄµÄÎïÀíÁ¿£¬ÈçÃÜ¶È»òÕßÑ¹Á¦*/
+			/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶È»ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½*/
 			parent_para = m_parent_vara->DouCData[idCPara];
 			child1_para = m_child1_vara->DouCData[idCPara];
 			child2_para = m_child2_vara->DouCData[idCPara];
 
-			/*Íø¸ñÖÐÐÄ×ø±ê*/
+			/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 			parent_center = m_parent_vara->VecCData[idCentroidCoord_cur];
 			child1_center = m_child1_vara->VecCData[idCentroidCoord_cur];
 			child2_center = m_child2_vara->VecCData[idCentroidCoord_cur];
 
-			/*¸¸×ÓÍø¸ñÖÐÐÄµãµÄ¾àÀë*/
+			/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½Ä¾ï¿½ï¿½ï¿½*/
 			dist1 = GeometryAlg::GetPointToPointDistance(parent_center, child1_center);
 			dist2 = GeometryAlg::GetPointToPointDistance(parent_center, child2_center);
 
-			/*Çó½âÎïÀíÁ¿ÌÝ¶È*/
+			/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¶ï¿½*/
 			child1_gradient = abs(parent_para - child1_para) / dist1;
 			child2_gradient = abs(parent_para - child2_para) / dist2;
 			parent_gradient = (child1_gradient + child2_gradient) / 2.;
 
-			/*ÃæµÄÐòºÅ*/
+			/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 			children_face = side[i]->face;
 			parent_face = side[1 - i]->face;
 
@@ -2275,7 +2275,7 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 		}
 	}
 
-	/*·ÇÐüµã±ß*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	side[0] = p4est_iter_fside_array_index_int(sides, 0);
 	side[1] = p4est_iter_fside_array_index_int(sides, 1);
 	if (!(side[0]->is_hanging) && !(side[1]->is_hanging))
@@ -2292,7 +2292,7 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 
 		face_index[0] = side[0]->face;
 
-		/*½çÃæÁ½²àµ¥ÔªÊý¾Ýbrother1_data£¬ brother2_data*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½àµ¥Ôªï¿½ï¿½ï¿½ï¿½brother1_dataï¿½ï¿½ brother2_data*/
 		if (side[0]->is.full.is_ghost)
 		{
 			brother1_data = &ghost_data[side[0]->is.full.quadid];
@@ -2302,7 +2302,7 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 			brother1_data = (quad_data_t  *)side[0]->is.full.quad->p.user_data;
 		}
 
-		/*±ß½ç´¦ÌÝ¶ÈÄ¬ÈÏÎª0*/
+		/*ï¿½ß½ç´¦ï¿½Ý¶ï¿½Ä¬ï¿½ï¿½Îª0*/
 		if (side[1]->is.full.quad == NULL || info->sides.elem_count <2 ||
 			side[1]->is.full.quadid>info->p4est->global_num_quadrants)
 		{
@@ -2344,7 +2344,7 @@ static void quadrant_update_after_coarsening_callback(p4est_iter_face_info_t *in
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	quad_data_t		*ghost_data = (quad_data_t *)user_data;
-	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ÐüµãÒ»²àµÄchildrenÍø¸ñÊý¾ÝºÍÁíÒ»²àparentÍø¸ñÊý¾Ý*/
+	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½childrenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½Ò»ï¿½ï¿½parentï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
 	p4est_iter_face_side_t *side[2];
@@ -2353,12 +2353,12 @@ static void quadrant_update_after_coarsening_callback(p4est_iter_face_info_t *in
 	int				m_which_corner[2], m_master_corner[2],
 		m_unconstrained_master_corner[2], m_which_side[2];
 
-	/*Ðüµã±ß*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	for (int i = 0; i < 2; i++)
 	{
 		side[i] = p4est_iter_fside_array_index_int(sides, i);
 		side[1 - i] = p4est_iter_fside_array_index_int(sides, 1 - i);
-		if (side[i]->is_hanging == Hanging)/*ÕâÌõ±ßÓÐÐüµã*/
+		if (side[i]->is_hanging == Hanging)/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
 			if (side[i]->is.hanging.quadid[0]<0
@@ -2471,16 +2471,16 @@ static void quadrant_update_after_coarsening_callback(p4est_iter_face_info_t *in
 			delta_velo1 = GeometryAlg::GetPointToPointDistance(middle_velo, child1_cn_velo);
 			delta_velo2 = GeometryAlg::GetPointToPointDistance(middle_velo, child2_cn_velo);
 
-			/*´Ö»¯ºó£¬Ï¸Íø¸ñµÄ½Úµã²»ÔÚ´ÖÍø¸ñ±ß½çµÄÖÐµã£¬Ôò¶ÔÏ¸Íø¸ñ½øÐÐÖØ·ÖÖØÓ³*/
-			if (delta_velo1 >= m_coliner_eps || delta_velo2 >= m_coliner_eps)/*´ÖÏ¸Íø¸ñÊÇ·ñ¹²ÏßµÄÅÐ¶Ï*/
+			/*ï¿½Ö»ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½Ä½Úµã²»ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½Ðµã£¬ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø·ï¿½ï¿½ï¿½Ó³*/
+			if (delta_velo1 >= m_coliner_eps || delta_velo2 >= m_coliner_eps)/*ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ßµï¿½ï¿½Ð¶ï¿½*/
 			{
 				CDoubleVector  m_cell_coord[CNDIM];
 
 				/************************for child 1***************************/
-				m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]] = middle_coord;/*1,×ø±ê*/
+				m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]] = middle_coord;/*1,ï¿½ï¿½ï¿½ï¿½*/
 				m_child1_vara->VecCnData[idcnCoords_lag][m_which_corner[0]] = m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]];
 				
-				m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]] = middle_velo;/*2,ËÙ¶È*/
+				m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]] = middle_velo;/*2,ï¿½Ù¶ï¿½*/
 				m_child1_vara->VecCnData[idcnVelocity_lag][m_which_corner[0]] = m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]];
 
 				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->VecCnData[idcnCoords_cur][i]; }
@@ -2490,13 +2490,13 @@ static void quadrant_update_after_coarsening_callback(p4est_iter_face_info_t *in
 				m_child1_vara->DouCData[idPressure_cur] = PhysicalAlg::EquationOfState(
 					m_child1_vara->DouCData[idGamma],
 					m_child1_vara->DouCData[idDensity_cur],
-					m_child1_vara->DouCData[idInternalEnergy_cur]);/*4£¬Ñ¹Á¦*/
+					m_child1_vara->DouCData[idInternalEnergy_cur]);/*4ï¿½ï¿½Ñ¹ï¿½ï¿½*/
 
 																   /************************for child 1***************************/
-				m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]] = middle_coord;/*1,×ø±ê*/
+				m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]] = middle_coord;/*1,ï¿½ï¿½ï¿½ï¿½*/
 				m_child2_vara->VecCnData[idcnCoords_lag][m_which_corner[1]] = m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]];
 
-				m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]] = middle_velo;/*2,ËÙ¶È*/
+				m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]] = middle_velo;/*2,ï¿½Ù¶ï¿½*/
 				m_child2_vara->VecCnData[idcnVelocity_lag][m_which_corner[1]] = m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]];
 
 				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->VecCnData[idcnCoords_cur][i]; }
@@ -2506,7 +2506,7 @@ static void quadrant_update_after_coarsening_callback(p4est_iter_face_info_t *in
 				m_child2_vara->DouCData[idPressure_cur] = PhysicalAlg::EquationOfState(
 					m_child2_vara->DouCData[idGamma],
 					m_child2_vara->DouCData[idDensity_cur],
-					m_child2_vara->DouCData[idInternalEnergy_cur]);/*4£¬Ñ¹Á¦*/
+					m_child2_vara->DouCData[idInternalEnergy_cur]);/*4ï¿½ï¿½Ñ¹ï¿½ï¿½*/
 			}
 		}
 	}
@@ -2517,7 +2517,7 @@ static void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_f
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	quad_data_t		*ghost_data = (quad_data_t *)user_data;
-	quad_data_t		*m_parent_data;/*ÐüµãÒ»²àµÄchildrenÍø¸ñÊý¾ÝºÍÁíÒ»²àparentÍø¸ñÊý¾Ý*/
+	quad_data_t		*m_parent_data;/*ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½childrenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½Ò»ï¿½ï¿½parentï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	CVariable		*m_parent_vara;
 	CCorner_data	*m_parent_cndata;
 	p4est_iter_face_side_t *side[2];
@@ -2525,12 +2525,12 @@ static void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_f
 
 	P4EST_ASSERT(sides->elem_count == 2);
 	if (sides->elem_count != 2) { return; }
-	/*Ðüµã±ß*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	for (int i = 0; i < 2; i++)
 	{
 		side[i] = p4est_iter_fside_array_index_int(sides, i);
 		side[1 - i] = p4est_iter_fside_array_index_int(sides, 1 - i);
-		if (side[i]->is_hanging == Hanging)/*ÕâÌõ±ßÓÐÐüµã*/
+		if (side[i]->is_hanging == Hanging)/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
 			int full_index = GeometryAlg::GetCircleNext(2, i);
@@ -2595,7 +2595,7 @@ static void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_f
 
 			if ((childlevel - parentlevel) > 1)
 			{
-				/*Ï¸»¯ºó£¬ÏàÁÚÍø¸ñ²ã¼¶´óÓÚ1£¬²»ÔÊÐí¸¸Íø¸ñÔÙ´Ö»¯ÁË*/
+				/*Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã¼¶ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù´Ö»ï¿½ï¿½ï¿½*/
 				m_parent_vara->IntCData[idAllowCoarsening] = p4est_data_t::CoarseningEnum::CoarsingNotAllowed;
 			}
 		}
@@ -2608,7 +2608,7 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	quad_data_t		*ghost_data = (quad_data_t *)user_data;
-	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ÐüµãÒ»²àµÄchildrenÍø¸ñÊý¾ÝºÍÁíÒ»²àparentÍø¸ñÊý¾Ý*/
+	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½childrenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½Ò»ï¿½ï¿½parentï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
 	p4est_iter_face_side_t *side[2];
@@ -2617,12 +2617,12 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 	int				m_which_corner[2], m_master_corner[2],
 		m_unconstrained_master_corner[2], m_which_side[2];
 	if (sides->elem_count != 2) { return; }
-	/*Ðüµã±ß*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	for (int i = 0; i < 2; i++)
 	{
 		side[i] = p4est_iter_fside_array_index_int(sides, i);
 		side[1 - i] = p4est_iter_fside_array_index_int(sides, 1 - i);
-		if (side[i]->is_hanging == Hanging)/*ÕâÌõ±ßÓÐÐüµã*/
+		if (side[i]->is_hanging == Hanging)/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
 			if (side[i]->is.hanging.quadid[0]<0
@@ -2735,16 +2735,16 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 			delta_velo1 = GeometryAlg::GetPointToPointDistance(middle_velo, child1_cn_velo);
 			delta_velo2 = GeometryAlg::GetPointToPointDistance(middle_velo, child2_cn_velo);
 
-			/*´Ö»¯ºó£¬Ï¸Íø¸ñµÄ½Úµã²»ÔÚ´ÖÍø¸ñ±ß½çµÄÖÐµã£¬Ôò¶ÔÏ¸Íø¸ñ½øÐÐÖØ·ÖÖØÓ³*/
-			if (delta_velo1 >= m_coliner_eps || delta_velo2 >= m_coliner_eps)/*´ÖÏ¸Íø¸ñÊÇ·ñ¹²ÏßµÄÅÐ¶Ï*/
+			/*ï¿½Ö»ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½Ä½Úµã²»ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½Ðµã£¬ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø·ï¿½ï¿½ï¿½Ó³*/
+			if (delta_velo1 >= m_coliner_eps || delta_velo2 >= m_coliner_eps)/*ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ßµï¿½ï¿½Ð¶ï¿½*/
 			{
 				CDoubleVector  m_cell_coord[CNDIM];
 
 				/************************for child 1***************************/
-				m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]] = middle_coord;/*1,×ø±ê*/
+				m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]] = middle_coord;/*1,ï¿½ï¿½ï¿½ï¿½*/
 				m_child1_vara->VecCnData[idcnCoords_lag][m_which_corner[0]] = m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]];
 
-				m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]] = middle_velo;/*2,ËÙ¶È*/
+				m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]] = middle_velo;/*2,ï¿½Ù¶ï¿½*/
 				m_child1_vara->VecCnData[idcnVelocity_lag][m_which_corner[0]] = m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]];
 
 				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->VecCnData[idcnCoords_cur][i]; }
@@ -2754,13 +2754,13 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 				m_child1_vara->DouCData[idPressure_cur] = PhysicalAlg::EquationOfState(
 					m_child1_vara->DouCData[idGamma],
 					m_child1_vara->DouCData[idDensity_cur],
-					m_child1_vara->DouCData[idInternalEnergy_cur]);/*4£¬Ñ¹Á¦*/
+					m_child1_vara->DouCData[idInternalEnergy_cur]);/*4ï¿½ï¿½Ñ¹ï¿½ï¿½*/
 
 																   /************************for child 2***************************/
-				m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]] = middle_coord;/*1,×ø±ê*/
+				m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]] = middle_coord;/*1,ï¿½ï¿½ï¿½ï¿½*/
 				m_child2_vara->VecCnData[idcnCoords_lag][m_which_corner[1]] = m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]];
 
-				m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]] = middle_velo;/*2,ËÙ¶È*/
+				m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]] = middle_velo;/*2,ï¿½Ù¶ï¿½*/
 				m_child2_vara->VecCnData[idcnVelocity_lag][m_which_corner[1]] = m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]];
 
 				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->VecCnData[idcnCoords_cur][i]; }
@@ -2770,7 +2770,7 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 				m_child2_vara->DouCData[idPressure_cur] = PhysicalAlg::EquationOfState(
 					m_child2_vara->DouCData[idGamma],
 					m_child2_vara->DouCData[idDensity_cur],
-					m_child2_vara->DouCData[idInternalEnergy_cur]);/*4£¬Ñ¹Á¦*/
+					m_child2_vara->DouCData[idInternalEnergy_cur]);/*4ï¿½ï¿½Ñ¹ï¿½ï¿½*/
 			}
 		}
 	}
@@ -2817,7 +2817,7 @@ static void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *inf
 
 }
 
-/*¼ÆËãÉùËÙ*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 void ComputeSoundSpeed(p4est_t *p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
@@ -2833,7 +2833,7 @@ void ComputeSoundSpeed(p4est_t *p4est)
 		NULL);
 }
 
-/*¼ÆËãÊ±¼ä°ë²½ÎïÀíÁ¿µÄ»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ë²½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_compute_halftime_variable_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	
@@ -2844,16 +2844,16 @@ static void quadrant_compute_halftime_variable_callback(p4est_iter_volume_info_t
 	m_vara->VecCData[idCentroidVelo_half] = (m_vara->VecCData[idCentroidVelo_cur] + m_vara->VecCData[idCentroidVelo_lag]) / 2.;
 	m_vara->VecCData[idCentroidCoord_half] = (m_vara->VecCData[idCentroidCoord_cur] + m_vara->VecCData[idCentroidCoord_lag]) / 2.;
 
-	/*¶¯Á¦Ñ§Á¿*/
+	/*ï¿½ï¿½ï¿½ï¿½Ñ§ï¿½ï¿½*/
 	for (int i = 0; i < CNDIM; i++)
 	{
 
 		m_vara->VecCnData[idcnCoords_half][i] = GeometryAlg::GetPointPointMiddle(m_vara->VecCnData[idcnCoords_cur][i], m_vara->VecCnData[idcnCoords_lag][i]);
 	}
-	/*ÓÉ¶¯Á¦Ñ§Á¿¼ÆËãµÃµ½ÃÜ¶È°ë²½µÄ¼ÆËã·½Ê½*/
+	/*ï¿½É¶ï¿½ï¿½ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½Ü¶È°ë²½ï¿½Ä¼ï¿½ï¿½ã·½Ê½*/
 	m_vara->DouCData[idDensity_half] = 2.*m_vara->DouCData[idDensity_cur] * m_vara->DouCData[idDensity_lag] /
 		(m_vara->DouCData[idDensity_cur] + m_vara->DouCData[idDensity_lag]);
-	/*ÈÈÁ¦Ñ§Á¿*/
+	/*ï¿½ï¿½ï¿½ï¿½Ñ§ï¿½ï¿½*/
 	m_vara->DouCData[idTotalEnergy_half] = (m_vara->DouCData[idTotalEnergy_cur]+ m_vara->DouCData[idTotalEnergy_lag]) / 2.;
 	m_vara->DouCData[idInternalEnergy_half] = (m_vara->DouCData[idInternalEnergy_cur] + m_vara->DouCData[idInternalEnergy_lag]) / 2.;
 	if (m_vara->DouCData[idInternalEnergy_half] > m_eps)
@@ -2892,7 +2892,7 @@ void CalculateHalfTimeVariable(p4est_t *p4est)
 		NULL);
 }
 
-/*AMR¸¸Íø¸ñ±ß½ç£¬±ßÖÐÐÄMcp»Øµ÷º¯Êý£¬ÓÃÓÚÇó½â±ßÖÐµãµÄFcp*/
+/*AMRï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ç£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Mcpï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½Fcp*/
 static void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 
@@ -2905,7 +2905,7 @@ static void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info,
 
 	for (int k = 0; k < CNDIM; k++)
 	{
-		/*Ö»ÓÐÔÚ¸¸×ÓÍø¸ñ±ß½ç²ÅÆð×÷ÓÃ*/
+		/*Ö»ï¿½ï¿½ï¿½Ú¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		if (PCInfo[k].IsParentChildBoun == true)
 		{
 			double Divergence = 0.;
@@ -2962,12 +2962,12 @@ static void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *i
 		LcpNcpPc = LcpNcp * m_vara->DouCnData[idReconstructPressure][k];
 		Divergence = LcpNcpPc ^ DeltaU[k];
 
-		if (CoordType == p4est_data_t::MyCoordType::plane)/*Æ½Ãæ×ø±ê*/
+		if (CoordType == p4est_data_t::MyCoordType::plane)/*Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			RcpLcpNcpPc[k] = m_plus->Rcp*m_plus->Lcp * m_plus->Ncp + 
 				m_minus->Rcp*m_minus->Lcp*m_minus->Ncp;
 		}
-		if (CoordType == p4est_data_t::MyCoordType::cylinder)/*Öù×ø±ê*/
+		if (CoordType == p4est_data_t::MyCoordType::cylinder)/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 
 		}
@@ -2984,11 +2984,11 @@ static void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *i
 		NcpPlusMatrix = GeometryAlg::DyadicProduct(m_plus->Ncp, m_plus->Ncp);
 		NcpMinusMatrix = GeometryAlg::DyadicProduct(m_minus->Ncp, m_minus->Ncp);
 
-		/*¼ÆËãÓç½Ç¾ØÕó*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½*/
 		m_vara->MarCnData[idcnMcp][k] = m_plus->Zcp*m_plus->Rcp*m_plus->Lcp*NcpPlusMatrix
 			+ m_minus->Zcp*m_minus->Rcp*m_minus->Lcp*NcpMinusMatrix;
 
-		/*Ðý×ªRiemann½â£¬ÐèÒªÐÞ¸ÄMcp¾ØÕó¶¨Òå*/
+		/*ï¿½ï¿½×ªRiemannï¿½â£¬ï¿½ï¿½Òªï¿½Þ¸ï¿½Mcpï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		if (p4est_data->solver_type == p4est_data_t::RiemannSolver::Rotated)
 		{
 			if (abs_deltau > m_eps)
@@ -3030,7 +3030,7 @@ static void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *i
 	}
 }
 
-/*½«Íø¸ñµÄ¾ØÕóMcp×°Åäµ½¸÷¸ö½ÚµãÉÏ£¬ÐÎ³É½Úµã¾ØÕóMp*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¾ï¿½ï¿½ï¿½Mcp×°ï¿½äµ½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½Ï£ï¿½ï¿½Î³É½Úµï¿½ï¿½ï¿½ï¿½Mp*/
 static void
 quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info, void *user_data)
 {
@@ -3051,7 +3051,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 
 	for (int i = 0; i < m_size; i++)
 	{
-		/*side[i]°üº¬ÁË¸Ã²àÊýÖµ¼ÆËãËùÐèÒªµÄÐÅÏ¢*/
+		/*side[i]ï¿½ï¿½ï¿½ï¿½ï¿½Ë¸Ã²ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¢*/
 		side[i] = p4est_iter_cside_array_index_int(sides, i);
 
 
@@ -3070,7 +3070,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 		which_corner = side[i]->corner;
 		cnid = convert_which_corner_to_user_define_index(which_corner);
 
-		/*ÄÃµ½ÓÃ»§×Ô¶¨ÒåÊý¾Ý*/
+		/*ï¿½Ãµï¿½ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		is_ghost = side[i]->is_ghost;
 		if (is_ghost)
 		{
@@ -3082,15 +3082,15 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 		}
 		m_vara = (CVariable  *)&m_data->m_vara;
 
-		/*¸ù¾ÝËã·¨²Ù×÷ÓÃ»§×Ô¶¨ÒåÊý¾Ý*/
-		/*MatrixPÀÛ¼Ó£¬RHSÀÛ¼Ó*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½ã·¨ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
+		/*MatrixPï¿½Û¼Ó£ï¿½RHSï¿½Û¼ï¿½*/
 		MatrixP += m_vara->MarCnData[idcnMcp][cnid];
 		RHS += m_vara->VecCnData[idcnRHS][cnid];
 	}
 
 	for (int i = 0; i < m_size; i++)
 	{
-		/*½«MatrixPºÍRHS¸³Öµ¸ø¸÷¸öPointsÊý¾Ý*/
+		/*ï¿½ï¿½MatrixPï¿½ï¿½RHSï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Pointsï¿½ï¿½ï¿½ï¿½*/
 		side[i] = p4est_iter_cside_array_index_int(sides, i);
 		quadid = side[i]->quadid;
 		which_corner = side[i]->corner;
@@ -3137,7 +3137,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 		if (m_minus->enumBYD != InnerBoundary) { is_boundary = true; }
 	}
 
-	/*Èç¹ûÊÇ±ß½çÓç½Ç£¬¶ÔÓ¦µÄ½Úµã±ØÐëÓÐÁ½Ìõ±ß½ç±ß£¬½«ÐÅÏ¢´æ´¢ÖÁTwoBounsÖÐ*/
+	/*ï¿½ï¿½ï¿½ï¿½Ç±ß½ï¿½ï¿½ï¿½Ç£ï¿½ï¿½ï¿½Ó¦ï¿½Ä½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ß£ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½æ´¢ï¿½ï¿½TwoBounsï¿½ï¿½*/
 
 	if (is_boundary)
 	{
@@ -3211,9 +3211,9 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 	}
 }
 
-/*[in]±ß½çÏà¹ØµÄÐÅÏ¢£¬°üÀ¨±ß½çÀàÐÍ£¬±ß½çÖµ£¬±ß½çµÄÍâ·¨ÏòÁ¿£¬±ß½ç³¤¶È*/
-/*[out]±ß½çËÙ¶È*/
-/*ÏÂÍ¼±íÃ÷½ÚµãP¶ÔÓ¦Íø¸ñµÄÁ½Ìõ±ß£¬PlusºÍMinus*/
+/*[in]ï¿½ß½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ß½ï¿½Öµï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½â·¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ç³¤ï¿½ï¿½*/
+/*[out]ï¿½ß½ï¿½ï¿½Ù¶ï¿½*/
+/*ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½Pï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß£ï¿½Plusï¿½ï¿½Minus*/
 /*       Minus        */
 /*-------------------P*/
 /*                   |*/
@@ -3222,13 +3222,13 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 /*                   |*/
 /*                   |*/
 
-/*enumPlusºÍenumMinusÎª±ß½çÀàÐÍ*/
-/*ValPlusºÍValMinusÎª±ß½çÑ¹Á¦/ËÙ¶ÈÖµ*/
-/*NcpPlus[P4EST_DIM]ºÍNcpMinus[P4EST_DIM]Îª±ß½çµ¥Î»Íâ·¨ÏòÁ¿*/
-/*LcpPlusºÍLcpMinusÎª±ß½ç±ßµÄ³¤¶È*/
-/*MatrixP[P4EST_DIM][P4EST_DIM]Îª½ÚµãÇó½âÆ÷µÄ½Úµã¾ØÕó*/
-/*m_RHS[P4EST_DIM]Îª½ÚµãÇó½âÆ÷µÄÓÒ¶ËÏî*/
-/*[out] velocityÎª½ÚµãËÙ¶È*/
+/*enumPlusï¿½ï¿½enumMinusÎªï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
+/*ValPlusï¿½ï¿½ValMinusÎªï¿½ß½ï¿½Ñ¹ï¿½ï¿½/ï¿½Ù¶ï¿½Öµ*/
+/*NcpPlus[P4EST_DIM]ï¿½ï¿½NcpMinus[P4EST_DIM]Îªï¿½ß½çµ¥Î»ï¿½â·¨ï¿½ï¿½ï¿½ï¿½*/
+/*LcpPlusï¿½ï¿½LcpMinusÎªï¿½ß½ï¿½ßµÄ³ï¿½ï¿½ï¿½*/
+/*MatrixP[P4EST_DIM][P4EST_DIM]Îªï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä½Úµï¿½ï¿½ï¿½ï¿½*/
+/*m_RHS[P4EST_DIM]Îªï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½*/
+/*[out] velocityÎªï¿½Úµï¿½ï¿½Ù¶ï¿½*/
 CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 	const CPointBounInfo &BounMinus, const CDoubleMatrix MatrixP, const CDoubleVector m_RHS)
 {
@@ -3243,7 +3243,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 	CDoubleVector	velocity = CDoubleVector(0., 0.);
 
 
-	/*¶¨ËÙ¶È±ß½çÌõ¼þ£¬²»ÐèÒªÇó½â*/
+	/*ï¿½ï¿½ï¿½Ù¶È±ß½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½*/
 	if (VelocityBoundary == enumPlus || VelocityBoundary == enumMinus
 		||CircleCenterBoundary == enumPlus || CircleCenterBoundary == enumMinus) { return velocity; }
 	CDoubleMatrix MatrixPInverse;
@@ -3267,7 +3267,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 	bool IsSolved, IsColinear;
 	IsSolved = false;
 
-	/*PlusÑ¹Á¦+MinusÑ¹Á¦±ß½çÌõ¼þ*/
+	/*PlusÑ¹ï¿½ï¿½+MinusÑ¹ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	if (enumPlus == FreeBoundary || enumPlus == PressureBoundary)
 	{
 		if (enumMinus == FreeBoundary || enumMinus == PressureBoundary)
@@ -3280,8 +3280,8 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 		}
 	}
 
-	/*PlusËÙ¶È+MinusËÙ¶È±ß½çÌõ¼þ*/
-	/*ËÙ¶È±ß½çÌõ¼þÖ»¿¼ÂÇÑØx(z)Öá£¬»òy(r)Öá£¬»òÑØÉäÏßÍø¸ñÖ¸ÏòÇòÐÄÕâ¼¸ÖÖÇé¿ö£¬ºóÆÚÔÙ×÷À©Õ¹*/
+	/*Plusï¿½Ù¶ï¿½+Minusï¿½Ù¶È±ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
+	/*ï¿½Ù¶È±ß½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½x(z)ï¿½á£¬ï¿½ï¿½y(r)ï¿½á£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â¼¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¹*/
 	if (enumPlus == VelocityBoundary || enumPlus == WallBoundary)
 	{
 		if (enumMinus == VelocityBoundary || enumMinus == WallBoundary)
@@ -3289,10 +3289,10 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 			IsColinear = false;
 			if (fabs(NcpPlus.x * NcpMinus.y - NcpPlus.y * NcpMinus.x) < 1e-10) { IsColinear = true; }
 
-			/**************************¹²ÏßËÙ¶È±ß½çÌõ¼þ*****************************/
+			/**************************ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È±ß½ï¿½ï¿½ï¿½ï¿½ï¿½*****************************/
 			if (IsColinear)
 			{
-				/*+++++++++++++ÑØy£¨r£©·½Ïò¶¨ËÙ¶È++++++++++++++=*/
+				/*+++++++++++++ï¿½ï¿½yï¿½ï¿½rï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½++++++++++++++=*/
 				if (fabs(NcpPlus.x) < 1e-12)
 				{
 					velocity.y = ValPlus;
@@ -3307,7 +3307,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 					velocity.x = aa*(ma*PIStar + na) + bb*(mb*PIStar + nb);
 				}
 
-				/*+++++++++++++ÑØx£¨z£©·½Ïò¶¨ËÙ¶È++++++++++++++=*/
+				/*+++++++++++++ï¿½ï¿½xï¿½ï¿½zï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½++++++++++++++=*/
 				else if (fabs(NcpPlus.y) < 1e-12)
 				{
 					velocity.x = ValPlus;
@@ -3323,7 +3323,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 				}
 				else
 				{
-					/*+++++++++++ÑØÈÎÒâ·½Ïò¶¨ËÙ¶È+++++++++++++*/
+					/*+++++++++++ï¿½ï¿½ï¿½ï¿½ï¿½â·½ï¿½ï¿½ï¿½Ù¶ï¿½+++++++++++++*/
 					/*cos_theta*(aa*(ma*PIStar+na) + bb *(mb*PIStar+nb))+sin_theta*(cc*(ma*PIStar+na)+dd*(mb*PIStar+nb)) = ValPlus*/
 					if (fabs(cos_theta*aa*ma + cos_theta*bb*mb + sin_theta*cc*ma + sin_theta*dd*mb) > 1e-12)
 					{
@@ -3340,14 +3340,14 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 			}
 			else
 			{
-				/**************************²»¹²ÏßËÙ¶È±ß½çÌõ¼þ*****************************/
+				/**************************ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È±ß½ï¿½ï¿½ï¿½ï¿½ï¿½*****************************/
 				velocity = ValPlus*NcpPlus + ValMinus*NcpMinus;
 			}
 		}
 		IsSolved = true;
 	}
 
-	/*PlusÑ¹Á¦+MinusËÙ¶È±ß½çÌõ¼þ*/
+	/*PlusÑ¹ï¿½ï¿½+Minusï¿½Ù¶È±ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	if (enumPlus == FreeBoundary || enumPlus == PressureBoundary)
 	{
 		if (enumMinus == VelocityBoundary || enumMinus == WallBoundary)
@@ -3372,7 +3372,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 		IsSolved = true;
 	}
 
-	/*PlusËÙ¶È+MinusÑ¹Á¦±ß½çÌõ¼þ*/
+	/*Plusï¿½Ù¶ï¿½+MinusÑ¹ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	if (enumPlus == VelocityBoundary || enumPlus == WallBoundary)
 	{
 		if (enumMinus == FreeBoundary || enumMinus == PressureBoundary)
@@ -3397,7 +3397,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 		IsSolved = true;
 	}
 
-	/*Plus¶Ô³ÆÖá+Minus¶Ô³ÆÖá±ß½çÌõ¼þ*/
+	/*Plusï¿½Ô³ï¿½ï¿½ï¿½+Minusï¿½Ô³ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	if (enumPlus == SymmetryBoundary || enumMinus == SymmetryBoundary)
 	{
 		velocity.y = 0.;
@@ -3405,7 +3405,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 		IsSolved = true;
 	}
 
-	/*Plus¶Ô³ÆÖá+MinusËÙ¶È±ß½çÌõ¼þ*/
+	/*Plusï¿½Ô³ï¿½ï¿½ï¿½+Minusï¿½Ù¶È±ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	if (enumPlus == SymmetryBoundary)
 	{
 		if (enumMinus == VelocityBoundary || enumMinus == WallBoundary)
@@ -3416,7 +3416,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 		}
 	}
 
-	/*PlusËÙ¶È+Minus¶Ô³ÆÖá±ß½çÌõ¼þ*/
+	/*Plusï¿½Ù¶ï¿½+Minusï¿½Ô³ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	if (enumPlus == VelocityBoundary || enumPlus == WallBoundary)
 	{
 		if (enumMinus == SymmetryBoundary)
@@ -3427,7 +3427,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 		}
 	}
 
-	/*Plus¶Ô³ÆÖá+MinusÑ¹Á¦±ß½çÌõ¼þ*/
+	/*Plusï¿½Ô³ï¿½ï¿½ï¿½+MinusÑ¹ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	if (enumPlus == SymmetryBoundary)
 	{
 		if (enumMinus == FreeBoundary || enumMinus == PressureBoundary)
@@ -3438,7 +3438,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 		}
 	}
 
-	/*PlusÑ¹Á¦+Minus¶Ô³ÆÖá±ß½çÌõ¼þ*/
+	/*PlusÑ¹ï¿½ï¿½+Minusï¿½Ô³ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	if (enumPlus == FreeBoundary || enumPlus == PressureBoundary)
 	{
 		if (enumMinus == SymmetryBoundary)
@@ -3456,7 +3456,7 @@ CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
 	return velocity;
 }
 
-/*Éú³ÉÐü¹ÒµãµÄ½Úµã¾ØÕóMatrixPºÍÓÒ¶ËÏîRHS£¬ÒÔ¼°TwoBouns[2]*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òµï¿½Ä½Úµï¿½ï¿½ï¿½ï¿½MatrixPï¿½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½RHSï¿½ï¿½ï¿½Ô¼ï¿½TwoBouns[2]*/
 static void 
 quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, void *user_data)
 {
@@ -3533,7 +3533,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			}
 			ParentBounInfo	*PCInfo = (ParentBounInfo	*)&m_quad_data_full->m_pc_edge_data;
 
-			CDoubleVector	master_coord[2];//Ö÷µãaºÍbµÄ×ø±ê
+			CDoubleVector	master_coord[2];//ï¿½ï¿½ï¿½ï¿½aï¿½ï¿½bï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 			switch (parent_face_index)
 			{
@@ -3616,19 +3616,19 @@ void MatrixAssemble(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 	m_user_data->p4est_data = (void *)p4est_data;
 	m_user_data->quad_data = (void *)ghost_data;
 
-	/*1, Íø¸ñÓç½Ç¾ØÕóMcp,Mcp*UpµÈ*/
+	/*1, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½Mcp,Mcp*Upï¿½ï¿½*/
 	p4est_iterate(p4est,
 		NULL,
 		NULL,
-		quadrant_corner_matrix_assemble_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		quadrant_corner_matrix_assemble_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-/*2, ¶ÔÓç½Ç¾ØÕó½øÐÐÀÛ¼Ó£¬×°Åä½Úµã¾ØÕó£¬µÃµ½·½³Ì×óÓÒ¶ËMatrixPºÍRHS£ºMatrixP * Up = RHS  */
+/*2, ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Û¼Ó£ï¿½×°ï¿½ï¿½Úµï¿½ï¿½ï¿½ó£¬µÃµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶ï¿½MatrixPï¿½ï¿½RHSï¿½ï¿½MatrixP * Up = RHS  */
 	p4est_iterate(p4est,
 		ghost,
 		(void*)m_user_data,
@@ -3638,7 +3638,7 @@ void MatrixAssemble(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		quadrant_corner_to_point_matrix_assemble_callback);        /* ·ÇÐüµãµÄ¾ØÕó×°Åä */
+		quadrant_corner_to_point_matrix_assemble_callback);        /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¾ï¿½ï¿½ï¿½×°ï¿½ï¿½ */
 }
 
 static void quadrant_copy_velocity_from_lag_to_relax_callback(p4est_iter_volume_info_t *info, void *user_data)
@@ -3743,74 +3743,74 @@ static void quadrant_update_parent_velo_press_callback(p4est_iter_face_info_t *i
 	}
 }
 
-/*¸ù¾ÝËÉ³ÚÔ¼ÊøÌõ¼þÏÂ,master½ÚµãµÄËÙ¶ÈºÍÎ»ÖÃ£¬¸üÐÂÐüµãËÙ¶È*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½É³ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½,masterï¿½Úµï¿½ï¿½ï¿½Ù¶Èºï¿½Î»ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½*/
 void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 
-	/*1. ¸üÐÂËÉ³ÚÔ¼ÊøËùÐèÒªµÄmaster½ÚµãËÙ¶È£¬Î»ÖÃ£¬ÒÔ¼°ÆäËû¼¸ºÎÁ¿*/
+	/*1. ï¿½ï¿½ï¿½ï¿½ï¿½É³ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½masterï¿½Úµï¿½ï¿½Ù¶È£ï¿½Î»ï¿½Ã£ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		NULL,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_compute_relaxed_info_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_compute_relaxed_info_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	/*2.¼ÆËãÐüµã´¦¸¸Íø¸ñ¾ØÕó*/
+	/*2.ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã´¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		NULL,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_parent_edge_matrix_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_parent_edge_matrix_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	/*3.×°ÅäÐüµã¾ØÕó*/
+	/*3.×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	p4est_iterate(p4est,
-		ghost,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*) ghost_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		NULL, // ¸üÐÂ»Øµ÷º¯Êý
+		ghost,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*) ghost_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		quadrant_hanging_point_matrix_assemble_callback,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	/*4.Çó½âÐüµã¸¸Íø¸ñ±ß½çÑ¹Á¦*/
+	/*4.ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã¸¸ï¿½ï¿½ï¿½ï¿½ß½ï¿½Ñ¹ï¿½ï¿½*/
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		NULL,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		NULL, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		quadrant_relaxed_hanging_solver_callback,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*Óç½ÇËÙ¶ÈÇó½âµÄ»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½Ä»Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, void *user_data)
 {
-	p4est_iter_corner_side_t	*side[CNDIM];  //Ã¿¸öÓç½ÇÓÐCNDIM¸ösides
+	p4est_iter_corner_side_t	*side[CNDIM];  //Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CNDIMï¿½ï¿½sides
 	sc_array_t					*sides = &(info->sides);
 	int							which_corner, cnid, is_ghost, m_size;
 	int							quadid;
 	int							tree_boundary;
-	bool						is_boundary /*ÊÇ·ñÊÇ±ß½çµã*//*, is_hanging  ÊÇ·ñÊÇÐü¹Òµã */;
+	bool						is_boundary /*ï¿½Ç·ï¿½ï¿½Ç±ß½ï¿½ï¿½*//*, is_hanging  ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òµï¿½ */;
 	quad_data_t					*m_data;
 	CVariable					*m_vara;
 	quad_data_t					*ghost_data = (quad_data_t *)user_data;
 
-	/*ÅÐ¶Ïµ±Ç°cornerÊÇ·ñÊÇ±ß½ç£¬ÅÐ¾Ý±êÊ¶Îªis_boundary*/
+	/*ï¿½Ð¶Ïµï¿½Ç°cornerï¿½Ç·ï¿½ï¿½Ç±ß½ç£¬ï¿½Ð¾Ý±ï¿½Ê¶Îªis_boundary*/
 	tree_boundary = info->tree_boundary;
 	//is_boundary = false;
 	//if (tree_boundary == P4EST_CONNECT_CORNER || tree_boundary == P4EST_CONNECT_FACE) { is_boundary = true; }
@@ -3860,25 +3860,25 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 		}
 
 
-		if (is_boundary)		/*±ß½çÇó½âÆ÷£¬Ò»¸ö±ß½ç½Úµã±ØÐë¶ÔÓ¦Á½¸ö±ß½ç±ß£¬AºÍB*/
+		if (is_boundary)		/*ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ß½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ß£ï¿½Aï¿½ï¿½B*/
 		{
 
 
 
 
 			m_data->points[cnid].velo_lag = BoundaryNodeVelocityComputation(
-				m_data->points[cnid].TwoBouns[0],    /*±ß½çA*/
-				m_data->points[cnid].TwoBouns[1],    /*±ß½çB*/
-				m_data->points[cnid].MatrixP,  /*½Úµã¾ØÕóMatrixP*/
-				m_data->points[cnid].RHS);     /*½ÚµãÓÒ¶ËÏîRHS*/
+				m_data->points[cnid].TwoBouns[0],    /*ï¿½ß½ï¿½A*/
+				m_data->points[cnid].TwoBouns[1],    /*ï¿½ß½ï¿½B*/
+				m_data->points[cnid].MatrixP,  /*ï¿½Úµï¿½ï¿½ï¿½ï¿½MatrixP*/
+				m_data->points[cnid].RHS);     /*ï¿½Úµï¿½ï¿½Ò¶ï¿½ï¿½ï¿½RHS*/
 		}
-		else                /*Ò»°ãÇó½âÆ÷*/
+		else                /*Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			CDoubleMatrix MatrixP_Inverse;
 			MatrixP_Inverse = GeometryAlg::MatrixInverse(m_data->points[cnid].MatrixP);
 			m_data->points[cnid].velo_lag = GeometryAlg::MatrixDotVector(MatrixP_Inverse, m_data->points[cnid].RHS);
 		}
-		/*Ð¡ÓÚm_epsÊ±ÖÃÁã*/
+		/*Ð¡ï¿½ï¿½m_epsÊ±ï¿½ï¿½ï¿½ï¿½*/
 		if (fabs(m_data->points[cnid].velo_lag.x) < m_eps) { m_data->points[cnid].velo_lag.x = 0.; }
 		if (fabs(m_data->points[cnid].velo_lag.y) < m_eps) { m_data->points[cnid].velo_lag.y = 0.; }
 
@@ -3892,7 +3892,7 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 	}
 }
 
-/*¸üÐÂÓç½ÇËÙ¶È*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½*/
 static void ComputeCornerNodeVelocity(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
@@ -3901,9 +3901,9 @@ static void ComputeCornerNodeVelocity(p4est_t * p4est, p4est_ghost_t * ghost, vo
 	m_user_data->quad_data = (void *)ghost_data;
 
 	p4est_iterate(p4est,
-		ghost,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)m_user_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		NULL, // ¸üÐÂ»Øµ÷º¯Êý
+		ghost,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)m_user_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
@@ -3912,25 +3912,25 @@ static void ComputeCornerNodeVelocity(p4est_t * p4est, p4est_ghost_t * ghost, vo
 		quadrant_corner_velocity_callback);   
 
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		NULL,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_copy_velocity_from_lag_to_relax_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_copy_velocity_from_lag_to_relax_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*¸üÐÂ×ø±ê»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
 	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	double				delta_time = p4est_data->dt_iter;
-	for (int k = 0; k < CNDIM; k++)  /*ËÄ¸ö½ÇµãÑ­»·*/
+	for (int k = 0; k < CNDIM; k++)  /*ï¿½Ä¸ï¿½ï¿½Çµï¿½Ñ­ï¿½ï¿½*/
 	{
 		m_vara->VecCnData[idcnCoords_lag][k] = m_vara->VecCnData[idcnCoords_half][k] +
 			CDoubleVector(m_vara->VecCnData[idcnVelocity_lag][k].x * delta_time, m_vara->VecCnData[idcnVelocity_lag][k].y * delta_time);
@@ -3971,24 +3971,24 @@ static void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t 
 	}
 }
 
-/*¼ÆËã½Úµã×ø±ê*/
+/*ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void ComputeCoordinate(p4est_t * p4est)
 {
 	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
-	/*1. ¸üÐÂÓç½Ç×ø±ê*/
+	/*1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)p4est_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_update_corner_coordinate_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)p4est_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_update_corner_coordinate_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*¸üÐÂÍø¸ñÃÜ¶ÈµÄ»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶ÈµÄ»Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_update_density_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
@@ -4009,23 +4009,23 @@ static void quadrant_update_density_callback(p4est_iter_volume_info_t *info, voi
 
 }
 
-/*¼ÆËãÍø¸ñÃÜ¶È*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½*/
 static void UpdateDensity(p4est_t * p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)p4est_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_update_density_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)p4est_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_update_density_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*¸üÐÂ¶¯Á¿·½³ÌµÄ»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÌµÄ»Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
@@ -4034,7 +4034,7 @@ static void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, vo
 	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	int					coordinate_type = p4est_data->coord_type;
 	int					scheme_type = p4est_data->Scheme_type;
-	CDoubleVector		SumFcp = CDoubleVector(0., 0.);/*Óç½ÇÁ¦Ö®ºÍ*/
+	CDoubleVector		SumFcp = CDoubleVector(0., 0.);/*ï¿½ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½*/
 	CDoubleVector		center_point;
 	double				m_alpha = 0.;
 	if (coordinate_type == p4est_data_t::MyCoordType::cylinder
@@ -4066,7 +4066,7 @@ static void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, vo
 		m_vara->VecCData[idCentroidVelo_lag] = m_vara->VecCData[idCentroidVelo_half] -
 			p4est_data->dt_iter * SumFcp / m_vara->DouCData[idMass];
 	}
-	else if (scheme_type == p4est_data_t::MySchemeType::AreaWeighted)/*Ãæ¸ñÊ½*/
+	else if (scheme_type == p4est_data_t::MySchemeType::AreaWeighted)/*ï¿½ï¿½ï¿½Ê½*/
 	{
 		CDoubleVector m_cell_coord[CNDIM];
 		for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->VecCnData[idcnCoords_cur][i]; }
@@ -4076,23 +4076,23 @@ static void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, vo
 	}
 }
 
-/*¸üÐÂ¶¯Á¿·½³Ì*/
+/*ï¿½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void UpdateMomentumEquation(p4est_t * p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)p4est_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_update_momentum_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)p4est_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_update_momentum_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*¸üÐÂÑ¹Á¦×ö¹¦»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
@@ -4116,7 +4116,7 @@ static void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void 
 	CDoubleVector Velo = 0.5 * (m_vara->VecCData[idCentroidVelo_half] + m_vara->VecCData[idCentroidVelo_lag]);
 	for (int cnid = 0; cnid < CNDIM; cnid++)
 	{
-		/*¸ù¾Ý¶¯Á¿·½³Ì¼ÆËã¶¯ÄÜ±ä»¯*/
+		/*ï¿½ï¿½ï¿½Ý¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¼ï¿½ï¿½ã¶¯ï¿½Ü±ä»¯*/
 		if (coordinate_type == p4est_data_t::MyCoordType::plane)
 		{
 			//cdata->KineticVariation
@@ -4129,7 +4129,7 @@ static void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void 
 			m_vara->DouCData[idKineticVariation] += m_beta * Velo^ m_vara->VecCnData[idAWFcp][cnid];
 		}
 
-		/*¸ù¾Ý×ÜÄÜ·½³Ì¼ÆËã×ÜÄÜµÄ±ä»¯*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü·ï¿½ï¿½Ì¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÜµÄ±ä»¯*/
 		m_vara->DouCData[idTotalWork] += m_alpha*
 			m_vara->VecCnData[idcnVelocity_lag][cnid] ^ 
 			(m_vara->VecCnData[idcnFcp][cnid]+ m_vara->VecCnData[idcnFluxRelaxed][cnid]); 
@@ -4137,7 +4137,7 @@ static void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void 
 
 	for (int eind = 0; eind < CNDIM; eind++)
 	{
-		/*¸¸×ÓÍø¸ñ±ß½ç*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½*/
 		if (PCInfo[eind].IsParentChildBoun==true)
 		{
 			if (coordinate_type == p4est_data_t::MyCoordType::plane)
@@ -4151,30 +4151,30 @@ static void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void 
 	}
 }
 
-/*¸üÐÂÑ¹Á¦×ö¹¦*/
+/*ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void ComputeWork(p4est_t * p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)p4est_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_compute_work_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)p4est_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_compute_work_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*¸üÐÂ×ÜÄÜºÍÄÚÄÜ·½³ÌµÄ»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Üºï¿½ï¿½ï¿½ï¿½Ü·ï¿½ï¿½ÌµÄ»Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
 	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 
-	/*¶þ½×Áú¸ñ¿âËþ·¨¸üÐÂ×ÜÄÜ*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	m_vara->DouCData[idTotalEnergy_lag] = m_vara->DouCData[idTotalEnergy_half] - p4est_data->dt_iter * m_vara->DouCData[idTotalWork] / m_vara->DouCData[idMass];
 
 
@@ -4196,7 +4196,7 @@ static void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void
 		std::abort();
 	}
 
-	/*¸ù¾Ý×ÜÄÜÊØºãÔ­Ôò¸üÐÂÄÚÄÜ*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øºï¿½Ô­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	m_vara->DouCData[idInternalEnergy_lag] = m_vara->DouCData[idInternalEnergy_half] - p4est_data->dt_iter
 		* (m_vara->DouCData[idTotalWork] - m_vara->DouCData[idKineticVariation]) / m_vara->DouCData[idMass];
 	m_vara->DouCData[idInternalEnergy_lag] += source;
@@ -4211,23 +4211,23 @@ static void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void
 	}
 }
 
-/*¸üÐÂ×ÜÄÜ·½³Ì*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü·ï¿½ï¿½ï¿½*/
 static void UpdateEnergyEquation(p4est_t * p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)p4est_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_update_energy_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)p4est_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_update_energy_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*¸üÐÂ×´Ì¬·½³ÌµÄ»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ÌµÄ»Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_update_EOS_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
@@ -4242,23 +4242,23 @@ static void quadrant_update_EOS_callback(p4est_iter_volume_info_t *info, void *u
 	}
 }
 
-/*¸üÐÂ×´Ì¬·½³Ì*/
+/*ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½*/
 static void UpdateEquationOfState(p4est_t * p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)p4est_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_update_EOS_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)p4est_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_update_EOS_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*½ÓÊÕÍø¸ñÖÐÐÄÁ¿ÊýÖµ½âµÄ»Øµ÷º¯Êý*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½Ä»Øµï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void quadrant_accept_center_solution_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
@@ -4524,7 +4524,7 @@ static void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info,
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)user_data;
 	quad_data_t		*ghost_data = (quad_data_t *)user_data;
-	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ÐüµãÒ»²àµÄchildrenÍø¸ñÊý¾ÝºÍÁíÒ»²àparentÍø¸ñÊý¾Ý*/
+	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;/*ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½childrenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½Ò»ï¿½ï¿½parentï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	CVariable		*m_child1_vara, *m_child2_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata;
 	p4est_iter_face_side_t *side[2];
@@ -4538,7 +4538,7 @@ static void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info,
 	for (int i = 0; i < 2; i++)
 	{
 		side[i] = p4est_iter_fside_array_index_int(sides, i);
-		if (side[i]->is_hanging == Hanging)/*ÕâÌõ±ßÓÐÐüµã*/
+		if (side[i]->is_hanging == Hanging)/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		{
 			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
 			if (side[i]->is.hanging.quadid[0]<0
@@ -4749,73 +4749,73 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 static void Get_AMR_BDY_info(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 {
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		NULL,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		NULL, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		quadrant_get_children_hanging_info_callback,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	/*Óç½ÇÐü¹ÒÐÅÏ¢Ä¬ÈÏÉèÎªfalse*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢Ä¬ï¿½ï¿½ï¿½ï¿½Îªfalse*/
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		NULL,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_reset_parent_edge_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_reset_parent_edge_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	/*¸ù¾ÝfaceÐü¹ÒÐÅÏ¢£¬¾ö¶¨Óç½ÇÐü¹ÒÐÅÏ¢*/
+	/*ï¿½ï¿½ï¿½ï¿½faceï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢*/
 	p4est_iterate(p4est,
-		ghost,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)ghost_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		NULL, // ¸üÐÂ»Øµ÷º¯Êý
+		ghost,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)ghost_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		quadrant_set_init_parent_edge_callback,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*½ÓÊÕÊýÖµ½â*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½*/
 static void AcceptNumericalSolution(p4est_t * p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)p4est_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_accept_center_solution_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)p4est_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_accept_center_solution_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*Í³¼Æ×ÜÄÜÎó²î*/
+/*Í³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void StatTotalEnergyError(p4est_t * p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 	p4est_data->total_energy_cur = 0.;
 	p4est_data->total_energy_lag = 0.;
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)p4est_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_total_energy_error_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)p4est_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_total_energy_error_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	if (p4est_data->current_step == 1)
 	{
 		p4est_data->total_energy_init = p4est_data->total_energy_cur;
@@ -4837,7 +4837,7 @@ static void StatTotalEnergyError(p4est_t * p4est)
 
 static void quadrant_compute_corner_force_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	/* 1. »ñÈ¡µ±Ç°quadrantµÄÓÃ»§Êý¾ÝÖ¸Õë */
+	/* 1. ï¿½ï¿½È¡ï¿½ï¿½Ç°quadrantï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ */
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable				*m_vara = (CVariable *)&data->m_vara;
 	ParentBounInfo		*PCInfo = (ParentBounInfo  *)&data->m_pc_edge_data;
@@ -4885,20 +4885,20 @@ static void quadrant_compute_corner_force_callback(p4est_iter_volume_info_t *inf
 	}
 }
 
-/*¼ÆËãÓç½ÇÁ¦*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void ComputeCornerAndEdgeForce(p4est_t * p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		(void*)p4est_data,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_compute_corner_force_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		(void*)p4est_data,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_compute_corner_force_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
 static void quadrant_flux_relaxed_reset_callback(p4est_iter_volume_info_t *info, void *user_data)
@@ -4919,52 +4919,52 @@ void FluxRelaxedResetZero(p4est_t *p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 
-	/*1.Íø¸ñÖ÷µãÓç½Ç¾ØÕóMcp, Mcp*UpµÈ*/
+	/*1.ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½Mcp, Mcp*Upï¿½ï¿½*/
 	p4est_iterate(p4est,
-		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-		NULL,   // ÓÃ»§×Ô¶¨ÒåÊý¾Ý£¬ÎÞÐèÊä³ö
-		quadrant_flux_relaxed_reset_callback, // ¸üÐÂ»Øµ÷º¯Êý
+		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		NULL,   // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		quadrant_flux_relaxed_reset_callback, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 		NULL,
 #ifdef P4_TO_P8
 		NULL,                  /* there is no callback for the
 							   edges between quadrants */
 #endif
-		NULL);         // ÎÞÐè¶îÍâÊý¾Ý
+		NULL);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
-/*½ÚµãÇó½âÆ÷*/
+/*ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void RiemannSolver(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
 {
-	/*Ã¿Ò»¸öÊ±¼ä²½£¬ËÉ³ÚÔ¼ÊøÁ¦¹éÁã*/
+	/*Ã¿Ò»ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½ï¿½É³ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	FluxRelaxedResetZero(p4est);
-	/*fixed iteration method¡£ÏÔÊ½¸ñÊ½£¬ÓÃ¼òµ¥µü´ú·¨Çó½â½ÚµãËÙ¶È*/
+	/*fixed iteration methodï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ã¼òµ¥µï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½Ù¶ï¿½*/
 	for (int iter_num = 0; iter_num < fixed_iter_num; iter_num++)
 	{
-		/*1. ×°ÅäÍø¸ñ¾ØÕóMatrixCP£¬ÀÛ¼ÓµÃµ½½Úµã¾ØÕóMatrixP£¬²¢»ñµÃMatrix * Up = RHSµÄÓÒ¶ËÏîRHS*/
+		/*1. ×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½MatrixCPï¿½ï¿½ï¿½Û¼ÓµÃµï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½MatrixPï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Matrix * Up = RHSï¿½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½RHS*/
 		MatrixAssemble(p4est, ghost, ghost_data);
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
-		/*2. ¸ù¾ÝUp = RHS * Matrix^-1£¬¼ÆËã½ÚµãËÙ¶È*/
+		/*2. ï¿½ï¿½ï¿½ï¿½Up = RHS * Matrix^-1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½Ù¶ï¿½*/
 		ComputeCornerNodeVelocity(p4est, ghost, ghost_data);
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
-		/*3.¸üÐÂÁ½¶Ëmaster½ÚµãµÄËÙ¶È£¬ÔÚ²Î¿¼×ø±êÏµÖÐ£¬ÒÔ»¬ÒÆÔ¼ÊøÌõ¼þ£¬¸üÐÂÐüµãËÙ¶È*/
+		/*3.ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½masterï¿½Úµï¿½ï¿½ï¿½Ù¶È£ï¿½ï¿½Ú²Î¿ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½Ð£ï¿½ï¿½Ô»ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½*/
 		ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est, ghost, ghost_data);
 
 		/*4. synchronize the ghost data after every iteration*/
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 	}
 
-	/*3. ¸üÐÂÓç½ÇÁ¦Fcp*/
+	/*3. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Fcp*/
 	ComputeCornerAndEdgeForce(p4est);
 }
 
-/*¶þ½×Runge_KuttaÊ±¼äÍÆ½ø*/
+/*ï¿½ï¿½ï¿½ï¿½Runge_KuttaÊ±ï¿½ï¿½ï¿½Æ½ï¿½*/
 static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
 {
 	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
 
-	/*Ò¶×ÓÍø¸ñ±ß½çÌõ¼þ*/
+	/*Ò¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	get_boundary_from_p4est(p4est);
 
 	for (size_t iter_num = 0; iter_num < 1; iter_num++)
@@ -4979,44 +4979,44 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 			break;
 		}
 
-		/*1. ¼ÆËãÊ±¼ä°ë²½ÎïÀíÁ¿*/
+		/*1. ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ë²½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		CalculateHalfTimeVariable(p4est);
 
-		/*2. ¼ÆËãµ±Ç°µü´ú²½Rcp, Lcp, NcpµÈ¼¸ºÎÁ¿*/
+		/*2. ï¿½ï¿½ï¿½ãµ±Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Rcp, Lcp, Ncpï¿½È¼ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		CalculateCornerRcpLcpNcp(p4est);
 
-		/*È·¶¨AMR±ß½çÐÅÏ¢*/
+		/*È·ï¿½ï¿½AMRï¿½ß½ï¿½ï¿½ï¿½Ï¢*/
 		Get_AMR_BDY_info(p4est,ghost,ghost_data);
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
-		/*3. ½ÚµãÇó½âÆ÷£¬¼ÆËã½ÚµãËÙ¶È*/
+		/*3. ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½Ù¶ï¿½*/
 		if (p4est_data->coord_type == p4est_data_t::RiemannSolver::GridAligned)
 		{
 			RiemannSolver(p4est, ghost, ghost_data);
 		}
 
-		/*4. ¸üÐÂÉ¢¶È*/
+		/*4. ï¿½ï¿½ï¿½ï¿½É¢ï¿½ï¿½*/
 		ComputeDivergence(p4est);
 
-		/*5. ¸üÐÂÍø¸ñÔË¶¯*/
+		/*5. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¶ï¿½*/
 		ComputeCoordinate(p4est);
 
-		/*6. ¸üÐÂÃÜ¶È*/
+		/*6. ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½*/
 		UpdateDensity(p4est);
 
-		/*7. ¸üÐÂ¶¯Á¿·½³Ì*/
+		/*7. ï¿½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		UpdateMomentumEquation(p4est);
 
-		/*8. ¸üÐÂÑ¹Á¦×ö¹¦*/
+		/*8. ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		ComputeWork(p4est);
 
-		/*9. ¸üÐÂÄÜÁ¿·½³Ì*/
+		/*9. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		UpdateEnergyEquation(p4est);
 
-		/*10. ¸üÐÂ×´Ì¬·½³Ì*/
+		/*10. ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½*/
 		UpdateEquationOfState(p4est);
 
-		/*11. ¼ÆËãÉùËÙ*/
+		/*11. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		ComputeSoundSpeed(p4est);
 	}
 	p4est_data->used_dt = p4est_data->delta_time;
@@ -5071,10 +5071,10 @@ static void quadrant_copy_cell_variable_to_array_callback(p4est_iter_volume_info
 
 	arrayoffset = local_id;
 	corner_arrayoffset = CNDIM*local_id;
-	double		*p_val = (double *)sc_array_index(m_cell_data->pressure_array, arrayoffset);/*Ñ¹Á¦*/
-	double		*t_val = (double *)sc_array_index(m_cell_data->temperature_array, arrayoffset);/*ÎÂ¶È*/
-	double		*rho_val = (double *)sc_array_index(m_cell_data->density_array, arrayoffset);/*ÃÜ¶È*/
-	double		*ie_val = (double *)sc_array_index(m_cell_data->internal_energy_array, arrayoffset);/*ÄÚÄÜ*/
+	double		*p_val = (double *)sc_array_index(m_cell_data->pressure_array, arrayoffset);/*Ñ¹ï¿½ï¿½*/
+	double		*t_val = (double *)sc_array_index(m_cell_data->temperature_array, arrayoffset);/*ï¿½Â¶ï¿½*/
+	double		*rho_val = (double *)sc_array_index(m_cell_data->density_array, arrayoffset);/*ï¿½Ü¶ï¿½*/
+	double		*ie_val = (double *)sc_array_index(m_cell_data->internal_energy_array, arrayoffset);/*ï¿½ï¿½ï¿½ï¿½*/
 
 	*p_val = m_vara->DouCData[idPressure_lag];
 	*t_val = 0.0;
@@ -5098,10 +5098,10 @@ static void quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *i
 
 	arrayoffset = local_id;
 	corner_arrayoffset = CNDIM * local_id;
-	double		*p_val = (double *)sc_array_index(m_cell_data->pressure_array, arrayoffset);/*Ñ¹Á¦*/
-	double		*t_val = (double *)sc_array_index(m_cell_data->temperature_array, arrayoffset);/*ÎÂ¶È*/
-	double		*rho_val = (double *)sc_array_index(m_cell_data->density_array, arrayoffset);/*ÃÜ¶È*/
-	double		*ie_val = (double *)sc_array_index(m_cell_data->internal_energy_array, arrayoffset);/*ÄÚÄÜ*/
+	double		*p_val = (double *)sc_array_index(m_cell_data->pressure_array, arrayoffset);/*Ñ¹ï¿½ï¿½*/
+	double		*t_val = (double *)sc_array_index(m_cell_data->temperature_array, arrayoffset);/*ï¿½Â¶ï¿½*/
+	double		*rho_val = (double *)sc_array_index(m_cell_data->density_array, arrayoffset);/*ï¿½Ü¶ï¿½*/
+	double		*ie_val = (double *)sc_array_index(m_cell_data->internal_energy_array, arrayoffset);/*ï¿½ï¿½ï¿½ï¿½*/
 
 	*p_val = m_vara->DouCData[idPressure_lag];
 	*t_val = 0.0;
@@ -5109,16 +5109,16 @@ static void quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *i
 	*ie_val = m_vara->DouCData[idInternalEnergy_lag];
 	for (int i = 0; i < CNDIM; i++) {
 		int index0 = convert_user_define_index_to_which_corner(i);
-		double *coordx_val = (double *)sc_array_index(m_cell_data->coordx, corner_arrayoffset + index0);/*x×ø±ê*/
+		double *coordx_val = (double *)sc_array_index(m_cell_data->coordx, corner_arrayoffset + index0);/*xï¿½ï¿½ï¿½ï¿½*/
 		coordx_val[0] = m_vara->VecCnData[idcnCoords_lag][i].x;
 
-		double *coordy_val = (double *)sc_array_index(m_cell_data->coordy, corner_arrayoffset + index0);/*y×ø±ê*/
+		double *coordy_val = (double *)sc_array_index(m_cell_data->coordy, corner_arrayoffset + index0);/*yï¿½ï¿½ï¿½ï¿½*/
 		coordy_val[0] = m_vara->VecCnData[idcnCoords_lag][i].y;
 
-		double *velox_val = (double *)sc_array_index(m_cell_data->velox, corner_arrayoffset + index0);/*xËÙ¶È*/
+		double *velox_val = (double *)sc_array_index(m_cell_data->velox, corner_arrayoffset + index0);/*xï¿½Ù¶ï¿½*/
 		velox_val[0] = m_vara->VecCnData[idcnVelocity_lag][i].x;
 
-		double *veloy_val = (double *)sc_array_index(m_cell_data->veloy, corner_arrayoffset + index0);/*yËÙ¶È*/
+		double *veloy_val = (double *)sc_array_index(m_cell_data->veloy, corner_arrayoffset + index0);/*yï¿½Ù¶ï¿½*/
 		veloy_val[0] = m_vara->VecCnData[idcnVelocity_lag][i].y;
 	}
 }
@@ -5186,7 +5186,7 @@ GetRefineCornerVelos(const CDoubleVector velo[CNDIM], CDoubleVector children_vel
 	return;
 }
 
-/* Initialize the state variables of incoming quadrants from outgoing quadrants (Íø¸ñÏ¸»¯ºÍ¾ÛºÏÊ±Êý¾Ý²Ù×÷)
+/* Initialize the state variables of incoming quadrants from outgoing quadrants (ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½Í¾Ûºï¿½Ê±ï¿½ï¿½ï¿½Ý²ï¿½ï¿½ï¿½)
 
 * The functions p4est_refine_ext(), p4est_coarsen_ext(), and
 * p4est_balance_ext() take as an argument a p4est_replace_t callback function,
@@ -5221,10 +5221,10 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 		child_data3 = (quad_data_t *)outgoing[2]->p.user_data;
 		child_data4 = (quad_data_t *)outgoing[3]->p.user_data;
 
-		/*±ê¼Ç¸Ã¸¸Íø¸ñ¸Õ¸Õ¾­ÀúÁË´Ö»¯*/
+		/*ï¿½ï¿½Ç¸Ã¸ï¿½ï¿½ï¿½ï¿½ï¿½Õ¸Õ¾ï¿½ï¿½ï¿½ï¿½Ë´Ö»ï¿½*/
 		parent_data->m_vara.IntCData[idCoarseningTag] = p4est_data_t::CoarseningEnum::CoarsenedJustNow;
 
-		/*ÖØÐÂÈ·¶¨¸¸Íø¸ñÓç½Ç×ø±ê*/
+		/*ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		/*children*/
 		/*----------------------------------*/
 		/*|                 |               |*/
@@ -5247,7 +5247,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 
 		int idChildIndex;
 
-		/*´Ö»¯ºó£¬½«childrenµÄ¼¸ºÎÊý¾Ý´æ´¢ÔÚparentµÄChildrenCnGeomVaraÊý×éÖÐ*/
+		/*ï¿½Ö»ï¿½ï¿½ó£¬½ï¿½childrenï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý´æ´¢ï¿½ï¿½parentï¿½ï¿½ChildrenCnGeomVaraï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		for (int idIndex = m_geometry_id::m_coord; idIndex <= m_geometry_id::m_velo; idIndex++)
 		{
 			switch (idIndex)
@@ -5284,7 +5284,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			}
 		}
 
-		/*´Ö»¯ºó£¬½«childrenµÄÎïÀíÁ¿Êý¾Ý£¨ÃÜ¶ÈºÍÄÚÄÜ£©´æ´¢ÔÚparentµÄChildrenPhysicalVaraÊý×éÖÐ*/
+		/*ï¿½Ö»ï¿½ï¿½ó£¬½ï¿½childrenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½Ü¶Èºï¿½ï¿½ï¿½ï¿½Ü£ï¿½ï¿½æ´¢ï¿½ï¿½parentï¿½ï¿½ChildrenPhysicalVaraï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		for (int idIndex = m_physical_id::m_density; idIndex <= m_physical_id::m_internal_energy; idIndex++)
 		{
 			switch (idIndex)
@@ -5323,9 +5323,9 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 		parent_data->m_vara.DouCData[idMass] = child_data1->m_vara.DouCData[idMass] +
 			child_data2->m_vara.DouCData[idMass] +
 			child_data3->m_vara.DouCData[idMass] +
-			child_data4->m_vara.DouCData[idMass]; /*ÖÊÁ¿*/
+			child_data4->m_vara.DouCData[idMass]; /*ï¿½ï¿½ï¿½ï¿½*/
 
-		/*Ìå»ýºÍÃÜ¶È*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½*/
 		CDoubleVector m_cell_coord[CNDIM];
 		for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = parent_data->m_vara.VecCnData[idcnCoords_cur][i]; }
 		parent_data->m_vara.DouCData[idVolume] = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
@@ -5335,7 +5335,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 		center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
 		parent_data->m_vara.VecCData[idCentroidCoord_cur] = center_point;
 
-		/*¸ù¾Ý×Ü¶¯Á¿ÊØºã¹æÂÉ£¬Çó½â´Ö»¯ºóµÄ¸¸Íø¸ñ¶¯Á¿*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½ï¿½ï¿½ï¿½Øºï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½Ä¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		parent_data->m_vara.VecCData[idCentroidVelo_cur] = (child_data1->m_vara.DouCData[idMass] * child_data1->m_vara.VecCData[idCentroidVelo_cur] +
 			child_data2->m_vara.DouCData[idMass] * child_data2->m_vara.VecCData[idCentroidVelo_cur] +
 			child_data3->m_vara.DouCData[idMass] * child_data3->m_vara.VecCData[idCentroidVelo_cur] +
@@ -5349,7 +5349,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			child_data3->m_vara.DouCData[idGamma] +
 			child_data4->m_vara.DouCData[idGamma]) / P4EST_CHILDREN;
 
-		/*¸ù¾Ý×ÜÄÜ²»±äÔ­Àí£¬Çó½â´Ö»¯ºóµÄ¸¸Íø¸ñ×ÜÄÜÁ¿*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü²ï¿½ï¿½ï¿½Ô­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½Ä¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		parent_data->m_vara.DouCData[idTotalEnergy_cur] = (
 			child_data1->m_vara.DouCData[idMass] * child_data1->m_vara.DouCData[idTotalEnergy_cur] +
 			child_data2->m_vara.DouCData[idMass] * child_data2->m_vara.DouCData[idTotalEnergy_cur] +
@@ -5358,7 +5358,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			/ parent_data->m_vara.DouCData[idMass];
 		parent_data->m_vara.DouCData[idTotalEnergy_lag] = parent_data->m_vara.DouCData[idTotalEnergy_cur];
 
-		/*¸ù¾Ý×ÜÄÜºÍ¶¯Á¿£¬Çó½âÄÚÄÜ*/
+		/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÜºÍ¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		parent_data->m_vara.DouCData[idInternalEnergy_cur] = parent_data->m_vara.DouCData[idTotalEnergy_cur] -
 			0.5 * (pow(parent_data->m_vara.VecCData[idCentroidVelo_cur].x, 2) + pow(parent_data->m_vara.VecCData[idCentroidVelo_cur].y, 2));
 		if (parent_data->m_vara.DouCData[idInternalEnergy_cur] > m_eps)
@@ -5374,7 +5374,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			0.5 * (pow(parent_data->m_vara.VecCData[idCentroidVelo_lag].x, 2) + pow(parent_data->m_vara.VecCData[idCentroidVelo_lag].y, 2));
 		parent_data->m_vara.DouCData[idInternalEnergy_lag] = parent_data->m_vara.DouCData[idInternalEnergy_cur];
 
-		/*¸üÐÂÑ¹Á¦¡¢ÉùËÙ*/
+		/*ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		parent_data->m_vara.DouCData[idPressure_lag] = PhysicalAlg::EquationOfState(
 			parent_data->m_vara.DouCData[idGamma],
 			parent_data->m_vara.DouCData[idDensity_lag],
@@ -5411,10 +5411,10 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			p4est_qcoord_t qx = incoming[i]->x;
 			p4est_qcoord_t qy = incoming[i]->y;
 
-			/*1. Ò»½×¾«¶È£¬¼Ì³Ð¸¸Íø¸ñµÄËùÓÐÎïÀíÁ¿*/
+			/*1. Ò»ï¿½×¾ï¿½ï¿½È£ï¿½ï¿½Ì³Ð¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 			for (int j = 0; j < idDoubleCellVariableNum; j++)
 			{
-				/***************double ÐÍÍø¸ñÖÐÐÄÁ¿*****************/
+				/***************double ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*****************/
 				child_data->m_vara.DouCData[j] = parent_data->m_vara.DouCData[j];
 				if (parent_data->m_vara.DouCData[idInternalEnergy_cur] > m_eps)
 				{
@@ -5429,25 +5429,25 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			{
 				for (int k = 0; k < CNDIM; k++)
 				{
-					/***************double ÐÍÍø¸ñÓç½ÇÁ¿*****************/
+					/***************double ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*****************/
 					child_data->m_vara.DouCnData[j][k] = parent_data->m_vara.DouCnData[j][k];
 				}
 			}
 			for (int j = 0; j < idVectorCellVariableNum; j++)
 			{
-				/***************CDoubleVector ÐÍÍø¸ñÖÐÐÄÁ¿*****************/
+				/***************CDoubleVector ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*****************/
 				child_data->m_vara.VecCData[j] = parent_data->m_vara.VecCData[j];
 			}
 			for (int j = 0; j < idVectorCornerVariableNum; j++)
 			{
 				for (int k = 0; k < CNDIM; k++)
 				{
-					/***************CDoubleVector ÐÍÍø¸ñÓç½ÇÁ¿*****************/
+					/***************CDoubleVector ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*****************/
 					child_data->m_vara.VecCnData[j][k] = parent_data->m_vara.VecCnData[j][k];
 				}
 			}
 
-			/*2. »ñµÃ×ÓÍø¸ñµÄ×ø±êºÍËÙ¶È*/
+			/*2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½*/
 			int idParentGeometry;
 			for (int idChildrenIndex = idcnCoords_cur; idChildrenIndex <= idcnVelocity_lag; idChildrenIndex++)
 			{
@@ -5472,7 +5472,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 				}
 			}
 
-			/*»ñµÃ×ÓÍø¸ñµÄÃÜ¶ÈºÍÄÚÄÜ*/
+			/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶Èºï¿½ï¿½ï¿½ï¿½ï¿½*/
 			int idParentPhysical;
 			for (int idChildrenIndex = idDensity_cur; idChildrenIndex <= idInternalEnergy_lag; idChildrenIndex++)
 			{
@@ -5589,17 +5589,17 @@ static void quadrant_copy_coordy_to_array_callback(p4est_iter_volume_info_t *inf
 	}
 }
 
-/*´Ö»¯ºó£¬¸øÍø¸ñ´ò±êÇ©£¬±íÊ¾Õâ¸öÍø¸ñ¸Õ¸Õ¾­ÀúÁË´Ö»¯*/
+/*ï¿½Ö»ï¿½ï¿½ó£¬¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç©ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¸Õ¾ï¿½ï¿½ï¿½ï¿½Ë´Ö»ï¿½*/
 static void
 quadrant_set_default_coarsening_tag_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	
-	/*Ä¬ÈÏÎ´´Ö»¯*/
+	/*Ä¬ï¿½ï¿½Î´ï¿½Ö»ï¿½*/
 	data->m_vara.IntCData[idCoarseningTag] = p4est_data_t::CoarseningEnum::NotCoarsenedJustNow;
 
-	/*Ä¬ÈÏÔÊÐí´Ö»¯*/
+	/*Ä¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½*/
 	data->m_vara.IntCData[idAllowCoarsening] = p4est_data_t::CoarseningEnum::CoarsingAllowed;
 }
 
@@ -5617,7 +5617,7 @@ static void set_default_coarsening_tag(p4est_t *p4est)
 		NULL);
 }
 
-/*³ýÁË°¼ËÄ±ßÐÎ£¬ÆäËû¶¼¿ÉÒÔÏ¸»¯*/
+/*ï¿½ï¿½ï¿½Ë°ï¿½ï¿½Ä±ï¿½ï¿½Î£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½*/
 static void
 quadrant_set_default_refining_tag_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
@@ -5637,17 +5637,17 @@ quadrant_set_default_refining_tag_callback(p4est_iter_volume_info_t *info, void 
 
 	if (IsConcaveQuad < 0)
 	{
-		/*Í¹ËÄ±ßÐÎ*/
+		/*Í¹ï¿½Ä±ï¿½ï¿½ï¿½*/
 		data->m_vara.IntCData[idAllowRefining] = p4est_data_t::RefiningEnum::RefiningAllowed;
 	}
 	else
 	{
-		/*°¼ËÄ±ßÐÎ*/
+		/*ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½*/
 
 	}
 }
 
-/*Ô¤²âÄÄÐ©ËÄ±ßÐÎ½«Òª±»Ï¸»¯*/
+/*Ô¤ï¿½ï¿½ï¿½ï¿½Ð©ï¿½Ä±ï¿½ï¿½Î½ï¿½Òªï¿½ï¿½Ï¸ï¿½ï¿½*/
 static void
 quadrant_predict_refining_quads_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
@@ -5737,7 +5737,7 @@ set_allowing_coarsening_tag(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_da
 static void 
 Predict_refining_Quads(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 {
-	/*Ô¤²âÄÇÐ©quad½«Òª±»Ï¸»¯*/
+	/*Ô¤ï¿½ï¿½ï¿½ï¿½Ð©quadï¿½ï¿½Òªï¿½ï¿½Ï¸ï¿½ï¿½*/
 	p4est_iterate(p4est,
 		NULL,
 		NULL,
@@ -5838,7 +5838,7 @@ refresh_after_balance(p4est_t *p4est)
 		NULL);
 }
 
-/*´Ö»¯ºó×÷ºó´¦Àí*/
+/*ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static void
 postprocess_after_coarsening(p4est_t *p4est)
 {
@@ -5908,12 +5908,12 @@ Gradient_estimate(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 
 static void PreProcess(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 {
-	/*¼ÆËãÌÝ¶È£¬ÓÃÓÚ×ÔÊÊÓ¦¼ÓÃÜ¡¢¼õÊèÅÐ¾Ý*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½Ý¶È£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½Ü¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¾ï¿½*/
 	Gradient_estimate(p4est, ghost, ghost_data);
-	/*Éè¶¨´Ö»¯±êÇ©£¬ÓÃÓÚ±ê¼ÇÍø¸ñÊÇ·ñ¾­ÀúÁËÏ¸»¯1-´Ö»¯-Ï¸»¯2(balance)²Ù×÷ÖÐµÄ´Ö»¯½×¶Î*/
+	/*ï¿½è¶¨ï¿½Ö»ï¿½ï¿½ï¿½Ç©ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½1-ï¿½Ö»ï¿½-Ï¸ï¿½ï¿½2(balance)ï¿½ï¿½ï¿½ï¿½ï¿½ÐµÄ´Ö»ï¿½ï¿½×¶ï¿½*/
 	set_default_coarsening_tag(p4est);
 
-	/*¸ù¾ÝËÄ±ßÐÎÊÇ·ñÎ´°¼ËÄ±ßÐÎ£¬ÅÐ¶ÏÔÊÐíÏ¸»¯*/
+	/*ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½ï¿½Ç·ï¿½Î´ï¿½ï¿½ï¿½Ä±ï¿½ï¿½Î£ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½*/
 	set_default_refining_tag(p4est);
 }
 
@@ -6123,7 +6123,7 @@ static void write_distance_profiles(p4est_t *p4est)
 	ret = _mkdir("output");
 	if (ret != 0 && errno != EEXIST) {
 #else
-	ret = mkdir("output", 0777);//LinuxµÈÏµÍ³
+	ret = mkdir("output", 0777);//Linuxï¿½ï¿½ÏµÍ³
 	if (ret != 0 && errno != EEXIST) {
 #endif
 		perror("Error creating directory");
@@ -6150,7 +6150,7 @@ static void write_solution(p4est_t *p4est, const int &time_step)
 	ret = _mkdir("output");
 	if (ret != 0 && errno != EEXIST) {
 #else
-	ret = mkdir("output", 0777);//LinuxµÈÏµÍ³
+	ret = mkdir("output", 0777);//Linuxï¿½ï¿½ÏµÍ³
 	if (ret != 0 && errno != EEXIST) {
 #endif
 		perror("Error creating directory");
@@ -6218,13 +6218,13 @@ static void write_solution(p4est_t *p4est, const int &time_step)
 	context = p4est_vtk_write_header(context);
 	
 	context = p4est_vtk_write_cell_dataf(
-		context, /*vtkÉÏÏÂÎÄ*/
-		0,/*ÊÇ·ñÊä³öÊ÷ID£¨0/1£©*/
-		1,/*ÊÇ·ñÊä³öÏóÏÞ²ã¼¶(0/1)*/
-		1,/*ÊÇ·ñÊä³öMPIÖÈ(0/1)*/
-		0,/*¶ÔMPIÖÈÈ¡Ä£(0±íÊ¾²»°ü×°)*/
-		3,/*±êÁ¿Êý¾Ý¼¯ÊýÁ¿(ÈçÑ¹Á¦)*/
-		0,/*ÏòÁ¿Êý¾Ý¼¯ÊýÁ¿*/
+		context, /*vtkï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
+		0,/*ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½IDï¿½ï¿½0/1ï¿½ï¿½*/
+		1,/*ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ²ã¼¶(0/1)*/
+		1,/*ï¿½Ç·ï¿½ï¿½ï¿½ï¿½MPIï¿½ï¿½(0/1)*/
+		0,/*ï¿½ï¿½MPIï¿½ï¿½È¡Ä£(0ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½×°)*/
+		3,/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¼ï¿½ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½Ñ¹ï¿½ï¿½)*/
+		0,/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¼ï¿½ï¿½ï¿½ï¿½ï¿½*/
 		"Pressure", 
 		pressure_array,
 		"density", 
@@ -6272,21 +6272,27 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 	int					recursive = 0;
 	int					allowed_level = p4est_data->max_level;
 	int					callbackorphans = 0;
-	int					allowcoarsening = 1;/*Ö»ÄÜ´Ö»¯Ò»²ã*/
+	int					allowcoarsening = 1;/*Ö»ï¿½Ü´Ö»ï¿½Ò»ï¿½ï¿½*/
 
 	/*create the ghost quadrants*/
 	ghost = p4est_ghost_new(p4est, P4EST_CONNECT_FULL);
 	/*create space for storing the ghost data*/
 	ghost_data = P4EST_ALLOC(p4est_data_t, ghost->ghosts.elem_count);
-	/*synchronize£¨Í¬²½£© the ghost data*/
+	/*synchronizeï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ the ghost data*/
 	p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
 	for (t = start_time; t < end_time; t += p4est_data->delta_time)
 	{
 		p4est_data->current_step += 1;
+		if(p4est_data->current_step>p4est_data->max_time_step)
+		{
+			P4EST_GLOBAL_PRODUCTIONF("The current step %d is larger than the max step %d, simulation is stopped!\n",
+				p4est_data->current_step, p4est_data->max_time_step);
+			break;
+		}
 		int current_output_index = (int)(p4est_data->current_time / p4est_data->write_interval_time);
 
-		/*Ô¤´¦Àí*/
+		/*Ô¤ï¿½ï¿½ï¿½ï¿½*/
 		PreProcess(p4est, ghost, ghost_data);
 
 		/*refine*/
@@ -6338,10 +6344,10 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 
 		/*refresh haning information in user defined data*/
 		refresh_after_balance(p4est);
-		/*¸üÐÂÓ°ÏñÇø£¬·ÀÖ¹refreshÊ§Ð§*/
+		/*ï¿½ï¿½ï¿½ï¿½Ó°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¹refreshÊ§Ð§*/
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
-		/* Ô¤¹ÀÊ±¼ä²½³¤*/
+		/* Ô¤ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½*/
 		if (p4est_data->equal_dt == false) { predict_timestep(p4est); }
 
 		/*write out solution*/
@@ -6359,18 +6365,18 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			write_solution(p4est, p4est_data->current_step);
 		}
 
-		/* ÊýÖµ¼ÆËãÊ±¼äÍÆ½ø*/
+		/* ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Æ½ï¿½*/
 		two_stage_Runge_Kutta(p4est, ghost, (void *)ghost_data);
 
-		/*Í³¼Æ×ÜÄÜÎó²î£¬ÓÃÓÚÑéÖ¤¸ñÊ½ÊÇ·ñÂú×ã×ÜÄÜÁ¿ÊØºã*/
+		/*Í³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½î£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½Ê½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øºï¿½*/
 		StatTotalEnergyError(p4est);
 
-		/* ½ÓÊÕÊýÖµ½â*/
+		/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½*/
 		AcceptNumericalSolution(p4est);
 
 		p4est_data->current_time = p4est_data->current_time + p4est_data->delta_time;
 
-		/*´òÓ¡µ½ÆÁÄ»*/
+		/*ï¿½ï¿½Ó¡ï¿½ï¿½ï¿½ï¿½Ä»*/
 		P4EST_GLOBAL_PRODUCTIONF("simulation_step= %d, delta_time = %.10lf, simulation_time = %.6lf \n",
 			p4est_data->current_step, p4est_data->delta_time, p4est_data->current_time);
 	}
@@ -6444,19 +6450,19 @@ int main(int argc, char **argv)
 
 	P4EST_GLOBAL_PRODUCTIONF("This is the p4est %dD demo for Lagrangian hydrodynamics\n", P4EST_DIM);
 
-	// 1. ´´½¨»ù´¡Á¬½ÓÐÔ£¨2D¾ØÐÎÓò£©
+	// 1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô£ï¿½2Dï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	p4est_connectivity_t *conn = p4est_connectivity_new_unitsquare();
 	//p4est_connectivity_t *conn = p4est_connectivity_new_brick(70,30,0,0);
 
-	// 2. ´´½¨p4estÊµÀý£¬²¢Í¨¹ý»Øµ÷º¯Êýinit_condition¸ø¶¨³õÊ¼Ìõ¼þ£¬ÈçSedov¡¢NohÎÊÌâµÄ³õÊ¼×´Ì¬
-	p4est_t *p4est = p4est_new_ext(mpicomm,				 // MPIÍ¨ÐÅÓò
-		conn,					 // Á¬½ÓÐÔ
-		1,						 // ³õÊ¼Ï¸»¯²ã¼¶
-		7,						 // ×îÐ¡Ï¸»¯²ã¼¶
-		1,						 //¾ùÔÈÌî³ä
-		sizeof(quad_data_t), // ÓÃ»§Êý¾Ý´óÐ¡
-		Lagrangian_init_condition,// ³õÊ¼»¯»Øµ÷£¨¿É¿Õ£©
-		(void *)(&ctx));          // ÓÃ»§Ö¸Õë
+	// 2. ï¿½ï¿½ï¿½ï¿½p4estÊµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½init_conditionï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Sedovï¿½ï¿½Nohï¿½ï¿½ï¿½ï¿½Ä³ï¿½Ê¼×´Ì¬
+	p4est_t *p4est = p4est_new_ext(mpicomm,				 // MPIÍ¨ï¿½ï¿½ï¿½ï¿½
+		conn,					 // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		1,						 // ï¿½ï¿½Ê¼Ï¸ï¿½ï¿½ï¿½ã¼¶
+		7,						 // ï¿½ï¿½Ð¡Ï¸ï¿½ï¿½ï¿½ã¼¶
+		1,						 //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		sizeof(quad_data_t), // ï¿½Ã»ï¿½ï¿½ï¿½ï¿½Ý´ï¿½Ð¡
+		Lagrangian_init_condition,// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½É¿Õ£ï¿½
+		(void *)(&ctx));          // ï¿½Ã»ï¿½Ö¸ï¿½ï¿½
 
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 
@@ -6488,22 +6494,22 @@ int main(int argc, char **argv)
 	p4est_balance(p4est, P4EST_CONNECT_CORNER, Lagrangian_init_condition);
 	p4est_partition(p4est, partforcoarsen, NULL);
 
-	//	/*²âÊÔÓç½Ç±àºÅÓÃ*/
+	//	/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç±ï¿½ï¿½ï¿½ï¿½*/
 	//	p4est_iterate(p4est,
-	//		NULL,          // ÎÞÐèghost²ãÊý¾Ý
-	//		(void*)p4est_data,   // ½«Ê±¼ä²½×÷ÎªÓÃ»§²ÎÊý´«µÝ
-	//		NULL, // ¸üÐÂ»Øµ÷º¯Êý
+	//		NULL,          // ï¿½ï¿½ï¿½ï¿½ghostï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//		(void*)p4est_data,   // ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½Îªï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//		NULL, // ï¿½ï¿½ï¿½Â»Øµï¿½ï¿½ï¿½ï¿½ï¿½
 	//		NULL,
 	//#ifdef P4_TO_P8
 	//		NULL,                  /* there is no callback for the
 	//							   edges between quadrants */
 	//#endif
-	//		quadrant_test_corner_callback);         // ²âÊÔÓç½Ç±àºÅ
+	//		quadrant_test_corner_callback);         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç±ï¿½ï¿½
 
-	//step3_get_timestep(p4est);/*²âÊÔÓÃ*/
-	//p4est_ghost_t *ghost = p4est_ghost_new(p4est, P4EST_CONNECT_FULL);//¶ÔÉ­ÁÖp4est²ÉÓÃ½Çµã·½Ê½¹¹ÔìÓ°ÏñÇøghost
+	//step3_get_timestep(p4est);/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
+	//p4est_ghost_t *ghost = p4est_ghost_new(p4est, P4EST_CONNECT_FULL);//ï¿½ï¿½É­ï¿½ï¿½p4estï¿½ï¿½ï¿½Ã½Çµã·½Ê½ï¿½ï¿½ï¿½ï¿½Ó°ï¿½ï¿½ï¿½ï¿½ghost
 
-	// 5. Ö´ÐÐ³õÊ¼¸ºÔØ¾ùºâ
+	// 5. Ö´ï¿½Ð³ï¿½Ê¼ï¿½ï¿½ï¿½Ø¾ï¿½ï¿½ï¿½
 	//p4est_partition(p4est, 1, NULL);
 	//p4est_balance(p4est, P4EST_CONNECT_FULL, NULL);
 
@@ -6511,12 +6517,12 @@ int main(int argc, char **argv)
 	//p4est_data->start_time = 0.;
 	//p4est_data->end_time = 1.;
 
-	/*6. Ê±¼ä²½½ø*/
-	advance_time_step(p4est,                    //É­ÁÖ
-		p4est_data->start_time,    //ÆðÊ¼Ê±¼ä
-		p4est_data->end_time);     //ÖÕÖ¹Ê±¼ä
+	/*6. Ê±ï¿½ä²½ï¿½ï¿½*/
+	advance_time_step(p4est,                    //É­ï¿½ï¿½
+		p4est_data->start_time,    //ï¿½ï¿½Ê¼Ê±ï¿½ï¿½
+		p4est_data->end_time);     //ï¿½ï¿½Ö¹Ê±ï¿½ï¿½
 
-								   //// 6. Ê¾Àý£ºÖ´ÐÐ×ø±ê¸üÐÂÓëÍ¬²½
+								   //// 6. Ê¾ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½
 								   //	for (int step = 0; step < 5; ++step) {
 								   //		if (p4est->mpirank == 0) {
 								   //			printf("Step %d: Updating coordinates...\n", step);
@@ -6524,7 +6530,7 @@ int main(int argc, char **argv)
 								   //		update_coordinates(p4est);
 								   //	}
 
-	// 7. ×ÊÔ´ÇåÀí
+	// 7. ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½
 	p4est_destroy(p4est);
 	p4est_connectivity_destroy(conn);
 

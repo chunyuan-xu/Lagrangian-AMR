@@ -27,13 +27,13 @@ enum RefineCriteria
 	Distance,
 };
 
-//È«¾ÖÍø¸ñÐÅÏ¢½á¹¹
+//È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½á¹¹
 struct CGlobal_grid_info
 {
-	int global_nx;//È«¾ÖÍø¸ñÔÚx·½ÏòµÄÊ÷ÊýÁ¿
-	int global_ny;//È«¾ÖÍø¸ñÔÚy·½ÏòµÄÊ÷ÊýÁ¿
-	double tree_width;//Ã¿¸öÊ÷µÄ¿í¶È
-	double tree_height;//Ã¿¸öÊ÷µÄ¸ß¶È
+	int global_nx;//È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	int global_ny;//È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	double tree_width;//Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½
+	double tree_height;//Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ß¶ï¿½
 	CGlobal_grid_info()
 	{
 		global_nx = 1;
@@ -81,11 +81,11 @@ struct p4est_data_t {
 
 	int which_case;
 
-	int LeftBoun;//×ó±ß½ç
-	int RightBoun;//ÓÒ±ß½ç
-	int BottomBoun;//ÏÂ±ß½ç
-	int TopBoun;//ÉÏ±ß½ç
-	double LeftBounVal;//×ó±ß½ç¶¨Ñ¹Á¦/ËÙ¶ÈÖµ
+	int LeftBoun;//ï¿½ï¿½ß½ï¿½
+	int RightBoun;//ï¿½Ò±ß½ï¿½
+	int BottomBoun;//ï¿½Â±ß½ï¿½
+	int TopBoun;//ï¿½Ï±ß½ï¿½
+	double LeftBounVal;//ï¿½ï¿½ß½ç¶¨Ñ¹ï¿½ï¿½/ï¿½Ù¶ï¿½Öµ
 	double RightBounVal;
 	double BottomBounVal;
 	double TopBounVal;
@@ -100,31 +100,31 @@ struct p4est_data_t {
 	double refine_coarsen_time;
 	//
 	double shock_velocity;
-	double used_dt;//ÉÏÒ»²½Ê±¼ä²½³¤
-	double local_dt;  //µ±Ç°½ø³ÌÊ±¼ä²½³¤
-	double delta_time;  //±¾²½Ê±¼ä²½³¤
-	double dt_iter;   //µü´ú²½Ê±¼ä²½³¤
-	double max_dt;    //ÔÊÐíµÄ×î´óÊ±¼ä²½³¤
-	bool equal_dt;    //ÊÇ·ñ¶¨Ê±¼ä²½³¤¼ÆËã
-	int current_step;  //µ±Ç°Ê±¼ä²½
-	int max_time_step; //×î´óÊ±¼ä²½Êý
-	int refine_coarsen_enum;    //ÓÃÄÇÖÖÎïÀíÅÐ¶ÏÊÇ·ñÐèÒª¼ÓÃÜ
-	int minus_level;   //×îÐ¡Ï¸»¯²ã¼¶
-	int max_level;     //×î´óÏ¸»¯²ã¼¶
-	int  refine_period;  //Ï¸»¯¼ä¸ô
-	int repartition_period; //ÖØ»®·Ö¼ä¸ô
-	int last_output_index; //ÉÏ´ÎÊä³öË÷Òý
-	int write_interval_step; //Ð´ÎÄ¼þ²½Êý¼ä¸ô
+	double used_dt;//ï¿½ï¿½Ò»ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½
+	double local_dt;  //ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½
+	double delta_time;  //ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½
+	double dt_iter;   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½
+	double max_dt;    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½
+	bool equal_dt;    //ï¿½Ç·ï¿½Ê±ï¿½ä²½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	int current_step;  //ï¿½ï¿½Ç°Ê±ï¿½ä²½
+	int max_time_step; //ï¿½ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½
+	int refine_coarsen_enum;    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½
+	int minus_level;   //ï¿½ï¿½Ð¡Ï¸ï¿½ï¿½ï¿½ã¼¶
+	int max_level;     //ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ã¼¶
+	int  refine_period;  //Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½
+	int repartition_period; //ï¿½Ø»ï¿½ï¿½Ö¼ï¿½ï¿½
+	int last_output_index; //ï¿½Ï´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	int write_interval_step; //Ð´ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	int profiletype;  //
 	int children_center_type;  //
-	int x_tree_number;  //Ç°´¦ÀíÉú³ÉÍø¸ñÊ¹ÓÃ£¬Ö¸¶¨x·½Ïòp4estÊ÷µÄÊýÄ¿
+	int x_tree_number;  //Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ã£ï¿½Ö¸ï¿½ï¿½xï¿½ï¿½ï¿½ï¿½p4estï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
 	int y_tree_number;  
-	double write_interval_time;//Ð´ÎÄ¼þÊ±¼ä¼ä¸ô
+	double write_interval_time;//Ð´ï¿½Ä¼ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
 	double total_energy_lag;
 	double total_energy_cur;
 	double total_energy_init;
-	double volume_varation_torelarion;/*µ¥¸öÊ±¼ä²½ÔÊÐíµÄÌå»ý±ä»¯*/
-	double dt_increase_percent;//Ê±¼ä²½³¤Ôö³¤ÂÊ
+	double volume_varation_torelarion;/*ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä²½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ä»¯*/
+	double dt_increase_percent;//Ê±ï¿½ä²½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	ofstream EnergyFile;
 	ofstream DistanceFile;
 	ofstream ErrorFile;
@@ -207,7 +207,7 @@ struct p4est_data_t {
 		max_dt = 1e-3;
 		equal_dt = false;
 		current_step = 0;
-		max_time_step = 10000000;
+		max_time_step = 1000;
 
 		volume_varation_torelarion = 0.01;
 		dt_increase_percent = 1.001;
@@ -224,19 +224,19 @@ struct p4est_data_t {
 		ErrorFile.setf(ios::fixed, ios::floatfield);
 		ErrorFile.precision(16);
 	}
-};//É­ÁÖÊý¾Ý
+};//É­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 
-/*×Ô¶¨ÒåÊý¾Ý½á¹¹£¬±ß½çÐÅÏ¢*/
+/*ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ï¿½ß½ï¿½ï¿½ï¿½Ï¢*/
 struct CPointBounInfo
 {
 	enum BouDTY {Inner, Velo, Wall, Symmetry, Free, Press};
-	int enumType;  //±ß½çÀàÐÍ
-	double Val; //±ß½çÖµ
-	CDoubleVector Ncp; //±ß½çµ¥Î»Íâ·¨ÏòÁ¿
-	double Lcp; //±ß½ç±ßµÄ³¤¶È
+	int enumType;  //ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½
+	double Val; //ï¿½ß½ï¿½Öµ
+	CDoubleVector Ncp; //ï¿½ß½çµ¥Î»ï¿½â·¨ï¿½ï¿½ï¿½ï¿½
+	double Lcp; //ï¿½ß½ï¿½ßµÄ³ï¿½ï¿½ï¿½
 	CDoubleVector delta_u_cp;   //uc-up
-	CDoubleVector Uc_cur;  //Íø¸ñÖÐÐÄËÙ¶È
+	CDoubleVector Uc_cur;  //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
 	double Zc;
 
 	CPointBounInfo()
@@ -248,31 +248,31 @@ struct CPointBounInfo
 	}
 };
 
-/*×Ô¶¨ÒåÊý¾Ý½á¹¹£¬´æ´¢½ÚµãÊý¾Ý*/
+/*ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ï¿½æ´¢ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½*/
 struct CPoint_data_t
 {
 	//bool IsBoundary;
-	bool IsHanging;  /*ÊÇ·ñÊÇÐü¹Ò½Úµã*/
-	bool AddDiss; /*ÊÇ·ñÔö¼ÓºÄÉ¢*/
-	/*Ò»¸ö½Úµã×î¶àÓÒÁ½¸ö±ß½ç±ß£¬¿ÉÄÜÊÇÑ¹Á¦+Ñ¹Á¦£¬Ñ¹Á¦+ËÙ¶È£¬ËÙ¶È+ËÙ¶ÈµÈÀàÐÍ±ß½ç*/
-	/*TwoBoun[0]ºÍTwoBoun[1]·Ö±ð´æ´¢±ß½ç±ßµÄÐÅÏ¢*/
-	/*Èç¹ûÎªÄÚ²¿µã£¬TwoBounsµÄenumBou¶¼ÎªÄÚ²¿±ß½çÀàÐÍ*/
+	bool IsHanging;  /*ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò½Úµï¿½*/
+	bool AddDiss; /*ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Óºï¿½É¢*/
+	/*Ò»ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ß£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½+Ñ¹ï¿½ï¿½ï¿½ï¿½Ñ¹ï¿½ï¿½+ï¿½Ù¶È£ï¿½ï¿½Ù¶ï¿½+ï¿½Ù¶Èµï¿½ï¿½ï¿½ï¿½Í±ß½ï¿½*/
+	/*TwoBoun[0]ï¿½ï¿½TwoBoun[1]ï¿½Ö±ï¿½æ´¢ï¿½ß½ï¿½ßµï¿½ï¿½ï¿½Ï¢*/
+	/*ï¿½ï¿½ï¿½Îªï¿½Ú²ï¿½ï¿½ã£¬TwoBounsï¿½ï¿½enumBouï¿½ï¿½Îªï¿½Ú²ï¿½ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 	CPointBounInfo TwoBouns[2];
 	CPointBounInfo BounParent;
-	CDoubleVector master_coord_relaxed[2];  //ËÉ³ÚÔ¼ÊøÌõ¼þÏÂ£¬Á½¸ö¶ËµãµÄ×ø±ê
-	CDoubleVector hanging_coord;  //nÊ±¿ÌÐüµãµÄ×ø±ê
-	CDoubleVector velo_lag;  //n+1Ê±¿Ì½ÚµãËÙ¶È
+	CDoubleVector master_coord_relaxed[2];  //ï¿½É³ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	CDoubleVector hanging_coord;  //nÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	CDoubleVector velo_lag;  //n+1Ê±ï¿½Ì½Úµï¿½ï¿½Ù¶ï¿½
 	double PI_hanging;
 	double pi_constrained_parent;
-	bool add_dissipation_child1;//×ÓÍø¸ñ1ÊÇ·ñÔö¼ÓºÄÉ¢
-	bool add_dissipation_child2;//×ÓÍø¸ñ2ÊÇ·ñÔö¼ÓºÄÉ¢
-	bool add_dissipation_parent;//¸¸Íø¸ñÊÇ·ñÔö¼ÓºÄÉ¢
-	CDoubleMatrix MatrixP;   //½Úµã¾ØÕó£¬ÓÃÓÚÇó½â½ÚµãËÙ¶È
-	CDoubleVector RHS;       //·½³ÌÓÒ¶ËÏî
+	bool add_dissipation_child1;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Óºï¿½É¢
+	bool add_dissipation_child2;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½2ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Óºï¿½É¢
+	bool add_dissipation_parent;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Óºï¿½É¢
+	CDoubleMatrix MatrixP;   //ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½Ù¶ï¿½
+	CDoubleVector RHS;       //ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½
 };
 
-/*×Ô¶¨ÒåÊý¾Ý½á¹¹£¬½ÚµãÖÜÎ§µÄ°ë±ß*/
-/*ÏÂÍ¼±íÃ÷½Úµãp¶ÔÓ¦Íø¸ñµÄÁ½Ìõhalf_edge£¬·Ö±ðÓÃPlusºÍMinus±íÊ¾*/
+/*ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½Î§ï¿½Ä°ï¿½ï¿½*/
+/*ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½pï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½half_edgeï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½Plusï¿½ï¿½Minusï¿½ï¿½Ê¾*/
 /*     Minus       */
 /*-----------------p*/
 /*                 |*/
@@ -282,19 +282,19 @@ struct CPoint_data_t
 /*                 |*/
 struct CHalf_edge_data
 {
-	enum cside{plus, minus}; //corner_side,ÆäÖÐplusºÍminus¶¨ÒåÈçÉÏÍ¼
-	double Rcp;  //×ø±êÈ¨ÖØÒò×Ó
-	double Lcp;  //°ë±ß³¤¶È
-	CDoubleVector Ncp;  //Íâ·¨ÏòÁ¿
+	enum cside{plus, minus}; //corner_side,ï¿½ï¿½ï¿½ï¿½plusï¿½ï¿½minusï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼
+	double Rcp;  //ï¿½ï¿½ï¿½ï¿½È¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	double Lcp;  //ï¿½ï¿½ß³ï¿½ï¿½ï¿½
+	CDoubleVector Ncp;  //ï¿½â·¨ï¿½ï¿½ï¿½ï¿½
 	double Zcp;
 	CDoubleVector delta_u_cp;
 	CDoubleVector Uc_cur;
 	double pi;
-	enum BounDTY {Inner, Velo, Wall, Symmetry, Free, Press};//±ß½çÀàÐÍ£ºÄÚ²¿¡¢ËÙ¶È¡¢¹Ì±Ú¡¢¶Ô³ÆÖá¡¢×ÔÓÉ¡¢Ñ¹Á¦
-	int enumBYD; //±ß½çÌõ¼þ
-	double BYDVal; //¶¨±ß½çÖµ£¬ÈçËÙ¶È¡¢Ñ¹Á¦µÈ
-	bool is_hanging; //°ë±ß×óÓÒÁ½²àÊÇ·ñ´æÔÚ´Ö¡¢Ï¸Íø¸ñ£¬Èç¹û´æÔÚ£¬ÔòÎªÐü¹Ò±ß
-	int which_face; //ÔÚquadµÄÄÄÌõ±ßÉÏ
+	enum BounDTY {Inner, Velo, Wall, Symmetry, Free, Press};//ï¿½ß½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½Ù¶È¡ï¿½ï¿½Ì±Ú¡ï¿½ï¿½Ô³ï¿½ï¿½á¡¢ï¿½ï¿½ï¿½É¡ï¿½Ñ¹ï¿½ï¿½
+	int enumBYD; //ï¿½ß½ï¿½ï¿½ï¿½ï¿½ï¿½
+	double BYDVal; //ï¿½ï¿½ï¿½ß½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È¡ï¿½Ñ¹ï¿½ï¿½ï¿½ï¿½
+	bool is_hanging; //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Ú´Ö¡ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ò±ï¿½
+	int which_face; //ï¿½ï¿½quadï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	CHalf_edge_data()
 	{
 		Rcp = 1.;
@@ -306,8 +306,8 @@ struct CHalf_edge_data
 	}
 };
 
-/*×Ô¶¨ÒåÊý¾Ý½á¹¹£¬Íø¸ñÓç½Ç*/
-/*ÏÂÍ¼±íÃ÷½ÚµãP¶ÔÓ¦Íø¸ñµÄÁ½Ìõhalf_edge£¬·Ö±ðÓÃPlusºÍMinus±íÊ¾*/
+/*ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
+/*ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½Pï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½half_edgeï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½Plusï¿½ï¿½Minusï¿½ï¿½Ê¾*/
 /*              */
 /*--------------p*/
 /*--------------|*/
@@ -326,7 +326,7 @@ struct CHalf_edge_data
 //0--min----plus--3
 struct CCorner_data
 {
-	CHalf_edge_data hdata[2];   //Óç½ÇÁ½Ìõ°ë±ß
+	CHalf_edge_data hdata[2];   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 };
 
 struct CEdge_data
@@ -335,28 +335,28 @@ struct CEdge_data
 	int EdgeType;
 };
 
-/*¸¸×ÓÍø¸ñ±ß½ç±ß£¬¼ÇÂ¼¸¸Íø¸ñ±ßµÄÐÅÏ¢*/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ß£ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ßµï¿½ï¿½ï¿½Ï¢*/
 struct ParentBounInfo
 {
-	bool IsParentChildBoun;   //Íø¸ñ±ßÊÇ·ñÊÇ¸¸×Ó±ß½ç¡£ÈôÊÇ£¬¸Ã±ßÊÇ¸¸Íø¸ñ±ß½ç±ß
+	bool IsParentChildBoun;   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ç¸ï¿½ï¿½Ó±ß½ç¡£ï¿½ï¿½ï¿½Ç£ï¿½ï¿½Ã±ï¿½ï¿½Ç¸ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½
 	bool addDiss;
-	CDoubleVector Ncp[2];   //¸ÃÌõ±ßµÄÍâ·¨ÏòÁ¿
-	double ParentPIStar;   //¸¸Íø¸ñ±ßµÄÑ¹Ç¿
+	CDoubleVector Ncp[2];   //ï¿½ï¿½ï¿½ï¿½ï¿½ßµï¿½ï¿½â·¨ï¿½ï¿½ï¿½ï¿½
+	double ParentPIStar;   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ßµï¿½Ñ¹Ç¿
 	CDoubleVector FluxRelaxed;
 	double Lcp[2];
 	double Zcp;
 
-	CDoubleVector Hanging_velocity;  //ÐüµãËÙ¶È
+	CDoubleVector Hanging_velocity;  //ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
 	ParentBounInfo()
 	{
-		IsParentChildBoun = false;    //Ä¬ÈÏÎª·Ç¸¸×ÓÍø¸ñ±ß½ç
+		IsParentChildBoun = false;    //Ä¬ï¿½ï¿½Îªï¿½Ç¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½
 	}
 };
 
-/*×Ô¶¨ÒåÊý¾Ý½á¹¹£¬´æ´¢quadrantÊý¾Ý*/
+/*ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ï¿½æ´¢quadrantï¿½ï¿½ï¿½ï¿½*/
 typedef struct quad_data
 {
-	/*ÓÃ»§×Ô¶¨ÒåÓç½Ç±àºÅ*/
+	/*ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Ç±ï¿½ï¿½*/
 	/*CNDIM = 0~3*/
 	/*1--------2*/
 	/*----------*/
@@ -365,28 +365,28 @@ typedef struct quad_data
 	/*0--------3*/
 	enum EnumCorner
 	{
-		LEFTBOTTOM, LEFTUP, RIGHTUP, RIGHTBOTTOM   /*×óÏÂ½Ç£¬×óÉÏ½Ç£¬ÓÒÉÏ½Ç£¬ÓÒÏÂ½Ç*/
+		LEFTBOTTOM, LEFTUP, RIGHTUP, RIGHTBOTTOM   /*ï¿½ï¿½ï¿½Â½Ç£ï¿½ï¿½ï¿½ï¿½Ï½Ç£ï¿½ï¿½ï¿½ï¿½Ï½Ç£ï¿½ï¿½ï¿½ï¿½Â½ï¿½*/
 	};
-	CCorner_data m_cndata[CNDIM];   //Íø¸ñÓç½ÇÊý¾Ý
+	CCorner_data m_cndata[CNDIM];   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 	enum EnumEdge
 	{
 		LEFT, RIGHT, BOTTOM, UP
 	};
-	CEdge_data m_edata[CNDIM];   //Íø¸ñ±ßÊý¾Ý
+	CEdge_data m_edata[CNDIM];   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	CPoint_data_t points[CNDIM];  //ËÄ¸öÓç½Ç¶ÔÓ¦ËÄ¸ö½ÚµãÊý¾Ý£¬ÓÃÓÚ±ß½ç´¦Àí
-	double init_node_coords[CNDIM][P4EST_DIM];  //³õÊ¼×ø±ê
+	CPoint_data_t points[CNDIM];  //ï¿½Ä¸ï¿½ï¿½ï¿½Ç¶ï¿½Ó¦ï¿½Ä¸ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½Ú±ß½ç´¦ï¿½ï¿½
+	double init_node_coords[CNDIM][P4EST_DIM];  //ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
 	
-	ParentBounInfo m_pc_edge_data[CNDIM]; //parent-children±ßÊý¾Ý
+	ParentBounInfo m_pc_edge_data[CNDIM]; //parent-childrenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	CVariable m_vara;    //ÎïÀíÁ¿Êý¾Ý
+	CVariable m_vara;    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-	int face_neighbors[2 * CNDIM];    //ÏàÁÚµÄÃæµ¥Ôªquad_id
+	int face_neighbors[2 * CNDIM];    //ï¿½ï¿½ï¿½Úµï¿½ï¿½æµ¥Ôªquad_id
 	int face_num;
-}quad_data_t;  //Ò¶×ÓÍø¸ñÊý¾Ý
+}quad_data_t;  //Ò¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-/*p4estÄ¬ÈÏµÄÓç½Ç±àºÅ*/
+/*p4estÄ¬ï¿½Ïµï¿½ï¿½ï¿½Ç±ï¿½ï¿½*/
 /*2--------3*/
 /*----------*/
 /*----------*/
@@ -397,7 +397,7 @@ enum p4est_enum_corner
 	left_bottom, right_bottom, left_up, right_up,
 };
 
-//ÓÃ»§Êý¾Ý½á¹¹£¨´æ´¢ÎïÀíÁ¿£©
+//ï¿½Ã»ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 typedef struct {
 	sc_array_t *pressure_array;
 	sc_array_t *density_array;
