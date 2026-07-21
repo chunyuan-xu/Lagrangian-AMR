@@ -1,0 +1,25 @@
+# Build & Output Directories
+bin/
+build/
+build_cmake/
+output/
+
+# Third-party & Temporary Archives
+libsc-2.8.5.zip
+libsc-2.8.5/
+p4est-2.8.5/
+
+# Simulation Output Plots & Diagnostics
+*.plt
+ErrorFile.txt
+InstallationLog.txt
+git.txt
+
+# Editor & Tooling Directories
+.claude/
+.gemini/
+.idea/
+.vscode/
+
+# Temporary Notes
+src/On branch main.md

@@ -1,7 +1,8 @@
 #pragma once
 #include <vector>
-#include<sc_options.h>
-#include<algorithm>
+#include "core/vector_matrix.h"
+#include <sc_options.h>
+#include <algorithm>
 using namespace std;
 
 #ifndef p4est_ALE_const
@@ -18,6 +19,17 @@ using namespace std;
 #define CircleCenterBoundary  6     //���Ĳ����߽�
 
 /*�������Ҷ���*/
+#define fixed_iter_num 1  /*򵥵Ĭϵ*/
+/*߽Ͷ*/
+#define InnerBoundary     -1    //ڲ߽
+#define PressureBoundary  1     //ѹ߽
+#define WallBoundary      2     //̱ڱ߽
+#define VelocityBoundary  3     //ٶȱ߽
+#define FreeBoundary      4     //ɱ߽
+#define SymmetryBoundary  5     //Գ߽
+#define CircleCenterBoundary  6     //Ĳ߽
+
+/*Ҷ*/
 #define LeftIndex         0
 #define RightIndex        1
 #define BottomIndex       0
@@ -30,123 +42,7 @@ using namespace std;
 #define m_coliner_eps   1e-13
 
 #define blank '\\'
-constexpr double pi = 3.14159265358979323846;
 #endif // !p4est_ALE_const
-
-
-struct CDoubleVector {
-	double x;
-	double y;
-	CDoubleVector() :x(0), y(0)
-	{}
-	CDoubleVector(double ax, double ay) :x(ax), y(ay)
-	{}
-	bool operator==(const CDoubleVector &a) const
-	{
-		return((fabs(x - a.x)<1e-100) && (fabs(y - a.y)<1e-100));
-	}
-	bool operator!=(const CDoubleVector &a) const
-	{
-		return !(*this == a);
-	}
-	friend CDoubleVector operator+(const CDoubleVector &a, const CDoubleVector &b)
-	{
-		return CDoubleVector(a.x + b.x, a.y + b.y);
-	}
-	friend CDoubleVector operator--(const CDoubleVector &a)/*ȡʸ��a�ķ�����ʸ��*/
-	{
-		return CDoubleVector(-a.x, -a.y);
-	}
-	friend CDoubleVector operator-(const CDoubleVector &a, const CDoubleVector &b)
-	{
-		return CDoubleVector(a.x - b.x, a.y - b.y);
-	}
-	friend CDoubleVector& operator+=(CDoubleVector &a, const CDoubleVector &b)
-	{
-		a.x += b.x;
-		a.y += b.y;
-		return a;
-	}
-	friend CDoubleVector& operator-=(CDoubleVector &a, const CDoubleVector &b)
-	{
-		a.x -= b.x;
-		a.y -= b.y;
-		return a;
-	}
-	friend CDoubleVector operator*(const CDoubleVector &a, double f)
-	{
-		return CDoubleVector(a.x*f, a.y*f);
-	}
-	friend CDoubleVector operator*(double f, const CDoubleVector &a)
-	{
-		return CDoubleVector(a.x*f, a.y*f);
-	}
-	friend CDoubleVector operator/(const CDoubleVector &a, double f)
-	{
-		return CDoubleVector(a.x / f, a.y / f);
-	}
-
-	/*��������ʸ���ĳ˻�*/
-	friend double operator^(const CDoubleVector &a, const CDoubleVector &b)
-	{
-		return a.x*b.x + a.y*b.y;
-	}
-};
-
-struct CDoubleMatrix {
-	double xx;
-	double xy;
-	double yx;
-	double yy;
-	CDoubleMatrix() :xx(0), xy(0), yx(0), yy(0)
-	{}
-	CDoubleMatrix(double axx, double axy, double ayx, double ayy) :
-		xx(axx), xy(axy), yx(ayx), yy(ayy)
-	{}
-
-	friend CDoubleMatrix operator--(const CDoubleMatrix &a)/*ȡ����a����ԭ��ĶԳƵ�*/
-	{
-		return CDoubleMatrix(-a.xx, -a.xy, -a.yx, -a.yy);
-	}
-	friend CDoubleMatrix operator+(const CDoubleMatrix &a, const CDoubleMatrix &b)
-	{
-		return CDoubleMatrix(a.xx + b.xx, a.xy + b.xy, a.yx + b.yx, a.yy + b.yy);
-	}
-	friend CDoubleMatrix operator-(const CDoubleMatrix &a, const CDoubleMatrix &b)
-	{
-		return CDoubleMatrix(a.xx - b.xx, a.xy - b.xy, a.yx - b.yx, a.yy - b.yy);
-	}
-
-	friend CDoubleMatrix& operator+=(CDoubleMatrix &a, CDoubleMatrix &b)
-	{
-		a.xx += b.xx;
-		a.xy += b.xy;
-		a.yx += b.yx;
-		a.yy += b.yy;
-		return a;
-	}
-	friend CDoubleMatrix& operator-=(CDoubleMatrix &a, CDoubleMatrix &b)
-	{
-		a.xx -= b.xx;
-		a.xy -= b.xy;
-		a.yx -= b.yx;
-		a.yy -= b.yy;
-		return a;
-	}
-
-	friend CDoubleMatrix operator*(const CDoubleMatrix &a, double f)
-	{
-		return CDoubleMatrix(a.xx*f, a.xy*f, a.yx*f, a.yy*f);
-	}
-	friend CDoubleMatrix operator*(double f, const CDoubleMatrix &a)
-	{
-		return CDoubleMatrix(a.xx*f, a.xy*f, a.yx*f, a.yy*f);
-	}
-	friend CDoubleMatrix operator/(const CDoubleMatrix &a, double f)
-	{
-		return CDoubleMatrix(a.xx / f, a.xy / f, a.yx / f, a.yy / f);
-	}
-};
 
 enum DoubleCellVariableID
 {
