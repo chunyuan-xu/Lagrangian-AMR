@@ -1,0 +1,207 @@
+name: CI for CMake
+
+on:
+  push:
+    paths:
+      - "**/CMakeLists.txt"
+      - "**.cmake"
+      - "**.cmake.in"
+      - "**.c"
+      - "**.h"
+      - "**.h.in"
+      - ".github/workflows/ci_cmake.yml"
+  pull_request:
+  release:
+    types: [published]
+
+jobs:
+
+  linux:
+    runs-on: ubuntu-22.04
+    name: CMake build on Linux
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        cc: [gcc-9, gcc-10, gcc-11]
+        shared: [false]
+        mpi: [true]
+        include:
+        - shared: true
+          cc: gcc
+          mpi: true
+        - shared: false
+          cc: clang-14
+          mpi: false
+
+    env:
+      CC: ${{ matrix.cc }}
+
+    steps:
+    - uses: actions/checkout@v3
+      name: Checkout source code
+
+    - name: Install system dependencies
+      if: ${{ matrix.mpi }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends \
+            libmpich-dev mpich
+
+    - name: CMake configure
+      run: cmake --preset default -Dmpi:BOOL=${{ matrix.mpi }} --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+    - name: CMake build
+      run: cmake --build --preset default --parallel
+
+    - name: CMake Test
+      run: ctest --preset default
+
+    - name: CMake install (for examples)
+      run: cmake --install build
+
+    - name: CMake configure examples
+      run: cmake -B example/build -S example -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+
+    - name: CMake build examples
+      run: cmake --build example/build --parallel
+
+    - name: Create package
+      if: github.event.action == 'published'
+      run: cpack --config build/CPackConfig.cmake
+
+    - name: Upload package
+      if: github.event.action == 'published'
+      uses: actions/upload-artifact@v3
+      with:
+        name: binary-archive
+        path: build/package
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeOutput.log
+          ./build/CMakeFiles/CMakeError.log
+          ./build/Testing/Temporary/LastTest.log
+
+  mac:
+    runs-on: macos-latest
+    name: CMake build on MacOS
+    timeout-minutes: 20
+
+    strategy:
+      matrix:
+        cc: [clang, gcc-11]
+        shared: [false]
+        include:
+        - shared: true
+          cc: clang
+
+    env:
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+      CC: ${{ matrix.cc }}
+
+    steps:
+    - uses: actions/checkout@v3
+      name: Checkout source code
+
+    - name: Install system dependencies
+      run: brew install open-mpi
+
+    - name: CMake configure
+      run: cmake --preset default --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+    - name: CMake build
+      run: cmake --build --preset default --parallel
+
+    - name: CMake Test
+      run: ctest --preset default
+
+    - name: CMake install (for examples)
+      run: cmake --install build
+
+    - name: CMake configure examples
+      run: cmake -B example/build -S example -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+
+    - name: CMake build examples
+      run: cmake --build example/build --parallel
+
+    - name: Create package
+      if: github.event.action == 'published'
+      run: cpack --config build/CPackConfig.cmake
+
+    - name: Upload package
+      if: github.event.action == 'published'
+      uses: actions/upload-artifact@v3
+      with:
+        name: binary-archive
+        path: build/package
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: mac_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeOutput.log
+          ./build/CMakeFiles/CMakeError.log
+          ./build/Testing/Temporary/LastTest.log
+
+  windows:
+    runs-on: windows-latest
+    name: CMake build on Windows
+    timeout-minutes: 20
+
+    strategy:
+      matrix:
+        shared: [false]
+    # GitHub Action Windows shared libs is generally broken, even with MSYS2, but works on real laptops etc.
+
+    env:
+      CMAKE_GENERATOR: "MinGW Makefiles"
+
+    steps:
+    - uses: actions/checkout@v3
+      name: Checkout source code
+
+    - name: CMake configure without MPI
+      run: cmake --preset default -Dmpi:BOOL=no --install-prefix=${{ runner.temp }} -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }}
+
+    - name: CMake build
+      run: cmake --build --preset default --parallel
+
+    - name: CMake Test
+      run: ctest --preset default
+
+    - name: CMake install (for examples)
+      run: cmake --install build
+
+    - name: CMake configure examples without MPI
+      run: cmake -B example/build -S example -DCMAKE_PREFIX_PATH:PATH=${{ runner.temp }}
+
+    - name: CMake build examples
+      run: cmake --build example/build --parallel
+
+    - name: Create package
+      if: github.event.action == 'published'
+      run: cpack --config build/CPackConfig.cmake
+
+    - name: Upload package
+      if: github.event.action == 'published'
+      uses: actions/upload-artifact@v3
+      with:
+        name: binary-archive
+        path: build/package
+
+    - name: Upload log files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows_cmake_log
+        path: |
+          ./build/CMakeFiles/CMakeOutput.log
+          ./build/CMakeFiles/CMakeError.log
+          ./build/Testing/Temporary/LastTest.log
