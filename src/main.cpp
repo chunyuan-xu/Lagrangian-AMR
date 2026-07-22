@@ -1,6 +1,7 @@
 #include "alg.h"
 #include "amr/amr_criteria.h"
 #include "solver/corner_solver.h"
+#include "io/vtk_writer.h"
 #ifdef _WIN32
 #include <direct.h>
 #else
