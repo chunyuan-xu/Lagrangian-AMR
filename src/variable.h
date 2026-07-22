@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "core/vector_matrix.h"
+#include "physics/eos.h"
 #include <sc_options.h>
 #include <algorithm>
 using namespace std;

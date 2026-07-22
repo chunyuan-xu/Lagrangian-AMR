@@ -5,7 +5,7 @@ using namespace std;
 #endif // !variable_const
 
 
-/*¼¸ºÎÏà¹ØµÄº¯Êı*/
+/*å‡ ä½•ç›¸å…³çš„å‡½æ•°*/
 namespace GeometryAlg {
 	double CalculateCellVolume(const int &coordtype, const CDoubleVector coord[4])
 	{
@@ -42,13 +42,13 @@ namespace GeometryAlg {
 	{
 		return _hypot(pt1.x - pt2.x, pt1.y - pt2.y);
 	}
-	//¼ÆËã²æ»ı(p2-p1)*(p3-p2)
+	//è®¡ç®—å‰ç§¯(p2-p1)*(p3-p2)
 	double cross_product(const CDoubleVector &p1, const CDoubleVector &p2, const CDoubleVector &p3) {
 		return (p2.x - p1.x)*(p3.y - p2.y) - (p2.y - p1.y)*(p3.x - p2.x);
 	}
 
 	
-	//¼ÆËãÈı½ÇĞÎÖØĞÄ triangleCentroid
+	//è®¡ç®—ä¸‰è§’å½¢é‡å¿ƒ triangleCentroid
 
 
 
@@ -56,14 +56,14 @@ namespace GeometryAlg {
 
 
 
-	//¼ÆËãÈı½ÇĞÎÃæ»ı£¨ÓĞÏòÃæ»ıµÄ¾ø¶ÔÖµ£©
+	//è®¡ç®—ä¸‰è§’å½¢é¢ç§¯ï¼ˆæœ‰å‘é¢ç§¯çš„ç»å¯¹å€¼ï¼‰
 
 
 
 
 
-	//ÅĞ¶ÏËÄ±ßĞÎptsÊÇ·ñÊÇ°¼ËÄ±ßĞÎ£¬Èç¹ûÊÇÍ¹ËÄ±ßĞÎ£¬Êä³ö-1¡£
-	//Èç¹ûÊÇ°¼ËÄ±ßĞÎ¶ÔÓ¦°¼µã·Ö±ğÎª0£¬1£¬2£¬3Ê±£¬·Ö±ğÊä³ö0£¬1£¬2£¬3
+	//åˆ¤æ–­å››è¾¹å½¢ptsæ˜¯å¦æ˜¯å‡¹å››è¾¹å½¢ï¼Œå¦‚æœæ˜¯å‡¸å››è¾¹å½¢ï¼Œè¾“å‡º-1ã€‚
+	//å¦‚æœæ˜¯å‡¹å››è¾¹å½¢å¯¹åº”å‡¹ç‚¹åˆ†åˆ«ä¸º0ï¼Œ1ï¼Œ2ï¼Œ3æ—¶ï¼Œåˆ†åˆ«è¾“å‡º0ï¼Œ1ï¼Œ2ï¼Œ3
 	int is_concave_quad(const CDoubleVector pts[4])
 	{
 		CDoubleVector A = pts[0];
@@ -81,12 +81,12 @@ namespace GeometryAlg {
 		int sign3 = (cp3 > eps) ? 1 : (cp3 < -eps) ? -1 : 0;
 		int sign4 = (cp4 > eps) ? 1 : (cp4 < -eps) ? -1 : 0;
 
-		//¼ì²éÊÇ·ñÈ«²¿·Ç¸º£¨Í¹£©
+		//æ£€æŸ¥æ˜¯å¦å…¨éƒ¨éè´Ÿï¼ˆå‡¸ï¼‰
 		if (sign1 >= 0 && sign2 >= 0 && sign3 >= 0 && sign4 >= 0) {
-			return -1;//Í¹
+			return -1;//å‡¸
 		}
 
-		//·ñÔòÊÇ°¼ËÄ±ßĞÎ£¬Êä³ö°¼µã
+		//å¦åˆ™æ˜¯å‡¹å››è¾¹å½¢ï¼Œè¾“å‡ºå‡¹ç‚¹
 		if (sign1 < 0) return 1;
 		if (sign2 < 0) return 2;
 		if (sign3 < 0) return 3;
@@ -94,7 +94,7 @@ namespace GeometryAlg {
 
 	}
 
-	//¼ÆËãÈı½ÇĞÎÖÊĞÄ
+	//è®¡ç®—ä¸‰è§’å½¢è´¨å¿ƒ
 
 
 
@@ -102,9 +102,9 @@ namespace GeometryAlg {
 
 
 
-	//¼ÆËã°¼ËÄ±ßĞÎµÄ¼¸ºÎÖĞĞÄ
+	//è®¡ç®—å‡¹å››è¾¹å½¢çš„å‡ ä½•ä¸­å¿ƒ
 	CDoubleVector concave_quad_centroid(const int & index, const CDoubleVector pts[4]) {
-		//¸ù¾İ°¼µãÎ»ÖÃÑ¡Ôñ·Ö¸î·½Ê½
+		//æ ¹æ®å‡¹ç‚¹ä½ç½®é€‰æ‹©åˆ†å‰²æ–¹å¼
 		CDoubleVector centroid;
 		CDoubleVector m_concave = pts[index];
 		CDoubleVector m_1 = pts[(index + 2) % 4];
@@ -439,8 +439,10 @@ namespace GeometryAlg {
 	}
 }
 
-/*³£ÓÃÎïÀíÁ¿¼ÆËã*/
+/*å¸¸ç”¨ç‰©ç†é‡è®¡ç®—*/
 namespace PhysicalAlg {
+	/* PhysicalAlg routines (CalculateCellMass, EquationOfState, CalculateSoundSpeed) are now defined in src/physics/eos.h */
+	/*
 	double CalculateCellMass(const double &volume, const double &density)
 	{
 		return volume*density;
@@ -453,6 +455,12 @@ namespace PhysicalAlg {
 
 	double CalculateSoundSpeed(const double &gamma, const double &pressure, const double &density)
 	{
+		return sqrt(gamma*pressure / density);
+	};
+	*/
+	/*
+	double CalculateSoundSpeed(const double &gamma, const double &pressure, const double &density)
+	{
 		if (sqrt(gamma*pressure / density) < m_eps)
 		{
 			printf("the sound speed is zero/n");
@@ -460,6 +468,7 @@ namespace PhysicalAlg {
 		}
 		return sqrt(gamma*pressure/ density);
 	};
+	*/
 
 	double CalculateDivergence(const int &enumCoordType, const CDoubleVector coord[4], const CDoubleVector velocity[4])
 	{
@@ -711,25 +720,25 @@ namespace PhysicalAlg {
 			CentroidCoordCur = center_point;
 			CentroidVeloCur = CDoubleVector(0., 0.);
 			gamma = 1.4;
-			if (CentroidCoordCur.x < 0.5 && CentroidCoordCur.y < 0.5) /*×óÏÂ*/
+			if (CentroidCoordCur.x < 0.5 && CentroidCoordCur.y < 0.5) /*å·¦ä¸‹*/
 			{
 				CentroidVeloCur = CDoubleVector(0.8939, 0.8939);
 				density_cur = 1.1;
 				pressure_cur = 1.1;
 			}
-			if (CentroidCoordCur.x < 0.5 && CentroidCoordCur.y > 0.5) /*×óÉÏ*/
+			if (CentroidCoordCur.x < 0.5 && CentroidCoordCur.y > 0.5) /*å·¦ä¸Š*/
 			{
 				CentroidVeloCur = CDoubleVector(0.8939, 0.);
 				density_cur = 0.5065;
 				pressure_cur = 0.35;
 			}
-			if (CentroidCoordCur.x > 0.5 && CentroidCoordCur.y < 0.5) /*ÓÒÏÂ*/
+			if (CentroidCoordCur.x > 0.5 && CentroidCoordCur.y < 0.5) /*å³ä¸‹*/
 			{
 				CentroidVeloCur = CDoubleVector(0., 0.8939);
 				density_cur = 0.5065;
 				pressure_cur = 0.35;
 			}
-			if (CentroidCoordCur.x > 0.5 && CentroidCoordCur.y > 0.5) /*ÓÒÉÏ*/
+			if (CentroidCoordCur.x > 0.5 && CentroidCoordCur.y > 0.5) /*å³ä¸Š*/
 			{
 				CentroidVeloCur = CDoubleVector(0., 0.);
 				density_cur = 1.1;
