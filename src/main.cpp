@@ -1,4 +1,5 @@
 #include "alg.h"
+#include "amr/amr_criteria.h"
 #ifdef _WIN32
 #include <direct.h>
 #else
@@ -1140,7 +1141,7 @@ static int Lagrangian_coarsen_fixed_estimate(p4est_t *p4est, p4est_topidx_t whic
 	int			idCPara;
 	double		parent_gradient;
 
-	/*���������������ݶȱ��붼����������������ܼ���*/
+	/*ݶȱ붼ܼ*/
 
 	switch (p4est_data->refine_coarsen_enum)
 	{
@@ -1178,98 +1179,16 @@ static int Lagrangian_coarsen_fixed_estimate(p4est_t *p4est, p4est_topidx_t whic
 static int Lagrangian_refine_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
 	p4est_quadrant_t *q)
 {
-	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
-	quad_data_t		*data = (quad_data_t *)q->p.user_data;
-	CVariable	*m_vara = (CVariable *)&data->m_vara;
-	int			idCPara;
-	p4est_qcoord_t qx = q->x;
-	p4est_qcoord_t qy = q->y;
-	int			level = q->level;
-	p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
-
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idCPressureGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idCDensityGradient;
-		break;
-	case RefineCriteria::Distance:
-		idCPara = idCentroidCoord_cur;
-		//break;
-	default:
-		break;
-	}
-
-
-
-
-
-
-
-
-
-
-	if (level<p4est_data->minus_level)/*С����Сϸ���㼶���������*/
-	{
-		return 1;
-	}
-	if(level>=p4est_data->max_level)/*���ڵ������ϸ���㼶�����ܼ���*/
-	{
-		return 0;
-	}
-
-	if (p4est_data->refine_coarsen_enum == RefineCriteria::Distance)
-	{
-		double dist = sqrt(pow(m_vara->VecCData[idCentroidCoord_cur].x, 2) +
-			pow(m_vara->VecCData[idCentroidCoord_cur].y, 2));
-		if (fabs(dist - p4est_data->shock_velocity*p4est_data->current_time) < p4est_data->refine_err)
-		{
-			return 1;
-		}
-		else
-		{
-			return 0;
-		}
-	}
-
-	if (m_vara->DouCData[idCPara] > p4est_data->refine_err)
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
+	return AMRAgorithm::RefineErrorEstimate(p4est, which_tree, q);
 }
 
 static int Lagrangian_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
 	p4est_quadrant_t *children[])
 {
-	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
-	quad_data_t		*data;
+	return AMRAgorithm::CoarsenErrorEstimate(p4est, which_tree, children);
+}
+#if 0
 
-
-
-	int			idCPara;
-	double		parent_gradient;
-
-	/*���������������ݶȱ��붼����������������ܼ���*/
-
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idCPressureGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idCDensityGradient;
-		break;
-	default:
-		break;
-	}
-
-	//return 0;
 
 	parent_gradient = 0.;
 	for (int i = 0; i < P4EST_CHILDREN; i++)
@@ -1326,6 +1245,8 @@ static int Lagrangian_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_
 		return 0;
 	}
 }
+#endif
+
 
 static int Lagrangian_init_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
 	p4est_quadrant_t *children[])
