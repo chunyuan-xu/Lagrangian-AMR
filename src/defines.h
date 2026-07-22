@@ -1,6 +1,8 @@
 #pragma once
-#include "Variable.h"
 #include <fstream>
+#include <string>
+#include "io/config_parser.h"
+#include "Variable.h"
 
 enum ProblemNo
 {
@@ -136,44 +138,6 @@ struct p4est_data_t {
 		x_tree_number = 1;
 		y_tree_number = 1;
 		refine_coarsen_enum = RefineCriteria::DensityGradient;
-		if (which_case == ProblemNo::NohCartesian)
-		{
-			end_time = 0.6;
-			refine_coarsen_enum = RefineCriteria::Distance;
-		}
-		if (which_case == ProblemNo::TaylorGreen)
-		{
-			end_time = 0.5;
-		}
-		if (which_case == ProblemNo::NohPolar)
-		{
-			end_time = 0.6;
-		}
-		if (which_case == ProblemNo::SedovCartesian)
-		{
-			end_time = 1.;
-		}
-		if (which_case == ProblemNo::Sedov1DCartesian)
-		{
-			end_time = 1.;
-		}
-		if (which_case == ProblemNo::SedovPolar)
-		{
-			end_time = 1.;
-		}
-		if (which_case == ProblemNo::TriplePoint)
-		{
-			end_time = 3.;
-			m_grid_info.global_nx = 70;
-			m_grid_info.global_ny = 30;
-			m_grid_info.tree_height = 1.;
-			m_grid_info.tree_width = 1.;
-		}
-		if (which_case == ProblemNo::SodCartesian
-			|| which_case == ProblemNo::TwoDimRiemann)
-		{
-			end_time = 0.2;
-		}
 
 		local_dt = 100000.;
 		delta_time = 1e-5;
@@ -223,6 +187,21 @@ struct p4est_data_t {
 		ErrorFile.open("ErrorFile.txt");
 		ErrorFile.setf(ios::fixed, ios::floatfield);
 		ErrorFile.precision(16);
+	}
+
+	void load_from_config(const IOAlgorithm::ConfigParser& cfg) {
+		if (cfg.HasKey("which_case")) which_case = cfg.GetInt("which_case", which_case);
+		if (cfg.HasKey("start_time")) start_time = cfg.GetDouble("start_time", start_time);
+		if (cfg.HasKey("end_time")) end_time = cfg.GetDouble("end_time", end_time);
+		if (cfg.HasKey("delta_time")) delta_time = cfg.GetDouble("delta_time", delta_time);
+		if (cfg.HasKey("refine_coarsen_enum")) refine_coarsen_enum = cfg.GetInt("refine_coarsen_enum", refine_coarsen_enum);
+		if (cfg.HasKey("minus_level")) minus_level = cfg.GetInt("minus_level", minus_level);
+		if (cfg.HasKey("max_level")) max_level = cfg.GetInt("max_level", max_level);
+		if (cfg.HasKey("refine_err")) refine_err = cfg.GetDouble("refine_err", refine_err);
+		if (cfg.HasKey("coarsen_error")) coarsen_error = cfg.GetDouble("coarsen_error", coarsen_error);
+		if (cfg.HasKey("refine_period")) refine_period = cfg.GetInt("refine_period", refine_period);
+		if (cfg.HasKey("write_interval_time")) write_interval_time = cfg.GetDouble("write_interval_time", write_interval_time);
+		if (cfg.HasKey("write_interval_step")) write_interval_step = cfg.GetInt("write_interval_step", write_interval_step);
 	}
 };//ɭ������
 

@@ -2,6 +2,7 @@
 #include "amr/amr_criteria.h"
 #include "solver/corner_solver.h"
 #include "io/vtk_writer.h"
+#include "io/config_parser.h"
 #ifdef _WIN32
 #include <direct.h>
 #else
@@ -6370,6 +6371,9 @@ int main(int argc, char **argv)
 
 	sc_init(mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
 	p4est_init(NULL, SC_LP_PRODUCTION);
+
+	IOAlgorithm::ConfigParser cfg("param.ini");
+	ctx.load_from_config(cfg);
 
 	P4EST_GLOBAL_PRODUCTIONF("This is the p4est %dD demo for Lagrangian hydrodynamics\n", P4EST_DIM);
 

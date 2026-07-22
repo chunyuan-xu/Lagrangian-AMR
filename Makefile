@@ -25,7 +25,7 @@ else
   EXEEXT :=
 endif
 
-OBJS := $(OBJDIR)/main.o $(OBJDIR)/alg.o
+OBJS := $(OBJDIR)/main.o $(OBJDIR)/alg.o $(OBJDIR)/config_parser.o
 EXE  := $(BINDIR)/AMR_Solver$(EXEEXT)
 
 .PHONY: all p4est run clean cleanall
@@ -53,6 +53,9 @@ $(OBJDIR)/main.o: $(SRCDIR)/main.cpp $(SRCDIR)/alg.h $(SRCDIR)/defines.h $(SRCDI
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(OBJDIR)/alg.o: $(SRCDIR)/alg.cpp $(SRCDIR)/alg.h $(SRCDIR)/defines.h | $(OBJDIR)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+
+$(OBJDIR)/config_parser.o: $(SRCDIR)/io/config_parser.cpp $(SRCDIR)/io/config_parser.h | $(OBJDIR)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 run: $(EXE)
