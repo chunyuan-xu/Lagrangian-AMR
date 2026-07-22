@@ -1,5 +1,6 @@
 #include "alg.h"
 #include "amr/amr_criteria.h"
+#include "solver/corner_solver.h"
 #ifdef _WIN32
 #include <direct.h>
 #else
