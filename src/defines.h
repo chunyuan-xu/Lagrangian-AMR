@@ -190,7 +190,21 @@ struct p4est_data_t {
 	}
 
 	void load_from_config(const IOAlgorithm::ConfigParser& cfg) {
-		if (cfg.HasKey("which_case")) which_case = cfg.GetInt("which_case", which_case);
+		if (cfg.HasKey("which_case")) {
+			std::string case_str = cfg.GetString("which_case", "");
+			if (case_str == "SedovPolar") which_case = ProblemNo::SedovPolar;
+			else if (case_str == "SedovCartesian") which_case = ProblemNo::SedovCartesian;
+			else if (case_str == "Sedov1DCartesian") which_case = ProblemNo::Sedov1DCartesian;
+			else if (case_str == "NohPolar") which_case = ProblemNo::NohPolar;
+			else if (case_str == "NohCartesian") which_case = ProblemNo::NohCartesian;
+			else if (case_str == "Saltzman") which_case = ProblemNo::Saltzman;
+			else if (case_str == "SodPolar") which_case = ProblemNo::SodPolar;
+			else if (case_str == "SodCartesian") which_case = ProblemNo::SodCartesian;
+			else if (case_str == "TriplePoint") which_case = ProblemNo::TriplePoint;
+			else if (case_str == "TwoDimRiemann") which_case = ProblemNo::TwoDimRiemann;
+			else if (case_str == "TaylorGreen") which_case = ProblemNo::TaylorGreen;
+			else which_case = cfg.GetInt("which_case", which_case); // fallback for integer
+		}
 		if (cfg.HasKey("start_time")) start_time = cfg.GetDouble("start_time", start_time);
 		if (cfg.HasKey("end_time")) end_time = cfg.GetDouble("end_time", end_time);
 		if (cfg.HasKey("delta_time")) delta_time = cfg.GetDouble("delta_time", delta_time);
