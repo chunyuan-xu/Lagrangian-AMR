@@ -5113,6 +5113,34 @@ static void write_solution(p4est_t *p4est, const int &time_step)
 	sc_array_destroy(rho_array);
 	sc_array_destroy(internal_energy_array);
 	sc_array_destroy(temperature_array);
+
+	// Patch PVTU file to include TimeValue for Tecplot/Paraview
+	if (p4est->mpirank == 0) {
+		char pvtu_filename[1024];
+		snprintf(pvtu_filename, sizeof(pvtu_filename), "%s.pvtu", filename);
+		FILE *f = fopen(pvtu_filename, "rb");
+		if (f) {
+			fseek(f, 0, SEEK_END);
+			long fsize = ftell(f);
+			fseek(f, 0, SEEK_SET);
+			char *string = (char *)malloc(fsize + 1);
+			fread(string, 1, fsize, f);
+			fclose(f);
+			string[fsize] = 0;
+			
+			char *insert_pos = strstr(string, "</VTKFile>");
+			if (insert_pos) {
+				*insert_pos = '\0';
+				f = fopen(pvtu_filename, "wb");
+				if (f) {
+					fprintf(f, "%s", string);
+					fprintf(f, "  <FieldData>\n    <DataArray type=\"Float64\" Name=\"TimeValue\" NumberOfTuples=\"1\" format=\"ascii\">\n      %.16g\n    </DataArray>\n  </FieldData>\n</VTKFile>\n", ((p4est_data_t *)p4est->user_pointer)->current_time);
+					fclose(f);
+				}
+			}
+			free(string);
+		}
+	}
 }
 
 
