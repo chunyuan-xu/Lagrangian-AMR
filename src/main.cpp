@@ -1217,7 +1217,7 @@ predict_timestep(p4est_t *p4est)
 	int		mpiret;
 	mpiret =
 		sc_MPI_Allreduce(&p4est_data->local_dt, &p4est_data->delta_time,
-			1, sc_MPI_DOUBLE, sc_MPI_MAX, p4est->mpicomm);
+			1, sc_MPI_DOUBLE, sc_MPI_MIN, p4est->mpicomm);
 	SC_CHECK_MPI(mpiret);
 }
 
@@ -2779,9 +2779,6 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 void MatrixAssemble(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	my_user_data_t *m_user_data = (my_user_data_t *)malloc(sizeof(my_user_data_t));
-	m_user_data->p4est_data = (void *)p4est_data;
-	m_user_data->quad_data = (void *)ghost_data;
 
 	
 	p4est_iterate(p4est,
@@ -2798,7 +2795,7 @@ void MatrixAssemble(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 
 	p4est_iterate(p4est,
 		ghost,
-		(void*)m_user_data,
+		(void*)ghost_data,
 		NULL,
 		NULL,  
 #ifdef P4_TO_P8
@@ -3049,13 +3046,10 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 static void ComputeCornerNodeVelocity(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	my_user_data_t *m_user_data = (my_user_data_t *)malloc(sizeof(my_user_data_t));
-	m_user_data->p4est_data = (void *)p4est_data;
-	m_user_data->quad_data = (void *)ghost_data;
 
 	p4est_iterate(p4est,
 		ghost,          
-		(void*)m_user_data,   
+		(void*)ghost_data,   
 		NULL, 
 		NULL,
 #ifdef P4_TO_P8
