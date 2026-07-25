@@ -3697,8 +3697,8 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 static void Get_AMR_BDY_info(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 {
 	p4est_iterate(p4est,
-		NULL,          
-		NULL,   
+		ghost,          
+		(void*)ghost_data,   
 		NULL, 
 		quadrant_get_children_hanging_info_callback,
 #ifdef P4_TO_P8
@@ -3764,14 +3764,22 @@ static void StatTotalEnergyError(p4est_t * p4est)
 
 #endif
 		NULL);         
+
+	double local_energy_cur = p4est_data->total_energy_cur;
+	double local_energy_lag = p4est_data->total_energy_lag;
+	sc_MPI_Allreduce(&local_energy_cur, &p4est_data->total_energy_cur, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
+	sc_MPI_Allreduce(&local_energy_lag, &p4est_data->total_energy_lag, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
+
 	if (p4est_data->current_step == 1)
 	{
 		p4est_data->total_energy_init = p4est_data->total_energy_cur;
 	}
 
-	p4est_data->EnergyFile << blank << blank << p4est_data->current_time << blank << blank <<
-		(p4est_data->total_energy_lag - p4est_data->total_energy_cur) /
-		p4est_data->total_energy_cur << endl;
+	if (p4est->mpirank == 0) {
+		p4est_data->EnergyFile << blank << blank << p4est_data->current_time << blank << blank <<
+			(p4est_data->total_energy_lag - p4est_data->total_energy_cur) /
+			p4est_data->total_energy_cur << endl;
+	}
 
 	P4EST_GLOBAL_PRODUCTIONF("the total energy error is %#.16g\n", (p4est_data->total_energy_lag - p4est_data->total_energy_init) /
 		p4est_data->total_energy_init);
@@ -3931,6 +3939,7 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 
 		
 		CalculateCornerRcpLcpNcp(p4est);
+		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
 		
 		Get_AMR_BDY_info(p4est,ghost,ghost_data);
@@ -4337,6 +4346,10 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 					
 					child_data->m_vara.DouCnData[j][k] = parent_data->m_vara.DouCnData[j][k];
 				}
+			}
+			for (int j = 0; j < idIntCellVariableNum; j++)
+			{
+				child_data->m_vara.IntCData[j] = parent_data->m_vara.IntCData[j];
 			}
 			for (int j = 0; j < idVectorCellVariableNum; j++)
 			{
