@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" version="1.1" width="188.303" height="188.303" viewBox="0 0 188.303 188.303">
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" d="M0 0V85.0508H-85.0508V0Z" fill="#ffffff"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" stroke-width="1.19553" stroke-linecap="butt" stroke-miterlimit="10" stroke-linejoin="miter" fill="none" stroke="#000000" d="M0 0V85.0508H-85.0508V0Z"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" d="M0 0V85.0508H85.0508V0Z" fill="#ffffff"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" stroke-width="1.19553" stroke-linecap="butt" stroke-miterlimit="10" stroke-linejoin="miter" fill="none" stroke="#000000" d="M0 0V85.0508H85.0508V0Z"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" d="M0 0V-85.0508H-85.0508V0Z" fill="#ffffff"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" stroke-width="1.19553" stroke-linecap="butt" stroke-miterlimit="10" stroke-linejoin="miter" fill="none" stroke="#000000" d="M0 0V-85.0508H-85.0508V0Z"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" d="M0 0V-85.0508H85.0508V0Z" fill="#ffffff"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" stroke-width="1.19553" stroke-linecap="butt" stroke-miterlimit="10" stroke-linejoin="miter" fill="none" stroke="#000000" d="M0 0V-85.0508H85.0508V0Z"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" stroke-width="1.19553" stroke-linecap="butt" stroke-miterlimit="10" stroke-linejoin="miter" fill="none" stroke="#000000" d="M-85.04042-42.5202H0"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" stroke-width="1.19553" stroke-linecap="butt" stroke-miterlimit="10" stroke-linejoin="miter" fill="none" stroke="#000000" d="M-42.5202-85.04042V0"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" d="M2.24162-42.5202C2.24162-41.28218 1.238-40.27858 0-40.27858-1.238-40.27858-2.24162-41.28218-2.24162-42.5202-2.24162-43.75822-1.238-44.76183 0-44.76183 1.238-44.76183 2.24162-43.75822 2.24162-42.5202ZM0-42.5202" fill="#ff0000"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" d="M-10.2972-40.0612V-36.47461H-6.7106V-40.0612ZM-6.7106-36.47461" fill="#ff0000"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" d="M-6.04556-35.80956V-32.22298H-2.45897V-35.80956ZM-2.45897-32.22298" fill="#ff0000"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" stroke-width=".79701" stroke-linecap="butt" stroke-miterlimit="10" stroke-linejoin="miter" fill="none" stroke="#000000" d="M-21.26009 0V12.89746"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" stroke-width=".79701" stroke-linecap="butt" stroke-miterlimit="10" stroke-linejoin="miter" fill="none" stroke="#000000" d="M0-21.26009H12.89746"/>
+<path transform="matrix(1,0,0,-1,94.151,94.15199)" stroke-width=".79701" stroke-linecap="butt" stroke-miterlimit="10" stroke-linejoin="miter" fill="none" stroke="#000000" d="M-21.26009-42.5202V-55.41766"/>
+</svg>

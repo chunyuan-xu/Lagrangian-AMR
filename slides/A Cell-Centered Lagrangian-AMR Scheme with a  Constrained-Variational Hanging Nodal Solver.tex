@@ -1,0 +1,631 @@
+\documentclass{beamer}
+\usepackage{ctex, hyperref}
+\usepackage[T1]{fontenc}
+
+% other packages
+\usepackage{latexsym,amsmath,xcolor,multicol,booktabs,calligra}
+\usepackage{graphicx,pstricks,listings,stackengine}
+
+% ======== 主题设置 ========
+% 如果您本地有清华模板文件 Tsinghua.sty，请取消下一行的注释，并注释掉后面的后备主题
+% \usepackage{Tsinghua} 
+
+% 极简学术后备主题 (如果您没有 Tsinghua.sty，可以直接使用以下配置)
+\usetheme{Boadilla}
+\usecolortheme{whale}
+\setbeamertemplate{navigation symbols}{} % 隐藏导航符号，追求极简
+\setbeamertemplate{blocks}[rounded][shadow=false] % 扁平化 block
+
+% ======== 基础信息 ========
+\author[Chunyuan Xu]{Chunyuan Xu \\ {\small xcyuan@mail.ustc.edu.cn}}
+\title[Cell-Centered Lagrangian-AMR]{A Cell-Centered Lagrangian-AMR Scheme with a \\ Constrained-Variational Hanging Nodal Solver}
+\subtitle{ICCFD13 Milan Italy 2026}
+\institute[IAPCM]{Institute of Applied Physics and Computational Mathematics \\ Beijing, China}
+\date{July 2026}
+
+% ======== 自定义命令 ========
+\def\cmd#1{\texttt{\color{red}\footnotesize $\backslash$#1}}
+\def\env#1{\texttt{\color{blue}\footnotesize #1}}
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+\definecolor{halfgray}{gray}{0.55}
+
+\begin{document}
+	
+	\kaishu
+	
+	% ==================== Slide 1: Title ====================
+	\begin{frame}
+		\titlepage
+	\end{frame}
+	
+	% ==================== Slide 2: Outline ====================
+	\begin{frame}{Outline (汇报大纲)}
+		\tableofcontents[hideallsubsections]
+	\end{frame}
+	
+	% ==========================================================
+	\section{第一部分：研究背景与动机 (Introduction \& Motivation)}
+	% ==========================================================
+	
+	% ==================== Slide 3 ====================
+	\begin{frame}{研究背景：多尺度压缩流 (Multi-Scale Compressible Flows)}
+		\begin{itemize}
+			\item \textbf{典型应用场景：}
+			\begin{itemize}
+				\item 惯性约束聚变 (Inertial Confinement Fusion, ICF)
+				\item 天体物理爆炸 (Astrophysical explosions)
+			\end{itemize}
+			\item \textbf{物理特征：} 存在强烈的激波、复杂的多物质界面。
+			\vspace{0.5cm}
+			\item \textbf{Lagrangian 方法的天然优势：}
+			\begin{itemize}
+				\item \textcolor{deepblue}{界面追踪：} 网格随流体运动，自然追踪物质界面，避免数值混合。
+				\item \textcolor{deepblue}{自适应分辨率：} 网格点自动聚集在压缩区，具备天然的激波捕捉能力。
+			\end{itemize}
+		\end{itemize}
+	\end{frame}
+	
+	% ==================== Slide 4 ====================
+	\begin{frame}{Lagrangian AMR 的发展演进}
+		\begin{block}{早期：基于 Patch 的框架 (Patch-based methods)}
+			\begin{itemize}
+				\item 成功解决了网格层级间的同步问题。
+				\item \textbf{缺陷：} 在强动态或湍流中，计算开销大，负载均衡极其复杂。
+			\end{itemize}
+		\end{block}
+		\vspace{0.3cm}
+		\begin{block}{近期：逐胞局部细化 (Cell-by-cell localized refinement)}
+			\begin{itemize}
+				\item 提高空间选择性，减少网格诱导的各向异性。
+				\item \textbf{主流方向：} 利用四边形单元的各向异性自适应 ALE 格式，或基于非结构多边形/四面体网格。
+			\end{itemize}
+		\end{block}
+	\end{frame}
+	
+	% ==================== Slide 5 ====================
+	\begin{frame}{网格拓扑的选择：Unstructured vs. Quadtree}
+		\begin{columns}
+			\column{0.5\textwidth}
+			\textbf{非结构多边形网格：}
+			\begin{itemize}
+				\item 将悬点作为活跃自由度。
+				\item \textcolor{red}{挑战：} 胞元演化为任意多边形易导致几何畸变，网格容易交错 (Tangling)。
+			\end{itemize}
+			
+			\column{0.5\textwidth}
+			\textbf{四叉树 (Quadtree) 网格：}
+			\begin{itemize}
+				\item 严格保持四边形拓扑。
+				\item \textcolor{deepblue}{挑战：} 必须处理非一致接口 (Non-conforming interfaces) 与悬点 (Hanging nodes)。
+			\end{itemize}
+		\end{columns}
+		\vspace{0.5cm}
+		\begin{alertblock}{核心冲突}
+			如何约束悬点以保持几何连续性，同时\textbf{不破坏物理守恒性}？
+		\end{alertblock}
+	\end{frame}
+	
+	% ==================== Slide 6 ====================
+	\begin{frame}{核心科学问题 (Core Scientific Problem)}
+		\begin{center}
+			\large 本文提出：\textbf{基于约束变分的悬点求解器} \\
+			\normalsize (A Constrained-Variational Hanging Nodal Solver)
+		\end{center}
+		\vspace{0.3cm}
+		\textbf{研究目标：}
+		\begin{enumerate}
+			\item \textbf{几何兼容：} 满足几何守恒律 (GCL)，防止网格交叉。
+			\item \textbf{物理守恒：} 严格保证跨层级过渡时的质量、动量和总能量守恒。
+			\item \textbf{算法闭环：} 将共线约束表述为变分问题，通过\textbf{拉格朗日乘子 (广义约束力)}实现力的平衡与能量分配。
+		\end{enumerate}
+	\end{frame}
+	
+	% ==========================================================
+	\section{第二部分：控制方程与基准格式 (Governing Equations \& Baseline Scheme)}
+	% ==========================================================
+	
+	% ==================== Slide 7 ====================
+	\begin{frame}{拉格朗日气体动力学控制方程}
+		对于以速度 $U$ 移动的控制体积 $\Omega(t)$，边界为 $\partial\Omega$，外法向为 $N$，其积分守恒定律为：
+		
+		\begin{block}{Integral Conservation Laws}
+			\begin{align*}
+				\frac{d}{dt}\int_{\Omega}d\Omega - \int_{\partial\Omega}U\cdot N~dL &= 0 \quad \text{(几何守恒 GCL)} \\
+				\frac{d}{dt}\int_{\Omega}\rho~d\Omega &= 0 \quad \text{(质量守恒)} \\
+				\frac{d}{dt}\int_{\Omega}\rho U~d\Omega + \int_{\partial\Omega}PN~dL &= 0 \quad \text{(动量守恒)} \\
+				\frac{d}{dt}\int_{\Omega}\rho E~d\Omega + \int_{\partial\Omega}PU\cdot N~dL &= 0 \quad \text{(总能守恒)}
+			\end{align*}
+		\end{block}
+		
+		状态方程 (EOS) 闭合系统：对于理想气体 $P = (\gamma-1)\rho e$。
+	\end{frame}
+	
+	% ==================== Slide 8 ====================
+	\begin{frame}{一致网格上的子胞几何定义 (Subcell Geometry)}
+		\begin{columns}
+			\column{0.4\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 1: \\ 四边形胞元 $\Omega_c$ 符号定义}
+				\end{minipage}}
+			\end{figure}
+			
+			\column{0.6\textwidth}
+			\textbf{局部符号约定：}
+			\begin{itemize}
+				\item 相邻节点设为 $p^+$ (逆时针) 和 $p^-$ (顺时针)。
+				\item 半边长度与法向：\\
+				$L_{\overline{p}}^c = \frac{1}{2}L_{pp^+}, \quad N_{\overline{p}}^c = N_{pp^+}$ \\
+				$L_{\underline{p}}^c = \frac{1}{2}L_{pp^-}, \quad N_{\underline{p}}^c = N_{pp^-}$
+				\item 相应的半边节点压力为 $\Pi_{\overline{p}}^c$ 和 $\Pi_{\underline{p}}^c$。
+			\end{itemize}
+		\end{columns}
+	\end{frame}
+	
+	% ==================== Slide 9 ====================
+	\begin{frame}{声学黎曼节点求解器 (Acoustic Riemann Solver)}
+		利用法向的一维声学近似对半边压力进行线性化：
+		\begin{exampleblock}{Acoustic Approximations}
+			\begin{align*}
+				\Pi_{\overline{p}}^c &= P_c + Z_c(U_p - U_c)\cdot N_{\overline{p}}^c \\
+				\Pi_{\underline{p}}^c &= P_c + Z_c(U_p - U_c)\cdot N_{\underline{p}}^c
+			\end{align*}
+		\end{exampleblock}
+		\vspace{0.2cm}
+		其中 $Z_c = \rho_c a_c$ 为局部声阻抗。\\
+		\vspace{0.3cm}
+		\textbf{动量守恒条件 (节点力平衡)：} 所有围绕节点 $p$ 的胞元施加的子胞力总和必须为零：
+		\begin{equation*}
+			\sum_{c\in C(p)} \left(\Pi_{\overline{p}}^c L_{\overline{p}}^c N_{\overline{p}}^c + \Pi_{\underline{p}}^c L_{\underline{p}}^c N_{\underline{p}}^c \right) = 0
+		\end{equation*}
+	\end{frame}
+	
+	% ==================== Slide 10 ====================
+	\begin{frame}{标准节点速度的解析求解 (Resolution of Nodal Velocity)}
+		将声学近似代入节点力平衡方程，可显式求解出唯一的节点速度 $U_p$：
+		
+		\begin{block}{Nodal Velocity Formula}
+			\begin{equation*}
+				U_p = M_p^{-1} \sum_{c\in C(p)} (M_p^c U_c - P_c L_p^c N_p^c)
+			\end{equation*}
+		\end{block}
+		
+		\begin{itemize}
+			\item $L_p^c N_p^c = L_{\overline{p}}^c N_{\overline{p}}^c + L_{\underline{p}}^c N_{\underline{p}}^c$ (子胞角矢量)
+			\item $M_p = \sum_{c\in C(p)} M_p^c$ 为 $2\times 2$ 节点矩阵。
+			\item $M_p^c = Z_c (L_{\overline{p}}^c N_{\overline{p}}^c \otimes N_{\overline{p}}^c + L_{\underline{p}}^c N_{\underline{p}}^c \otimes N_{\underline{p}}^c)$
+		\end{itemize}
+	\end{frame}
+	
+	% ==================== Slide 11 ====================
+	\begin{frame}{基准格式的变分观点 (Variational Interpretation)}
+		\textbf{关键洞察：} 上述求解过程等价于求解一个\textbf{无约束二次泛函}的极值问题。
+		
+		定义节点 $p$ 的局部泛函：
+		\begin{block}{Unconstrained Quadratic Functional}
+			\begin{equation*}
+				\mathcal{J}(U_p) = \frac{1}{2}U_p^T M_p U_p - U_p^T \sum_{c\in C(p)}(M_p^c U_c - P_c L_p^c N_p^c)
+			\end{equation*}
+		\end{block}
+		
+		\vspace{0.2cm}
+		应用一阶平稳必要条件 $\frac{\partial\mathcal{J}}{\partial U_p} = 0$，直接导出：
+		\begin{equation*}
+			M_p U_p = \sum_{c\in C(p)} (M_p^c U_c - P_c L_p^c N_p^c)
+		\end{equation*}
+		\textit{(这为后续引入约束条件奠定了理论基础)}
+	\end{frame}
+	
+	% ==========================================================
+	\section{第三部分：约束变分悬点求解器 (Constrained-Variational Hanging Nodal Solver)}
+	% ==========================================================
+	
+	% ==================== Slide 12 ====================
+	\begin{frame}{四叉树非一致接口 (Non-conforming Interfaces)}
+		\begin{columns}
+			\column{0.4\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 2: \\ Quadtree 非一致接口}
+				\end{minipage}}
+			\end{figure}
+			
+			\column{0.6\textwidth}
+			在自适应网格中，粗细胞元交界处会产生\textbf{悬点 (Hanging Node, $h$)}。
+			\vspace{0.2cm}
+			\begin{itemize}
+				\item $p$: 主节点 (Master node)
+				\item $h$: 悬点
+				\item 子胞半边发生变化：对于共线段，法向一致 $N_{\underline{p}}^c = N_{\overline{h}}^c$。父胞的半边长度减半。
+			\end{itemize}
+		\end{columns}
+	\end{frame}
+	
+	% ==================== Slide 13 ====================
+	\begin{frame}{运动学共线约束 (Kinematic Collinearity Constraint)}
+		悬点 $h$ 不是独立的自由度，其运动受制于相邻的主节点 $p_1$ 和 $p_2$。必须引入\textbf{全息约束 (Holonomic constraint)}：
+		
+		\begin{block}{Collinearity Constraint}
+			\begin{equation*}
+				C(U_h) \equiv U_h - [(1-\alpha)U_{p_1} + \alpha U_{p_2}] = 0
+			\end{equation*}
+		\end{block}
+		
+		\begin{itemize}
+			\item 其中 $\alpha = \frac{L_{p_1 h}}{L_{p_1 p_2}}$。
+			\item 对于标准的 2:1 四叉树网格，悬点位于中点，此时 $\alpha = 1/2$。
+			\item 该约束强制决定了悬点的速度 $U_h$。
+		\end{itemize}
+	\end{frame}
+	
+	% ==================== Slide 14 ====================
+	\begin{frame}{约束与几何守恒律 (Connection to GCL)}
+		\begin{itemize}
+			\item \textbf{为什么必须共线？} \\
+			共线约束确保非一致接口在整个模拟过程中变形为\textbf{单一连续的物质线}。
+			\vspace{0.3cm}
+			\item \textbf{数学意义：} \\
+			在网格细化极限下，这保证了离散的网格运动收敛于连续的映射 $x(t)$。
+			\vspace{0.3cm}
+			\item \textbf{物理意义：} \\
+			避免了网格出现“空洞”或“重叠”，在积分形式上严格满足\textbf{几何守恒律 (Geometric Conservation Law, GCL)}。
+		\end{itemize}
+	\end{frame}
+	
+	% ==================== Slide 15 ====================
+	\begin{frame}{构造约束变分体系 (Constrained Variational Setup)}
+		由于运动受到约束，原有的无约束泛函极值问题转化为\textbf{约束变分问题}。
+		
+		引入二维拉格朗日乘子向量 $\lambda \in \mathbb{R}^2$，定义悬点 $h$ 的 Lagrangian 泛函：
+		\begin{block}{Lagrangian Functional}
+			\begin{equation*}
+				\mathcal{L}(U_h, \lambda) = \mathcal{J}(U_h) + \lambda^T C(U_h)
+			\end{equation*}
+		\end{block}
+		
+		其中：
+		\begin{itemize}
+			\item $\mathcal{J}(U_h)$ 为悬点处的局部二次泛函。
+			\item $C(U_h)$ 为共线约束方程。
+		\end{itemize}
+	\end{frame}
+	
+	% ==================== Slide 16 ====================
+	\begin{frame}{拉格朗日乘子的解析推导 (Derivation of Lagrange Multiplier)}
+		求解一阶平稳必要条件：$\frac{\partial\mathcal{L}}{\partial U_h} = 0$ 和 $\frac{\partial\mathcal{L}}{\partial \lambda} = 0$。
+		
+		由于 $U_h$ 已由约束完全决定，上述系统退化为直接求解 $\lambda$ 的显式表达式：
+		
+		\begin{block}{Explicit Expression for $\lambda$}
+			\begin{equation*}
+				\lambda = - \left[ M_h U_h - \sum_{c\in C(h)} (M_h^c U_c - P_c L_h^c N_h^c) \right]
+			\end{equation*}
+		\end{block}
+		
+		\textbf{算法优势：} 该式完全由已知的物理状态和约束速度计算得出，\textcolor{deepblue}{无需额外求解任何线性系统}，计算开销极低。
+	\end{frame}
+	
+	% ==================== Slide 17 ====================
+	\begin{frame}{物理诠释：广义约束力 (The Constraint Force)}
+		为方便后续离散化，我们将拉格朗日乘子定义为\textbf{约束力 (Constraint Force)}：
+		\begin{equation*}
+			F_{cons,h} \equiv \lambda = - \left[ M_h U_h - \sum_{c\in C(h)} (M_h^c U_c - P_c L_h^c N_h^c) \right]
+		\end{equation*}
+		
+		\vspace{0.3cm}
+		\begin{alertblock}{物理力学类比}
+			在经典力学中，对质点运动施加几何约束会产生反作用力（即方程中的拉格朗日乘子）。\\
+			此处，$F_{cons,h}$ 正是\textbf{流体为了维持网格共线而施加在悬点上的广义约束力}。
+		\end{alertblock}
+	\end{frame}
+	
+	% ==================== Slide 18 ====================
+	\begin{frame}{虚功原理与能量分配 (Virtual Work \& Energy Partition)}
+		\textbf{核心理论突破：} 因为悬点约束是“理想约束 (Ideal Constraint)”，其产生的\textbf{全局虚功必定为零}。这保证了机器精度的总能量守恒。
+		\vspace{0.3cm}
+		
+		我们需要将约束力分配给悬点周围的胞元。采用\textbf{基于内能的加权分配方案}：
+		\begin{block}{Energy-weighted Partition}
+			\begin{equation*}
+				F_{cons,h}^c = \frac{E_c}{E_{total}} F_{cons,h}, \quad E_{total} = \sum_{k\in C(h)} E_k
+			\end{equation*}
+		\end{block}
+		
+		\begin{itemize}
+			\item 保证了 $\sum_c F_{cons,h}^c = F_{cons,h}$。
+			\item 高能量的胞元承受更高比例的约束反力，确保系统热力学稳定。
+		\end{itemize}
+	\end{frame}
+	
+	% ==================== Slide 19 ====================
+	\begin{frame}{修正的半离散方程：动量 (Modified Spatial Discretization)}
+		由于引入了悬点约束力，胞元的动量方程必须进行相应修正：
+		
+		\begin{block}{Momentum Equation}
+			\begin{align*}
+				m_c \frac{dU_c}{dt} &+ \sum_{k\in\mathcal{P}(c)} \left(\Pi_{\overline{k}}^c L_{\overline{k}}^c N_{\overline{k}}^c + \Pi_{\underline{k}}^c L_{\underline{k}}^c N_{\underline{k}}^c \right) \\
+				&+ \sum_{k\in\mathcal{H}(c)} \left(\pi_{\overline{k}}^c L_{\overline{k}}^c N_{\overline{k}}^c + \pi_{\underline{k}}^c L_{\underline{k}}^c N_{\underline{k}}^c + \textcolor{red}{F_{cons,k}^c} \right) = 0
+			\end{align*}
+		\end{block}
+		
+		\textit{注：$\mathcal{P}(c)$ 代表常规主节点集合，$\mathcal{H}(c)$ 代表悬点集合。}
+	\end{frame}
+	
+	% ==================== Slide 20 ====================
+	\begin{frame}{修正的半离散方程：总能 (Modified Spatial Discretization)}
+		能量方程同样受到约束力做功的影响：
+		
+		\begin{block}{Total Energy Equation}
+			\begin{align*}
+				m_c \frac{dE_c}{dt} &+ \sum_{k\in\mathcal{P}(c)} \left(\Pi_{\overline{k}}^c L_{\overline{k}}^c N_{\overline{k}}^c + \Pi_{\underline{k}}^c L_{\underline{k}}^c N_{\underline{k}}^c \right) \cdot U_k \\
+				&+ \sum_{k\in\mathcal{H}(c)} \left(\pi_{\overline{k}}^c L_{\overline{k}}^c N_{\overline{k}}^c + \pi_{\underline{k}}^c L_{\underline{k}}^c N_{\underline{k}}^c + \textcolor{red}{F_{cons,k}^c} \right) \cdot U_k = 0
+			\end{align*}
+		\end{block}
+		
+		\textbf{向后兼容性：} 对于没有悬点的标准一致网格，$F_{cons}^c \equiv 0$，该系统自动退化为原始的 Maire 格式。
+	\end{frame}
+	
+	% ==========================================================
+	\section{第四部分：AMR 框架构建与算法流程 (AMR Framework \& Implementation)}
+	% ==========================================================
+	
+	% ==================== Slide 21 ====================
+	\begin{frame}{数据管理与拓扑分离 (Data Management)}
+		在 Eulerian AMR 中网格固定，但在 Lagrangian AMR 中网格随流体运动。
+		\vspace{0.2cm}
+		\begin{itemize}
+			\item \textbf{逻辑拓扑分离：} 我们使用 \texttt{p4est} 库仅管理抽象的逻辑四叉树拓扑和并行通信。
+			\item \textbf{物理负载 (Payload) 挂载：} 在每个叶子象限 (Leaf quadrant) 附加自定义数据结构：
+			\begin{enumerate}
+				\item \textit{胞心变量：} 质量 $m_c$, 密度 $\rho_c$, 速度 $U_c$, 总能 $E_c$ 等。
+				\item \textit{节点/子胞变量：} 节点速度 $U_p$, 坐标 $X_p$, 子胞半边几何量。
+			\end{enumerate}
+		\end{itemize}
+	\end{frame}
+	
+	% ==================== Slide 22 ====================
+	\begin{frame}{算法与迭代器的映射 (Mapping Solvers to Mesh Iterators)}
+		算法的一个核心特征是数值求解器与 \texttt{p4est} 原生网格迭代器的\textbf{显式映射}：
+		
+		\begin{table}[htbp]
+			\centering\small
+			\begin{tabular}{lll}
+				\toprule
+				\textbf{Iterator Type} & \textbf{Targeted Algorithmic Step} & \textbf{Main Operations} \\
+				\midrule
+				\textcolor{deepblue}{Corner Iterator} & 标准节点求解器 & 组装 $M_p$, 求解主节点速度 $U_p$ \\
+				\textcolor{deepblue}{Face Iterator} & \textbf{悬点求解器} & 求解 $U_h$, 计算拉格朗日乘子 $\lambda_h$ \\
+				\textcolor{deepblue}{Volume Iterator} & 胞元状态更新 & 积分守恒方程更新 $U_c, E_c$ \\
+				\bottomrule
+			\end{tabular}
+		\end{table}
+	\end{frame}
+	
+	% ==================== Slide 23 ====================
+	\begin{frame}{网格自适应与重映射 (Adaptation \& Remapping)}
+		\begin{itemize}
+			\item \textbf{自适应准则：} 采用基于密度或压力梯度的局部细化 (Refinement) 和粗化 (Coarsening) 阈值。
+			\item \textbf{几何重构：} 细化时使用面积加权形心，保证网格单元质量。
+			\item \textbf{物理场传输：} 采用一阶保守重映射 (1st-order conservative remapping)
+			\begin{itemize}
+				\item \textit{细化：} 物理量直接注入 (Direct injection)。
+				\item \textit{粗化：} 体积加权平均 (Volume-averaging)。
+			\end{itemize}
+			\item \textbf{性质：} 严格确保网格操作全过程的质量、动量和总能全局精确守恒。
+		\end{itemize}
+	\end{frame}
+	
+	% ==================== Slide 24 ====================
+	\begin{frame}[fragile]{单步算法流总结 (Algorithm 1 Summary)}
+		\begin{exampleblock}{One-step Update Procedure}
+			\small
+			\begin{enumerate}
+				\item \textbf{Adaptation:} 执行梯度细化/粗化及保守重映射。
+				\item \textbf{Geometry:} 计算所有节点 $k \in \mathcal{P}\cup\mathcal{H}$ 的子胞几何 $(L, N)$。
+				\item \textbf{Nodal Solver:}
+				\begin{itemize}
+					\item[a.] 遍历主节点求解 $U_p$ 并更新半边压力。
+					\item[b.] 遍历悬点求解 $U_h$，计算约束力 $\lambda_h$。
+				\end{itemize}
+				\item \textbf{Cell Integration:} 将约束力 $\lambda_h$ 按能量分配为 $F_{cons,h}^c$，更新胞元动量 $U_c$ 与总能 $E_c$。
+				\item \textbf{Kinematics \& EOS:} 推进网格位置 $X_p^{n+1}$，更新密度 $\rho_c^{n+1}$ 和压力 $P_c^{n+1}$。
+			\end{enumerate}
+		\end{exampleblock}
+	\end{frame}
+	
+	% ==========================================================
+	\section{第五部分：数值结果与算例验证 (Numerical Results \& Verification)}
+	% ==========================================================
+	
+	% ==================== Slide 25 ====================
+	\begin{frame}{Benchmark 1: Sod 激波管 (Sod Shock Tube) - 网格分布}
+		考察格式捕捉激波与接触间断的能力，以及网格对称性的保持。
+		
+		\begin{figure}[htpb]
+			\centering
+			\fbox{\begin{minipage}[c][4.5cm][c]{0.7\textwidth}
+					\centering
+					\textcolor{gray}{[图片占位] 图 3(a): Sod 问题自适应网格分布 ($t=0.2$)}
+			\end{minipage}}
+		\end{figure}
+		
+		\textbf{现象：} AMR 网格紧密聚集在激波阵面与接触间断处，且在笛卡尔网格下严格保持了一维对称性，未引入人工非对称扰动。
+	\end{frame}
+	
+	% ==================== Slide 26 ====================
+	\begin{frame}{Benchmark 1: Sod 激波管 - 物理剖面与误差}
+		\begin{columns}
+			\column{0.5\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4.5cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 4: 密度/压力/内能沿中心线剖面对比}
+				\end{minipage}}
+			\end{figure}
+			
+			\column{0.5\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4.5cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 3(b): 总能量相对误差历史}
+				\end{minipage}}
+			\end{figure}
+		\end{columns}
+		\vspace{0.2cm}
+		\textbf{结论：} 物理量与精确解吻合良好；能量相对误差严格锁定在 $10^{-13}$ 机器精度范围。
+	\end{frame}
+	
+	% ==================== Slide 27 ====================
+	\begin{frame}{Benchmark 2: Sedov 爆炸波 (Sedov Blast Wave) - 网格与对称性}
+		考察柱面强激波膨胀与多维对称性。
+		\begin{columns}
+			\column{0.5\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4.5cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 5(a): 4-6 级 AMR 网格}
+				\end{minipage}}
+			\end{figure}
+			
+			\column{0.5\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4.5cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 6(a): 5-7 级 AMR 网格}
+				\end{minipage}}
+			\end{figure}
+		\end{columns}
+		\textbf{现象：} 自适应网格呈现出极佳的柱面对称性，悬点约束有效维持了波前的平滑。
+	\end{frame}
+	
+	% ==================== Slide 28 ====================
+	\begin{frame}{Benchmark 2: Sedov 爆炸波 - 数据对比}
+		\begin{columns}
+			\column{0.5\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4.5cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 7: 对角线密度剖面对比}
+				\end{minipage}}
+			\end{figure}
+			
+			\column{0.5\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4.5cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 5(b)/6(b): 能量误差 ($10^{-15}$)}
+				\end{minipage}}
+			\end{figure}
+		\end{columns}
+		\textbf{结论：} 极值捕捉准确；即便在频繁的网格插/删操作下，总能依然全局守恒至机器精度。
+	\end{frame}
+	
+	% ==================== Slide 29 ====================
+	\begin{frame}{Benchmark 3: 2D Riemann 相互作用 (多波演化)}
+		考察波在非一致接口处的透射与反射。
+		\begin{figure}[htpb]
+			\centering
+			\fbox{\begin{minipage}[c][3.5cm][c]{0.9\textwidth}
+					\centering
+					\textcolor{gray}{[图片占位] 图 8: 静态粗网格 vs 动态 AMR vs 静态细网格对比图}
+			\end{minipage}}
+		\end{figure}
+		\textbf{结论：} 
+		\begin{itemize}
+			\item 动态 AMR (4-6级) 以接近粗网格的代价，达到了细网格的分辨率。
+			\item 悬点求解器没有在过渡区引入任何虚假的数值反射。
+		\end{itemize}
+	\end{frame}
+	
+	% ==================== Slide 30 ====================
+	\begin{frame}{Benchmark 4: Taylor-Green 涡流 (极致网格畸变测试)}
+		旋转强剪切流是拉格朗日方法的传统难点（极易诱发网格扭曲 Tangling）。
+		\begin{figure}[htpb]
+			\centering
+			\fbox{\begin{minipage}[c][4cm][c]{0.8\textwidth}
+					\centering
+					\textcolor{gray}{[图片占位] 图 10: T-G Vortex 在不同时刻 (t=0.2, 0.4, 0.6) 的网格}
+			\end{minipage}}
+		\end{figure}
+		\textbf{结论：} 经历严重的旋转变形后，所有网格保持有效（无负体积），\textbf{悬点始终完美共线}，充分证明了该几何约束机制的鲁棒性。
+	\end{frame}
+	
+	% ==================== Slide 31 ====================
+	\begin{frame}{Benchmark 5: 三相点问题 (Triple Point) - 界面追踪}
+		测试强剪切条件下的多物质界面追踪与 K-H 不稳定性解析。
+		\begin{columns}
+			\column{0.5\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4.5cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 12: 整体网格对比}
+				\end{minipage}}
+			\end{figure}
+			
+			\column{0.5\textwidth}
+			\begin{figure}[htpb]
+				\centering
+				\fbox{\begin{minipage}[c][4.5cm][c]{\linewidth}
+						\centering
+						\textcolor{gray}{[图片占位] 图 13: 卷起区域的局部放大网格}
+				\end{minipage}}
+			\end{figure}
+		\end{columns}
+		\textbf{现象：} 在涡旋卷起的极度变形区，AMR 网格紧密贴合物流特征，未发生界面交叉失真。
+	\end{frame}
+	
+	% ==================== Slide 32 ====================
+	\begin{frame}{Benchmark 5: 三相点问题 - 密度场解析}
+		\begin{figure}[htpb]
+			\centering
+			\fbox{\begin{minipage}[c][4.5cm][c]{0.8\textwidth}
+					\centering
+					\textcolor{gray}{[图片占位] 图 14: 粗网格与 AMR 网格的密度场对比}
+			\end{minipage}}
+		\end{figure}
+		\textbf{结论：} AMR 结果清晰地捕捉到了错综复杂的涡旋卷起（Vortex roll-ups）现象，克服了基础粗网格固有的巨大数值扩散。
+	\end{frame}
+	
+	% ==========================================================
+	\section{第六部分：总结与展望 (Conclusion \& Future Work)}
+	% ==========================================================
+	
+	% ==================== Slide 33 ====================
+	\begin{frame}{总结与展望 (Conclusion \& Future Work)}
+		\begin{block}{主要贡献 (Contributions)}
+			\begin{enumerate}
+				\item \textbf{约束变分框架：} 将非一致接口的悬点运动转化为变分问题，拉格朗日乘子自然显现为维持界面连续的广义约束力。
+				\item \textbf{机器级物理守恒：} 基于虚功原理对约束力进行能量加权分配，首次在 Quadtree Lagrangian-AMR 中实现了精确到机器精度 ($\sim 10^{-14}$) 的全局总能守恒。
+				\item \textbf{高鲁棒性：} 满足几何守恒律 (GCL)，在强剪切变形下展现出极强的抗网格畸变 (Anti-tangling) 能力。
+			\end{enumerate}
+		\end{block}
+		
+		\vspace{0.2cm}
+		\begin{exampleblock}{未来工作 (Future Work)}
+			当前的网格自适应重映射 (Remapping) 仅为一阶精度。未来将研发\textbf{二阶甚至更高精度的斜率限制重构重映射机制}，并使其全面兼容带有拉格朗日乘子约束的悬点拓扑。
+		\end{exampleblock}
+	\end{frame}
+	
+	% ==================== Q&A ====================
+	\begin{frame}
+		\begin{center}
+			{\Huge\calligra Thanks for your attention!} \\
+			\vspace{1cm}
+			\Large Q \& A
+		\end{center}
+	\end{frame}
+	
+\end{document}

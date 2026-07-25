@@ -2,17 +2,16 @@
 using namespace std;
 #ifndef variable_const
 #define M_PI 3.14159265358979323846
-#endif // !variable_const
+#endif 
 
 
-/*几何相关的函数*/
 namespace GeometryAlg {
 	double CalculateCellVolume(const int &coordtype, const CDoubleVector coord[4])
 	{
 		CDoubleVector center;
 		double volume;
 		center = GetPolyCenter(coord);
-		//if (coordtype== p4est_data_t::MyCoordType::plane) {
+		
 		CDoubleVector tri1[3], tri2[3];
 			tri1[0] = coord[0];
 			tri1[1] = coord[1];
@@ -42,28 +41,12 @@ namespace GeometryAlg {
 	{
 		return _hypot(pt1.x - pt2.x, pt1.y - pt2.y);
 	}
-	//计算叉积(p2-p1)*(p3-p2)
+	
 	double cross_product(const CDoubleVector &p1, const CDoubleVector &p2, const CDoubleVector &p3) {
 		return (p2.x - p1.x)*(p3.y - p2.y) - (p2.y - p1.y)*(p3.x - p2.x);
 	}
 
 	
-	//计算三角形重心 triangleCentroid
-
-
-
-
-
-
-
-	//计算三角形面积（有向面积的绝对值）
-
-
-
-
-
-	//判断四边形pts是否是凹四边形，如果是凸四边形，输出-1。
-	//如果是凹四边形对应凹点分别为0，1，2，3时，分别输出0，1，2，3
 	int is_concave_quad(const CDoubleVector pts[4])
 	{
 		CDoubleVector A = pts[0];
@@ -71,22 +54,22 @@ namespace GeometryAlg {
 		CDoubleVector C = pts[2];
 		CDoubleVector D = pts[3];
 		const double eps = 1e-9;
-		double cp1 = cross_product(A, B, C);//B
-		double cp2 = cross_product(B, C, D);//C
-		double cp3 = cross_product(C, D, A);//D
-		double cp4 = cross_product(D, A, B);//A
+		double cp1 = cross_product(A, B, C);
+		double cp2 = cross_product(B, C, D);
+		double cp3 = cross_product(C, D, A);
+		double cp4 = cross_product(D, A, B);
 
 		int sign1 = (cp1 > eps) ? 1 : (cp1 < -eps) ? -1 : 0;
 		int sign2 = (cp2 > eps) ? 1 : (cp2 < -eps) ? -1 : 0;
 		int sign3 = (cp3 > eps) ? 1 : (cp3 < -eps) ? -1 : 0;
 		int sign4 = (cp4 > eps) ? 1 : (cp4 < -eps) ? -1 : 0;
 
-		//检查是否全部非负（凸）
+		
 		if (sign1 >= 0 && sign2 >= 0 && sign3 >= 0 && sign4 >= 0) {
-			return -1;//凸
+			return -1;
 		}
 
-		//否则是凹四边形，输出凹点
+		
 		if (sign1 < 0) return 1;
 		if (sign2 < 0) return 2;
 		if (sign3 < 0) return 3;
@@ -94,58 +77,13 @@ namespace GeometryAlg {
 
 	}
 
-	//计算三角形质心
-
-
-
-
-
-
-
-	//计算凹四边形的几何中心
+	
 	CDoubleVector concave_quad_centroid(const int & index, const CDoubleVector pts[4]) {
-		//根据凹点位置选择分割方式
+		
 		CDoubleVector centroid;
 		CDoubleVector m_concave = pts[index];
 		CDoubleVector m_1 = pts[(index + 2) % 4];
 		centroid = 0.5 * (m_concave + m_1);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 		return centroid;
@@ -188,158 +126,6 @@ namespace GeometryAlg {
 	}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	CDoubleVector GetPolyCenterByAverage(const CDoubleVector coord[4]) {
 		CDoubleVector Centroid = CDoubleVector(0.0, 0.0);
 		Centroid = CDoubleVector(0.0, 0.0);
@@ -364,11 +150,7 @@ namespace GeometryAlg {
 		return kpre;
 	}
 
-	/*double CalculateVectorDotVector(const CDoubleVector &va, const CDoubleVector &vb)
-	{
-		return va.x*vb.x + va.y*vb.y;
-	}*/
-
+	
 	CDoubleMatrix DyadicProduct(const CDoubleVector va, const CDoubleVector vb)
 	{
 		CDoubleMatrix matrix;
@@ -422,7 +204,7 @@ namespace GeometryAlg {
 		if (length < 1e-15) 
 		{ 
 			return CDoubleVector(0., 0.);
-			//printf("Error in GetLineNormalVector because line length is zero"); 
+			
 
 		}
 		return CDoubleVector(-(pte.y - pts.y), -(pts.x - pte.x)) / length;
@@ -439,37 +221,10 @@ namespace GeometryAlg {
 	}
 }
 
-/*常用物理量计算*/
+
 namespace PhysicalAlg {
-	/* PhysicalAlg routines (CalculateCellMass, EquationOfState, CalculateSoundSpeed) are now defined in src/physics/eos.h */
-	/*
-	double CalculateCellMass(const double &volume, const double &density)
-	{
-		return volume*density;
-	}
-
-	double EquationOfState(const double &gamma, const double &density, const double &internal_energy)
-	{
-		return (gamma - 1.0)*density*internal_energy;
-	};
-
-	double CalculateSoundSpeed(const double &gamma, const double &pressure, const double &density)
-	{
-		return sqrt(gamma*pressure / density);
-	};
-	*/
-	/*
-	double CalculateSoundSpeed(const double &gamma, const double &pressure, const double &density)
-	{
-		if (sqrt(gamma*pressure / density) < m_eps)
-		{
-			printf("the sound speed is zero/n");
-			abort();
-		}
-		return sqrt(gamma*pressure/ density);
-	};
-	*/
-
+	
+	
 	double CalculateDivergence(const int &enumCoordType, const CDoubleVector coord[4], const CDoubleVector velocity[4])
 	{
 		double Divergence = 0.;
@@ -720,25 +475,25 @@ namespace PhysicalAlg {
 			CentroidCoordCur = center_point;
 			CentroidVeloCur = CDoubleVector(0., 0.);
 			gamma = 1.4;
-			if (CentroidCoordCur.x < 0.5 && CentroidCoordCur.y < 0.5) /*左下*/
+			if (CentroidCoordCur.x < 0.5 && CentroidCoordCur.y < 0.5) 
 			{
 				CentroidVeloCur = CDoubleVector(0.8939, 0.8939);
 				density_cur = 1.1;
 				pressure_cur = 1.1;
 			}
-			if (CentroidCoordCur.x < 0.5 && CentroidCoordCur.y > 0.5) /*左上*/
+			if (CentroidCoordCur.x < 0.5 && CentroidCoordCur.y > 0.5) 
 			{
 				CentroidVeloCur = CDoubleVector(0.8939, 0.);
 				density_cur = 0.5065;
 				pressure_cur = 0.35;
 			}
-			if (CentroidCoordCur.x > 0.5 && CentroidCoordCur.y < 0.5) /*右下*/
+			if (CentroidCoordCur.x > 0.5 && CentroidCoordCur.y < 0.5) 
 			{
 				CentroidVeloCur = CDoubleVector(0., 0.8939);
 				density_cur = 0.5065;
 				pressure_cur = 0.35;
 			}
-			if (CentroidCoordCur.x > 0.5 && CentroidCoordCur.y > 0.5) /*右上*/
+			if (CentroidCoordCur.x > 0.5 && CentroidCoordCur.y > 0.5) 
 			{
 				CentroidVeloCur = CDoubleVector(0., 0.);
 				density_cur = 1.1;

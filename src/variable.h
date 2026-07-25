@@ -7,30 +7,30 @@
 using namespace std;
 
 #ifndef p4est_ALE_const
-#define CNDIM   4//�ı��������ĸ��ǵ�
+#define CNDIM   4
 #define P4EST_DIM 2  
-#define fixed_iter_num 1  /*�򵥵���Ĭ�ϵ�������*/
-/*�߽����Ͷ���*/
-#define InnerBoundary     -1    //�ڲ��߽�
-#define PressureBoundary  1     //ѹ���߽�
-#define WallBoundary      2     //�̱ڱ߽�
-#define VelocityBoundary  3     //�ٶȱ߽�
-#define FreeBoundary      4     //���ɱ߽�
-#define SymmetryBoundary  5     //�Գ���߽�
-#define CircleCenterBoundary  6     //���Ĳ����߽�
+#define fixed_iter_num 1  
 
-/*�������Ҷ���*/
-#define fixed_iter_num 1  /*򵥵Ĭϵ*/
-/*߽Ͷ*/
-#define InnerBoundary     -1    //ڲ߽
-#define PressureBoundary  1     //ѹ߽
-#define WallBoundary      2     //̱ڱ߽
-#define VelocityBoundary  3     //ٶȱ߽
-#define FreeBoundary      4     //ɱ߽
-#define SymmetryBoundary  5     //Գ߽
-#define CircleCenterBoundary  6     //Ĳ߽
+#define InnerBoundary     -1    
+#define PressureBoundary  1     
+#define WallBoundary      2     
+#define VelocityBoundary  3     
+#define FreeBoundary      4     
+#define SymmetryBoundary  5     
+#define CircleCenterBoundary  6     
 
-/*Ҷ*/
+
+#define fixed_iter_num 1  
+
+#define InnerBoundary     -1    
+#define PressureBoundary  1     
+#define WallBoundary      2     
+#define VelocityBoundary  3     
+#define FreeBoundary      4     
+#define SymmetryBoundary  5     
+#define CircleCenterBoundary  6     
+
+
 #define LeftIndex         0
 #define RightIndex        1
 #define BottomIndex       0
@@ -43,11 +43,11 @@ using namespace std;
 #define m_coliner_eps   1e-13
 
 #define blank '\\'
-#endif // !p4est_ALE_const
+#endif 
 
 enum DoubleCellVariableID
 {
-	/*Cell Variable*/
+	
 	idMass,
 	idPressure_cur,
 	idPressure_half,
@@ -71,7 +71,7 @@ enum DoubleCellVariableID
 	idCPressureGradient,
 	idCVorticity,
 	 
-	/*numbers of double cell variables*/
+	
 	idDoubleCellVariableNum,
 };
 
@@ -84,18 +84,12 @@ enum IntEdgeVariableID
 
 enum IntCellVariableID
 {
-	idCoarseningTag, /*�����Ƿ����ֻ��ı�ǩ*/
+	idCoarseningTag, 
 	idAllowCoarsening,
 	idAllowRefining,
 
 	idIntCellVariableNum,
 };
-
-
-
-
-
-
 
 
 enum DoubleEdgeVariableID
@@ -108,11 +102,11 @@ enum DoubleEdgeVariableID
 
 enum VectorEdgeVariableID
 {
-	idEChildrenCoordinate_cur, /*edge middle variable to record the children information*/
+	idEChildrenCoordinate_cur, 
 	idEChidrenVelocity_cur,
 	idEChildrenCoordinate_lag,
 	idEChildrenVelocity_lag,
-	idEChildrenCoordinate_bc,   /*bc means before coarsening*/
+	idEChildrenCoordinate_bc,   
 	idEChildrenVelocity_bc,
 
 	idVectorEdgeVariableNum,
@@ -120,7 +114,7 @@ enum VectorEdgeVariableID
 
 enum DoubleCornerVariableID
 {
-	/*Cell Corner Variable*/
+	
 	idReconstructPressure,
 	idReconstructDensity,
 	idVeloDeriToPoint,
@@ -128,7 +122,7 @@ enum DoubleCornerVariableID
 	idCNPressGradient,
 	idCNVorticity,
 
-	/*numbers of double corner variables*/
+	
 	idDoubleCornerVariableNum,
 };
 
@@ -148,7 +142,7 @@ enum VectorCellVariableID
 
 	idCentroidCoord_relaxed,
 
-	/*numbers of vector cell variables*/
+	
 	idVectorCellVariableNum,
 };
 
@@ -171,7 +165,7 @@ enum VectorCornerVariableID
 	idcnCoords_relaxed,
 	idcnVelocity_relaxed,
 
-	/*numbers of vector corner variables*/
+	
 	idVectorCornerVariableNum,
 };
 
@@ -189,25 +183,17 @@ class CVariable
 public:
 
 
-/*four corners*/
-/* 0 for left-bottom-corner,˳ʱ��*/
-
-
-
-	double DouCData[idDoubleCellVariableNum];//double������������
-	double DouCnData[idDoubleCornerVariableNum][CNDIM];//double�����������
-	double DouEData[idDoubleEdgeVariableNum][CNDIM];//double�����������
-	int    IntEData[idIntEdgeVariableNum][CNDIM];//int�����������
-	int    IntCData[idIntCellVariableNum];//���͵�Ԫ��
-	CDoubleVector  VecCData[idVectorCellVariableNum];//CDoubleVector������������
-	CDoubleVector  VecCnData[idVectorCornerVariableNum][CNDIM];//CDoubleVector�����������
+	double DouCData[idDoubleCellVariableNum];
+	double DouCnData[idDoubleCornerVariableNum][CNDIM];
+	double DouEData[idDoubleEdgeVariableNum][CNDIM];
+	int    IntEData[idIntEdgeVariableNum][CNDIM];
+	int    IntCData[idIntCellVariableNum];
+	CDoubleVector  VecCData[idVectorCellVariableNum];
+	CDoubleVector  VecCnData[idVectorCornerVariableNum][CNDIM];
 	CDoubleVector  VecEdata[idVectorEdgeVariableNum][CNDIM];
-	CDoubleVector  ChildrenCnGeomVara[2/*0 for coord and 1 for velo*/][CNDIM/*four children*/][CNDIM/*four corner*/];
-	double         ChildrenPhysicalVara[2/*0 for rho and 1 for internal energy*/][CNDIM/*four children*/];
-	CDoubleMatrix  MarCnData[idcnMatrixNum][CNDIM];  //CDoubleMatrix�����������
-
-
-
+	CDoubleVector  ChildrenCnGeomVara[2][CNDIM][CNDIM];
+	double         ChildrenPhysicalVara[2][CNDIM];
+	CDoubleMatrix  MarCnData[idcnMatrixNum][CNDIM];  
 
 
 public:

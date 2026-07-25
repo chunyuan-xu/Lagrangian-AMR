@@ -29,13 +29,13 @@ enum RefineCriteria
 	Distance,
 };
 
-//ȫ��������Ϣ�ṹ
+
 struct CGlobal_grid_info
 {
-	int global_nx;//ȫ��������x�����������
-	int global_ny;//ȫ��������y�����������
-	double tree_width;//ÿ�����Ŀ���
-	double tree_height;//ÿ�����ĸ߶�
+	int global_nx;
+	int global_ny;
+	double tree_width;
+	double tree_height;
 	CGlobal_grid_info()
 	{
 		global_nx = 1;
@@ -83,11 +83,11 @@ struct p4est_data_t {
 
 	int which_case;
 
-	int LeftBoun;//��߽�
-	int RightBoun;//�ұ߽�
-	int BottomBoun;//�±߽�
-	int TopBoun;//�ϱ߽�
-	double LeftBounVal;//��߽綨ѹ��/�ٶ�ֵ
+	int LeftBoun;
+	int RightBoun;
+	int BottomBoun;
+	int TopBoun;
+	double LeftBounVal;
 	double RightBounVal;
 	double BottomBounVal;
 	double TopBounVal;
@@ -100,33 +100,33 @@ struct p4est_data_t {
 	double current_time;
 	double initial_dt;
 	double refine_coarsen_time;
-	//
+	
 	double shock_velocity;
-	double used_dt;//��һ��ʱ�䲽��
-	double local_dt;  //��ǰ����ʱ�䲽��
-	double delta_time;  //����ʱ�䲽��
-	double dt_iter;   //������ʱ�䲽��
-	double max_dt;    //���������ʱ�䲽��
-	bool equal_dt;    //�Ƿ�ʱ�䲽������
-	int current_step;  //��ǰʱ�䲽
-	int max_time_step; //���ʱ�䲽��
-	int refine_coarsen_enum;    //�����������ж��Ƿ���Ҫ����
-	int minus_level;   //��Сϸ���㼶
-	int max_level;     //���ϸ���㼶
-	int  refine_period;  //ϸ�����
-	int repartition_period; //�ػ��ּ��
-	int last_output_index; //�ϴ��������
-	int write_interval_step; //д�ļ��������
-	int profiletype;  //
-	int children_center_type;  //
-	int x_tree_number;  //ǰ������������ʹ�ã�ָ��x����p4est������Ŀ
+	double used_dt;
+	double local_dt;  
+	double delta_time;  
+	double dt_iter;   
+	double max_dt;    
+	bool equal_dt;    
+	int current_step;  
+	int max_time_step; 
+	int refine_coarsen_enum;    
+	int minus_level;   
+	int max_level;     
+	int  refine_period;  
+	int repartition_period; 
+	int last_output_index; 
+	int write_interval_step; 
+	int profiletype;  
+	int children_center_type;  
+	int x_tree_number;  
 	int y_tree_number;  
-	double write_interval_time;//д�ļ�ʱ����
+	double write_interval_time;
 	double total_energy_lag;
 	double total_energy_cur;
 	double total_energy_init;
-	double volume_varation_torelarion;/*����ʱ�䲽����������仯*/
-	double dt_increase_percent;//ʱ�䲽��������
+	double volume_varation_torelarion;
+	double dt_increase_percent;
 	ofstream EnergyFile;
 	ofstream DistanceFile;
 	ofstream ErrorFile;
@@ -144,8 +144,8 @@ struct p4est_data_t {
 		refine_coarsen_time = 0.0001;
 		minus_level = 4;
 		max_level = 7;
-		//refine_err = 10.;
-		//coarsen_error = 9.9;
+		
+		
 		refine_err = 1.;
 		coarsen_error = 0.8;
 		refine_period = 4;
@@ -203,7 +203,7 @@ struct p4est_data_t {
 			else if (case_str == "TriplePoint") which_case = ProblemNo::TriplePoint;
 			else if (case_str == "TwoDimRiemann") which_case = ProblemNo::TwoDimRiemann;
 			else if (case_str == "TaylorGreen") which_case = ProblemNo::TaylorGreen;
-			else which_case = cfg.GetInt("which_case", which_case); // fallback for integer
+			else which_case = cfg.GetInt("which_case", which_case); 
 		}
 		if (cfg.HasKey("start_time")) start_time = cfg.GetDouble("start_time", start_time);
 		if (cfg.HasKey("end_time")) end_time = cfg.GetDouble("end_time", end_time);
@@ -218,19 +218,18 @@ struct p4est_data_t {
 		if (cfg.HasKey("write_interval_step")) write_interval_step = cfg.GetInt("write_interval_step", write_interval_step);
 		if (cfg.HasKey("max_time_step")) max_time_step = cfg.GetInt("max_time_step", max_time_step);
 	}
-};//ɭ������
+};
 
 
-/*�Զ������ݽṹ���߽���Ϣ*/
 struct CPointBounInfo
 {
 	enum BouDTY {Inner, Velo, Wall, Symmetry, Free, Press};
-	int enumType;  //�߽�����
-	double Val; //�߽�ֵ
-	CDoubleVector Ncp; //�߽絥λ�ⷨ����
-	double Lcp; //�߽�ߵĳ���
-	CDoubleVector delta_u_cp;   //uc-up
-	CDoubleVector Uc_cur;  //���������ٶ�
+	int enumType;  
+	double Val; 
+	CDoubleVector Ncp; 
+	double Lcp; 
+	CDoubleVector delta_u_cp;   
+	CDoubleVector Uc_cur;  
 	double Zc;
 
 	CPointBounInfo()
@@ -242,53 +241,44 @@ struct CPointBounInfo
 	}
 };
 
-/*�Զ������ݽṹ���洢�ڵ�����*/
+
 struct CPoint_data_t
 {
-	//bool IsBoundary;
-	bool IsHanging;  /*�Ƿ������ҽڵ�*/
-	bool AddDiss; /*�Ƿ����Ӻ�ɢ*/
-	/*һ���ڵ�����������߽�ߣ�������ѹ��+ѹ����ѹ��+�ٶȣ��ٶ�+�ٶȵ����ͱ߽�*/
-	/*TwoBoun[0]��TwoBoun[1]�ֱ�洢�߽�ߵ���Ϣ*/
-	/*���Ϊ�ڲ��㣬TwoBouns��enumBou��Ϊ�ڲ��߽�����*/
+	
+	bool IsHanging;  
+	bool AddDiss; 
+	
+	
 	CPointBounInfo TwoBouns[2];
 	CPointBounInfo BounParent;
-	CDoubleVector master_coord_relaxed[2];  //�ɳ�Լ�������£������˵������
-	CDoubleVector hanging_coord;  //nʱ�����������
-	CDoubleVector velo_lag;  //n+1ʱ�̽ڵ��ٶ�
+	CDoubleVector master_coord_relaxed[2];  
+	CDoubleVector hanging_coord;  
+	CDoubleVector velo_lag;  
 	double PI_hanging;
 	double pi_constrained_parent;
-	bool add_dissipation_child1;//������1�Ƿ����Ӻ�ɢ
-	bool add_dissipation_child2;//������2�Ƿ����Ӻ�ɢ
-	bool add_dissipation_parent;//�������Ƿ����Ӻ�ɢ
-	CDoubleMatrix MatrixP;   //�ڵ�����������ڵ��ٶ�
-	CDoubleVector RHS;       //�����Ҷ���
+	bool add_dissipation_child1;
+	bool add_dissipation_child2;
+	bool add_dissipation_parent;
+	CDoubleMatrix MatrixP;   
+	CDoubleVector RHS;       
 };
 
-/*�Զ������ݽṹ���ڵ���Χ�İ��*/
-/*��ͼ�����ڵ�p��Ӧ���������half_edge���ֱ���Plus��Minus��ʾ*/
-/*     Minus       */
-/*-----------------p*/
-/*                 |*/
-/*                 |*/
-/*                 |Plus*/
-/*                 |*/
-/*                 |*/
+
 struct CHalf_edge_data
 {
-	enum cside{plus, minus}; //corner_side,����plus��minus��������ͼ
-	double Rcp;  //����Ȩ������
-	double Lcp;  //��߳���
-	CDoubleVector Ncp;  //�ⷨ����
+	enum cside{plus, minus}; 
+	double Rcp;  
+	double Lcp;  
+	CDoubleVector Ncp;  
 	double Zcp;
 	CDoubleVector delta_u_cp;
 	CDoubleVector Uc_cur;
 	double pi;
-	enum BounDTY {Inner, Velo, Wall, Symmetry, Free, Press};//�߽����ͣ��ڲ����ٶȡ��̱ڡ��Գ��ᡢ���ɡ�ѹ��
-	int enumBYD; //�߽�����
-	double BYDVal; //���߽�ֵ�����ٶȡ�ѹ����
-	bool is_hanging; //������������Ƿ���ڴ֡�ϸ����������ڣ���Ϊ���ұ�
-	int which_face; //��quad����������
+	enum BounDTY {Inner, Velo, Wall, Symmetry, Free, Press};
+	int enumBYD; 
+	double BYDVal; 
+	bool is_hanging; 
+	int which_face; 
 	CHalf_edge_data()
 	{
 		Rcp = 1.;
@@ -300,27 +290,10 @@ struct CHalf_edge_data
 	}
 };
 
-/*�Զ������ݽṹ���������*/
-/*��ͼ�����ڵ�P��Ӧ���������half_edge���ֱ���Plus��Minus��ʾ*/
-/*              */
-/*--------------p*/
-/*--------------|*/
-/*--------------|*/
-/*----corner----|*/
-/*--------------|*/
-/*--------------|*/
 
-/*four corners:*/
-//1--plus---minus-2
-//|               |
-//min            plus
-//|               |
-//plus           min
-//|               |
-//0--min----plus--3
 struct CCorner_data
 {
-	CHalf_edge_data hdata[2];   //����������
+	CHalf_edge_data hdata[2];   
 };
 
 struct CEdge_data
@@ -329,69 +302,59 @@ struct CEdge_data
 	int EdgeType;
 };
 
-/*��������߽�ߣ���¼������ߵ���Ϣ*/
+
 struct ParentBounInfo
 {
-	bool IsParentChildBoun;   //������Ƿ��Ǹ��ӱ߽硣���ǣ��ñ��Ǹ�����߽��
+	bool IsParentChildBoun;   
 	bool addDiss;
-	CDoubleVector Ncp[2];   //�����ߵ��ⷨ����
-	double ParentPIStar;   //������ߵ�ѹǿ
+	CDoubleVector Ncp[2];   
+	double ParentPIStar;   
 	CDoubleVector FluxRelaxed;
 	double Lcp[2];
 	double Zcp;
 
-	CDoubleVector Hanging_velocity;  //�����ٶ�
+	CDoubleVector Hanging_velocity;  
 	ParentBounInfo()
 	{
-		IsParentChildBoun = false;    //Ĭ��Ϊ�Ǹ�������߽�
+		IsParentChildBoun = false;    
 	}
 };
 
-/*�Զ������ݽṹ���洢quadrant����*/
+
 typedef struct quad_data
 {
-	/*�û��Զ�����Ǳ��*/
-	/*CNDIM = 0~3*/
-	/*1--------2*/
-	/*----------*/
-	/*----------*/
-	/*----------*/
-	/*0--------3*/
+	
+	
 	enum EnumCorner
 	{
-		LEFTBOTTOM, LEFTUP, RIGHTUP, RIGHTBOTTOM   /*���½ǣ����Ͻǣ����Ͻǣ����½�*/
+		LEFTBOTTOM, LEFTUP, RIGHTUP, RIGHTBOTTOM   
 	};
-	CCorner_data m_cndata[CNDIM];   //�����������
+	CCorner_data m_cndata[CNDIM];   
 
 	enum EnumEdge
 	{
 		LEFT, RIGHT, BOTTOM, UP
 	};
-	CEdge_data m_edata[CNDIM];   //���������
+	CEdge_data m_edata[CNDIM];   
 
-	CPoint_data_t points[CNDIM];  //�ĸ���Ƕ�Ӧ�ĸ��ڵ����ݣ����ڱ߽紦��
-	double init_node_coords[CNDIM][P4EST_DIM];  //��ʼ����
+	CPoint_data_t points[CNDIM];  
+	double init_node_coords[CNDIM][P4EST_DIM];  
 	
-	ParentBounInfo m_pc_edge_data[CNDIM]; //parent-children������
+	ParentBounInfo m_pc_edge_data[CNDIM]; 
 
-	CVariable m_vara;    //����������
+	CVariable m_vara;    
 
-	int face_neighbors[2 * CNDIM];    //���ڵ��浥Ԫquad_id
+	int face_neighbors[2 * CNDIM];    
 	int face_num;
-}quad_data_t;  //Ҷ����������
+}quad_data_t;  
 
-/*p4estĬ�ϵ���Ǳ��*/
-/*2--------3*/
-/*----------*/
-/*----------*/
-/*----------*/
-/*0--------1*/
+
 enum p4est_enum_corner
 {
 	left_bottom, right_bottom, left_up, right_up,
 };
 
-//�û����ݽṹ���洢��������
+
 typedef struct {
 	sc_array_t *pressure_array;
 	sc_array_t *density_array;
