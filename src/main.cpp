@@ -5108,7 +5108,7 @@ static void write_solution(p4est_t *p4est, const int &time_step)
 	sc_array_destroy(internal_energy_array);
 	sc_array_destroy(temperature_array);
 
-	// Patch PVTU file to include TimeValue for Tecplot/Paraview
+	
 	if (p4est->mpirank == 0) {
 		char pvtu_filename[1024];
 		snprintf(pvtu_filename, sizeof(pvtu_filename), "%s.pvtu", filename);

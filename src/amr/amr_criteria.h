@@ -7,7 +7,7 @@
 
 namespace AMRAgorithm {
 
-// Estimates whether a quadrant should be refined based on user criteria
+
 inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *q)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
@@ -55,7 +55,7 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 	}
 }
 
-// Estimates whether a family of 4 quadrants should be coarsened based on user criteria
+
 inline int CoarsenErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *children[])
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
@@ -113,4 +113,4 @@ inline int CoarsenErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est
 	}
 }
 
-} // namespace AMRAgorithm
+} 

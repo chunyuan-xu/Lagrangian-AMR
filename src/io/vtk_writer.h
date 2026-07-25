@@ -6,10 +6,10 @@
 
 namespace IOAlgorithm {
 
-// High-level VTK Solution Exporter wrapper
+
 inline void WriteVTKSolution(p4est_t *p4est, const char *prefix)
 {
 	p4est_vtk_write_file(p4est, NULL, prefix);
 }
 
-} // namespace IOAlgorithm
+} 
