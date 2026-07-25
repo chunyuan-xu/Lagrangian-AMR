@@ -2792,6 +2792,9 @@ void MatrixAssemble(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 #endif
 		NULL);         
 
+	if (ghost) {
+		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+	}
 
 	p4est_iterate(p4est,
 		ghost,
@@ -2928,7 +2931,10 @@ void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p
 #endif
 		NULL);         
 
-	
+	if (ghost) {
+		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+	}
+
 	p4est_iterate(p4est,
 		ghost,          
 		(void*) ghost_data,   
