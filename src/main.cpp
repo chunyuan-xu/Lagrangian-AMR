@@ -3915,6 +3915,40 @@ static void RiemannSolver(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_da
 }
 
 
+static void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
+    double local_sums[2] = {0.0, 0.0};
+    double c[2] = {0.0, 0.0};
+    
+    p4est_tree_t *tree;
+    p4est_quadrant_t *quad;
+    sc_array_t *tquadrants;
+    for (p4est_topidx_t t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
+        tree = p4est_tree_array_index (p4est->trees, t);
+        tquadrants = &tree->quadrants;
+        for (size_t i = 0; i < tquadrants->elem_count; ++i) {
+            quad = p4est_quadrant_array_index (tquadrants, i);
+            quad_data_t *data = (quad_data_t *)quad->p.user_data;
+            
+            double y0 = data->m_vara.DouCData[idMass] - c[0];
+            double t0 = local_sums[0] + y0;
+            c[0] = (t0 - local_sums[0]) - y0;
+            local_sums[0] = t0;
+            
+            double y1 = data->m_vara.DouCData[idTotalEnergy_cur] - c[1];
+            double t1 = local_sums[1] + y1;
+            c[1] = (t1 - local_sums[1]) - y1;
+            local_sums[1] = t1;
+        }
+    }
+    
+    double global_sums[2] = {0.0, 0.0};
+    sc_MPI_Reduce(local_sums, global_sums, 2, sc_MPI_DOUBLE, sc_MPI_SUM, 0, p4est->mpicomm);
+    
+    if (p4est->mpirank == 0) {
+        P4EST_GLOBAL_PRODUCTIONF("Checksum [%s]: Mass = %.14e, Energy = %.14e\n", label, global_sums[0], global_sums[1]);
+    }
+}
+
 static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
 {
 	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
@@ -3936,6 +3970,7 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 
 		
 		CalculateHalfTimeVariable(p4est);
+		StatGlobalFieldChecksum(p4est, "Checkpoint 3: Predict");
 
 		
 		CalculateCornerRcpLcpNcp(p4est);
@@ -3950,6 +3985,7 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 		{
 			RiemannSolver(p4est, ghost, ghost_data);
 		}
+		StatGlobalFieldChecksum(p4est, "Checkpoint 4: RiemannSolver");
 
 		
 		ComputeDivergence(p4est);
@@ -3975,6 +4011,7 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 		
 		ComputeSoundSpeed(p4est);
 	}
+	StatGlobalFieldChecksum(p4est, "Checkpoint 5: Update");
 	p4est_data->used_dt = p4est_data->delta_time;
 }
 
@@ -5179,6 +5216,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 	for (t = start_time; t < end_time; t += p4est_data->delta_time)
 	{
 		p4est_data->current_step += 1;
+		StatGlobalFieldChecksum(p4est, "Checkpoint 1: Start time loop");
 		if(p4est_data->current_step>p4est_data->max_time_step)
 		{
 			P4EST_GLOBAL_PRODUCTIONF("The current step %d is larger than the max step %d, simulation is stopped!\n",
@@ -5214,6 +5252,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			ghost = NULL;
 			ghost_data = NULL;
 		}
+		StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");
 
 		
 		if (p4est_data->current_step &&
