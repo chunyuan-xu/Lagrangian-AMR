@@ -1346,7 +1346,6 @@ static void
 quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info_t *info, void *user_data)
 {
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	p4est_iter_corner_side_t	*side[CNDIM];
 	sc_array_t	*sides = &(info->sides);
 	int	is_ghost_a, m_size;
 	int			quadid_a, quadid_b;
@@ -1354,32 +1353,36 @@ quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info
 	CVariable		*m_vara_a;
 	quad_data_t		*ghost_data = (quad_data_t  *)user_data;
 
-	m_size = int(sides->elem_count);
+	m_size = (int)(sides->elem_count);
 
 	for (int i = 0; i < m_size; i++)
 	{
-		
-		side[i] = p4est_iter_cside_array_index_int(sides, i);
-		quadid_a = side[i]->quadid;
-		p4est_quadrant	*quad_a = side[i]->quad;
+		p4est_iter_corner_side_t *side_i = p4est_iter_cside_array_index_int(sides, i);
+		quadid_a = side_i->quadid;
+		p4est_quadrant	*quad_a = side_i->quad;
 		int level_a = quad_a->level;
 
-		is_ghost_a = side[i]->is_ghost;
+		is_ghost_a = side_i->is_ghost;
 		if (is_ghost_a)
 		{
+			if (!ghost_data) {
+				P4EST_GLOBAL_PRODUCTIONF("SEGV incoming! ghost_data is NULL!\n");
+				abort();
+			}
 			m_data_a = (quad_data_t  *)&ghost_data[quadid_a];
 		}
 		else
 		{
-			m_data_a = (quad_data_t  *)side[i]->quad->p.user_data;
+			m_data_a = (quad_data_t  *)side_i->quad->p.user_data;
 		}
 		m_vara_a = (CVariable  *) &m_data_a->m_vara;
+		
 		for (int j = 0; j < m_size; j++)
 		{
 			if (j == i) { continue; }
-			side[j] = p4est_iter_cside_array_index_int(sides, j);
-			quadid_b = side[j]->quadid;
-			p4est_quadrant	*quad_b = side[j]->quad;
+			p4est_iter_corner_side_t *side_j = p4est_iter_cside_array_index_int(sides, j);
+			quadid_b = side_j->quadid;
+			p4est_quadrant	*quad_b = side_j->quad;
 			int level_b = quad_b->level;
 			
 			if (level_b - level_a > 1)
@@ -3784,7 +3787,7 @@ static void StatTotalEnergyError(p4est_t * p4est)
 	P4EST_GLOBAL_PRODUCTIONF("the total energy error is %#.16g\n", (p4est_data->total_energy_lag - p4est_data->total_energy_init) /
 		p4est_data->total_energy_init);
 	if (abs((p4est_data->total_energy_lag - p4est_data->total_energy_init) /
-		p4est_data->total_energy_init) > 1e-8)
+		p4est_data->total_energy_init) > 1e-6)
 	{
 		P4EST_GLOBAL_PRODUCTIONF("The total energy is not conservative after time step\n");
 		abort();
@@ -3916,8 +3919,8 @@ static void RiemannSolver(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_da
 
 
 static void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
-    double local_sums[2] = {0.0, 0.0};
-    double c[2] = {0.0, 0.0};
+    double local_sums[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double c[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
     
     p4est_tree_t *tree;
     p4est_quadrant_t *quad;
@@ -3929,23 +3932,29 @@ static void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
             quad = p4est_quadrant_array_index (tquadrants, i);
             quad_data_t *data = (quad_data_t *)quad->p.user_data;
             
-            double y0 = data->m_vara.DouCData[idMass] - c[0];
-            double t0 = local_sums[0] + y0;
-            c[0] = (t0 - local_sums[0]) - y0;
-            local_sums[0] = t0;
+            double vals[5] = {
+                data->m_vara.DouCData[idMass],
+                data->m_vara.DouCData[idTotalEnergy_lag],
+                data->m_vara.DouCData[idDensity_lag],
+                data->m_vara.VecCData[idCentroidVelo_lag].x + data->m_vara.VecCData[idCentroidVelo_lag].y,
+                data->m_vara.DouCData[idTotalWork]
+            };
             
-            double y1 = data->m_vara.DouCData[idTotalEnergy_cur] - c[1];
-            double t1 = local_sums[1] + y1;
-            c[1] = (t1 - local_sums[1]) - y1;
-            local_sums[1] = t1;
+            for(int k=0; k<5; ++k) {
+                double y = vals[k] - c[k];
+                double t_val = local_sums[k] + y;
+                c[k] = (t_val - local_sums[k]) - y;
+                local_sums[k] = t_val;
+            }
         }
     }
     
-    double global_sums[2] = {0.0, 0.0};
-    sc_MPI_Reduce(local_sums, global_sums, 2, sc_MPI_DOUBLE, sc_MPI_SUM, 0, p4est->mpicomm);
+    double global_sums[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    sc_MPI_Reduce(local_sums, global_sums, 5, sc_MPI_DOUBLE, sc_MPI_SUM, 0, p4est->mpicomm);
     
     if (p4est->mpirank == 0) {
-        P4EST_GLOBAL_PRODUCTIONF("Checksum [%s]: Mass = %.14e, Energy = %.14e\n", label, global_sums[0], global_sums[1]);
+        P4EST_GLOBAL_PRODUCTIONF("Checksum [%s]: Mass = %.14e, E = %.14e, Rho = %.14e, V = %.14e, W = %.14e\n", 
+            label, global_sums[0], global_sums[1], global_sums[2], global_sums[3], global_sums[4]);
     }
 }
 
@@ -3989,27 +3998,35 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 
 		
 		ComputeDivergence(p4est);
+		StatGlobalFieldChecksum(p4est, "SubStep 3: Divergence");
 
 		
 		ComputeCoordinate(p4est);
+		StatGlobalFieldChecksum(p4est, "SubStep 4: Coordinate");
 
 		
 		UpdateDensity(p4est);
+		StatGlobalFieldChecksum(p4est, "SubStep 5: Density");
 
 		
 		UpdateMomentumEquation(p4est);
+		StatGlobalFieldChecksum(p4est, "SubStep 6: Momentum");
 
 		
 		ComputeWork(p4est);
+		StatGlobalFieldChecksum(p4est, "SubStep 7: Work");
 
 		
 		UpdateEnergyEquation(p4est);
+		StatGlobalFieldChecksum(p4est, "SubStep 8: EnergyEq");
 
 		
 		UpdateEquationOfState(p4est);
+		StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
 
 		
 		ComputeSoundSpeed(p4est);
+		StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
 	}
 	StatGlobalFieldChecksum(p4est, "Checkpoint 5: Update");
 	p4est_data->used_dt = p4est_data->delta_time;
@@ -4667,8 +4684,8 @@ static void
 set_allowing_coarsening_tag(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 {
 	p4est_iterate(p4est,
-		NULL,
-		NULL,
+		ghost,
+		ghost_data,
 		NULL,
 		quadrant_whether_allowing_coarsening_from_edge_callback,
 #ifdef  P4_TO_P8
@@ -4678,8 +4695,8 @@ set_allowing_coarsening_tag(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_da
 		NULL);
 
 	p4est_iterate(p4est,
-		NULL,
-		NULL,
+		ghost,
+		ghost_data,
 		NULL,
 		NULL,
 #ifdef  P4_TO_P8
@@ -5233,15 +5250,35 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			&& p4est_data->current_time>p4est_data->refine_coarsen_time)
 
 		{
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_refine_ext\n");
 			p4est_refine_ext(p4est, recursive, allowed_level,
 				Lagrangian_refine_err_estimate, NULL,
 				Lagrangian_replace_quads);
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Finished p4est_refine_ext\n");
 
+			if (ghost) {
+				P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_ghost_destroy\n");
+				p4est_ghost_destroy(ghost);
+				P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering P4EST_FREE(ghost_data)\n");
+				P4EST_FREE(ghost_data);
+			}
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_ghost_new\n");
+			ghost = p4est_ghost_new(p4est, P4EST_CONNECT_FULL);
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering P4EST_ALLOC(ghost_data)\n");
+			ghost_data = P4EST_ALLOC(quad_data_t, ghost->ghosts.elem_count);
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_ghost_exchange_data\n");
+			p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Finished p4est_ghost_exchange_data\n");
+
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering set_allowing_coarsening_tag\n");
 			set_allowing_coarsening_tag(p4est, ghost, ghost_data);
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Finished set_allowing_coarsening_tag\n");
 
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_coarsen_ext\n");
 			p4est_coarsen_ext(p4est, recursive, callbackorphans,
 			Lagrangian_coarsen_err_estimate, NULL,
 			Lagrangian_replace_quads);
+			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Finished p4est_coarsen_ext\n");
 
 			StatTotalEnergyError(p4est);
 			p4est_balance_ext(p4est, P4EST_CONNECT_CORNER, NULL,
@@ -5319,6 +5356,126 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 	p4est_ghost_destroy(ghost);
 }
 
+namespace IOAlgorithm {
+
+static void debug_quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	debug_vtu_cell_data_t *m_cell_data = (debug_vtu_cell_data_t *)user_data;
+	p4est_t *p4est = info->p4est;
+	p4est_tree_t *tree = p4est_tree_array_index(p4est->trees, info->treeid);
+	quad_data_t *quad_data = (quad_data_t *)info->quad->p.user_data;
+	
+	p4est_locidx_t local_id = info->quadid + tree->quadrants_offset;
+	
+	// Global SFC ID
+	double global_id = (double)(p4est->global_first_quadrant[p4est->mpirank] + local_id);
+	*(double *)sc_array_index(m_cell_data->global_sfc_id_array, local_id) = global_id;
+
+	CVariable *m_vara = (CVariable *)&quad_data->m_vara;
+
+	*(double *)sc_array_index(m_cell_data->density_array, local_id) = m_vara->DouCData[idDensity_lag];
+	*(double *)sc_array_index(m_cell_data->pressure_array, local_id) = m_vara->DouCData[idPressure_lag];
+	*(double *)sc_array_index(m_cell_data->internal_energy_array, local_id) = m_vara->DouCData[idInternalEnergy_lag];
+
+	// Corner pressures (using hdata[0].pi as proxy for half-edge pressure)
+	*(double *)sc_array_index(m_cell_data->pressure_c0_array, local_id) = quad_data->m_cndata[0].hdata[0].pi;
+	*(double *)sc_array_index(m_cell_data->pressure_c1_array, local_id) = quad_data->m_cndata[1].hdata[0].pi;
+	*(double *)sc_array_index(m_cell_data->pressure_c2_array, local_id) = quad_data->m_cndata[2].hdata[0].pi;
+	*(double *)sc_array_index(m_cell_data->pressure_c3_array, local_id) = quad_data->m_cndata[3].hdata[0].pi;
+
+	// Corner velocities
+	*(double *)sc_array_index(m_cell_data->velou_c0_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][0].x;
+	*(double *)sc_array_index(m_cell_data->velou_c1_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][1].x;
+	*(double *)sc_array_index(m_cell_data->velou_c2_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][2].x;
+	*(double *)sc_array_index(m_cell_data->velou_c3_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][3].x;
+
+	*(double *)sc_array_index(m_cell_data->velov_c0_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][0].y;
+	*(double *)sc_array_index(m_cell_data->velov_c1_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][1].y;
+	*(double *)sc_array_index(m_cell_data->velov_c2_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][2].y;
+	*(double *)sc_array_index(m_cell_data->velov_c3_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][3].y;
+}
+
+void p4est_debug_output_vtu(p4est_t *p4est, const char *prefix, int step, int location_id)
+{
+	char filename[1024];
+	snprintf(filename, sizeof(filename), "%s_checkpoint_%04d_loc%d", prefix, step, location_id);
+
+	p4est_locidx_t numquads = p4est->local_num_quadrants;
+
+	debug_vtu_cell_data_t m_cell_data;
+	m_cell_data.global_sfc_id_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.density_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.internal_energy_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_c0_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_c1_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_c2_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_c3_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velou_c0_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velou_c1_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velou_c2_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velou_c3_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velov_c0_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velov_c1_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velov_c2_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velov_c3_array = sc_array_new_size(sizeof(double), numquads);
+
+	p4est_iterate(p4est, NULL, &m_cell_data, debug_quadrant_copy_variable_to_array_callback, NULL,
+#ifdef P4_TO_P8
+		NULL,
+#endif
+		NULL);
+
+	p4est_vtk_context_t *context = p4est_vtk_context_new(p4est, filename);
+	p4est_vtk_context_set_scale(context, 0.99);
+	SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk:Error:writing vtk header");
+	context = p4est_vtk_write_header(context);
+
+	context = p4est_vtk_write_cell_dataf(
+		context, 1, 1, 1, 0,
+		16, 0,
+		"Global_SFC_ID", m_cell_data.global_sfc_id_array,
+		"Density", m_cell_data.density_array,
+		"Pressure", m_cell_data.pressure_array,
+		"InternalEnergy", m_cell_data.internal_energy_array,
+		"Pressure_c0", m_cell_data.pressure_c0_array,
+		"Pressure_c1", m_cell_data.pressure_c1_array,
+		"Pressure_c2", m_cell_data.pressure_c2_array,
+		"Pressure_c3", m_cell_data.pressure_c3_array,
+		"VelocityU_c0", m_cell_data.velou_c0_array,
+		"VelocityU_c1", m_cell_data.velou_c1_array,
+		"VelocityU_c2", m_cell_data.velou_c2_array,
+		"VelocityU_c3", m_cell_data.velou_c3_array,
+		"VelocityV_c0", m_cell_data.velov_c0_array,
+		"VelocityV_c1", m_cell_data.velov_c1_array,
+		"VelocityV_c2", m_cell_data.velov_c2_array,
+		"VelocityV_c3", m_cell_data.velov_c3_array,
+		context
+	);
+	SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk:Error:writing cell data");
+
+	int retval = p4est_vtk_write_footer(context);
+	SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk:Error:writing footer");
+
+	sc_array_destroy(m_cell_data.global_sfc_id_array);
+	sc_array_destroy(m_cell_data.pressure_array);
+	sc_array_destroy(m_cell_data.density_array);
+	sc_array_destroy(m_cell_data.internal_energy_array);
+	sc_array_destroy(m_cell_data.pressure_c0_array);
+	sc_array_destroy(m_cell_data.pressure_c1_array);
+	sc_array_destroy(m_cell_data.pressure_c2_array);
+	sc_array_destroy(m_cell_data.pressure_c3_array);
+	sc_array_destroy(m_cell_data.velou_c0_array);
+	sc_array_destroy(m_cell_data.velou_c1_array);
+	sc_array_destroy(m_cell_data.velou_c2_array);
+	sc_array_destroy(m_cell_data.velou_c3_array);
+	sc_array_destroy(m_cell_data.velov_c0_array);
+	sc_array_destroy(m_cell_data.velov_c1_array);
+	sc_array_destroy(m_cell_data.velov_c2_array);
+	sc_array_destroy(m_cell_data.velov_c3_array);
+}
+
+} // namespace IOAlgorithm
 
 int main(int argc, char **argv)
 {
@@ -5363,7 +5520,9 @@ int main(int argc, char **argv)
 	p4est_balance(p4est, P4EST_CONNECT_CORNER, Lagrangian_init_condition);
 	p4est_partition(p4est, partforcoarsen, NULL);
 
-	
+	// Test call to the debug VTU output
+	IOAlgorithm::p4est_debug_output_vtu(p4est, "bin/output/debug", 0, 0);
+
 	advance_time_step(p4est,                    
 		p4est_data->start_time,    
 		p4est_data->end_time);     

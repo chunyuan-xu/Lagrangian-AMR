@@ -79,6 +79,48 @@ def parse_vtu_file(vtu_path):
         'data': data_arrays
     }
 
+def parse_any_vtu(file_path):
+    if file_path.endswith('.pvtu'):
+        return parse_pvtu_file(file_path)
+    else:
+        return parse_vtu_file(file_path)
+
+def parse_pvtu_file(pvtu_path):
+    tree = ET.parse(pvtu_path)
+    root = tree.getroot()
+    base_dir = os.path.dirname(pvtu_path)
+    
+    pieces = root.findall('.//Piece')
+    if not pieces:
+        raise ValueError(f"Invalid PVTU format: missing <Piece> elements in {pvtu_path}")
+    
+    total_points = 0
+    total_cells = 0
+    all_data = {}
+    
+    for piece in pieces:
+        vtu_filename = piece.attrib.get('Source')
+        if not vtu_filename:
+            continue
+        vtu_full_path = os.path.join(base_dir, vtu_filename)
+        info = parse_vtu_file(vtu_full_path)
+        
+        total_points += info['num_points']
+        total_cells += info['num_cells']
+        
+        for k, v in info['data'].items():
+            if k not in all_data:
+                all_data[k] = []
+            all_data[k].append(v)
+            
+    for k in all_data:
+        all_data[k] = np.concatenate(all_data[k], axis=0)
+        
+    return {
+        'num_points': total_points,
+        'num_cells': total_cells,
+        'data': all_data
+    }
 
 def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('density', 'Pressure')):
     """
@@ -94,8 +136,8 @@ def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('density', 'P
     print("-" * 65)
 
     try:
-        target_info = parse_vtu_file(target_path)
-        ref_info = parse_vtu_file(ref_path)
+        target_info = parse_any_vtu(target_path)
+        ref_info = parse_any_vtu(ref_path)
     except Exception as e:
         print(f"[ERROR] Failed to parse files: {e}")
         return False
@@ -114,6 +156,19 @@ def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('density', 'P
 
     print(f"Mesh Structure Check : PASSED (Points: {target_info['num_points']}, Cells: {target_info['num_cells']})")
     print("-" * 65)
+    print("-" * 65)
+
+    if 'Global_SFC_ID' in target_info['data'] and 'Global_SFC_ID' in ref_info['data']:
+        print("[INFO] Found Global_SFC_ID. Sorting arrays for alignment (PVTU vs VTU)...")
+        target_sort_idx = np.argsort(target_info['data']['Global_SFC_ID'])
+        ref_sort_idx = np.argsort(ref_info['data']['Global_SFC_ID'])
+        
+        for k in target_info['data']:
+            target_info['data'][k] = target_info['data'][k][target_sort_idx]
+        for k in ref_info['data']:
+            ref_info['data'][k] = ref_info['data'][k][ref_sort_idx]
+        print("[INFO] Sorting complete.")
+        print("-" * 65)
 
     # Detailed field comparison
     all_passed = True
@@ -122,7 +177,11 @@ def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('density', 'P
 
     check_fields = list(fields_to_check)
     # Also check additional fields if present in both
-    for extra in ['internal_energy', 'NodeX', 'NodeY', 'NodeU', 'NodeV', 'Position']:
+    for extra in ['internal_energy', 'NodeX', 'NodeY', 'NodeU', 'NodeV', 'Position',
+                  'Pressure_c0', 'Pressure_c1', 'Pressure_c2', 'Pressure_c3',
+                  'VelocityU_c0', 'VelocityU_c1', 'VelocityU_c2', 'VelocityU_c3',
+                  'VelocityV_c0', 'VelocityV_c1', 'VelocityV_c2', 'VelocityV_c3',
+                  'Global_SFC_ID']:
         if extra in target_info['data'] and extra in ref_info['data'] and extra not in check_fields:
             check_fields.append(extra)
 

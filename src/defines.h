@@ -368,6 +368,28 @@ typedef struct {
 }vtu_cell_data_t;
 
 typedef struct {
+	sc_array_t *global_sfc_id_array;
+	sc_array_t *pressure_array;
+	sc_array_t *density_array;
+	sc_array_t *internal_energy_array;
+
+	sc_array_t *pressure_c0_array;
+	sc_array_t *pressure_c1_array;
+	sc_array_t *pressure_c2_array;
+	sc_array_t *pressure_c3_array;
+
+	sc_array_t *velou_c0_array;
+	sc_array_t *velou_c1_array;
+	sc_array_t *velou_c2_array;
+	sc_array_t *velou_c3_array;
+
+	sc_array_t *velov_c0_array;
+	sc_array_t *velov_c1_array;
+	sc_array_t *velov_c2_array;
+	sc_array_t *velov_c3_array;
+}debug_vtu_cell_data_t;
+
+typedef struct {
 	void *p4est_data;
 	void *quad_data;
 }my_user_data_t;
