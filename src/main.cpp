@@ -5521,7 +5521,7 @@ int main(int argc, char **argv)
 	p4est_partition(p4est, partforcoarsen, NULL);
 
 	// Test call to the debug VTU output
-	IOAlgorithm::p4est_debug_output_vtu(p4est, "bin/output/debug", 0, 0);
+	IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug_checkpoint", 0, 0);
 
 	advance_time_step(p4est,                    
 		p4est_data->start_time,    

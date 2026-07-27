@@ -96,14 +96,15 @@ powershell -File validate_current.ps1
 **调用时机**: 任何代码修改后，需要官方验证并提交时。
 
 **完整 SOP**:
-1. 申请权限：`ask_permission` 授权 `make`、`python`、`git`、`powershell`
-2. 运行：`powershell -File .\validate_current.ps1`
-3. **若通过（Exit Code 0）**:
+1. **智能体定义约束**: 必须以 `enable_write_tools=true` 权限定义/唤醒。
+2. **首步提权**: 唤醒后的第一步，必须强制使用 `ask_permission` 批量申请底层环境的持久化运行授权 (`make`, `git`, `python`, `$env:PATH`, `.\bin\AMR_Solver.exe`)，避免中途因无终端权限被静默阻塞。
+3. 运行：`powershell -File .\validate_current.ps1` 或根据配置文件手动执行所有算例。
+4. **若通过（Exit Code 0 / 0误差）**:
    - `git add .`
    - `git commit -m "chore: [GOLDEN-PASS] pass validation regression suite"`
    - `git push origin main`
    - 报告 PASS + commit hash
-4. **若失败（Exit Code 1）**:
+5. **若失败（Exit Code 1 / 误差超标）**:
    - **严禁修改源码**
    - 立即向用户/调度者报告失败指标
    - 附上失败算例名称和误差数值
@@ -133,6 +134,16 @@ powershell -File validate_current.ps1
 - 分区边界的节点力不对称
 - 全局量 Allreduce（能量、时间步）
 - partition 后的数据迁移（`p4est_partition` 时序）
+
+**全场 VTU 锚点比对策略 (Debug Anchor Strategy)**:
+1. **植入锚点**: 在目标代码处（如黎曼求解器后、节点速度组装后），插入 `IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug", 0, location_id);`，对全场物理量进行快照输出。此操作只读，绝对安全。
+2. **生成参照**:
+   - **串行**: 运行 `.\bin\AMR_Solver.exe` 产生参照文件 `output/debug_checkpoint_0000_locX_0000.vtu`，并重命名为 `ref.vtu`。
+   - **并行**: 运行 `mpiexec -n 4 .\bin\AMR_Solver.exe` 产生多区块文件 `output/debug_checkpoint_0000_locX.pvtu`。
+3. **强制对齐与比对**: 
+   - 使用升级版的 `compare_vtu.py`：`python compare_vtu.py --target output/debug_checkpoint_...pvtu --ref output/ref.vtu --tol 1e-12`
+   - 该脚本将利用数据结构中的 `Global_SFC_ID` 作为空间索引，自动将乱序并行的 `.pvtu` 与串行的 `.vtu` 进行精确的网格对齐。
+4. **锚点二分法**: 利用该策略在迭代步内不断前移或后移锚点位置（`location_id`），直到精确锁定引发串并行数据第一次发生误差（>1e-12）的代码行。
 
 **MPI 运行命令**:
 ```powershell

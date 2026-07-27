@@ -15,7 +15,7 @@ end_time = 0.5
 delta_time = 1e-5
 minus_level = 5
 max_level = 7
-max_time_step = 10
+max_time_step = 15
 refine_err = 1.0
 coarsen_error = 0.8
 refine_period = 4
@@ -37,22 +37,32 @@ def parse_checksums(logfile):
     checksums = {}
     with open(logfile, "r") as f:
         for line in f:
-            match = re.search(r"Checksum \[(.*?)\]: Mass = (.*?), Energy = (.*)", line)
+            match = re.search(r"Checksum \[(.*?)\]: Mass = (.*?), E = (.*?), Rho = (.*?), V = (.*?), W = (.*)", line)
             if match:
                 label = match.group(1).strip()
                 mass = float(match.group(2))
                 energy = float(match.group(3))
+                rho = float(match.group(4))
+                velo = float(match.group(5))
+                work = float(match.group(6))
                 if label not in checksums:
                     checksums[label] = []
-                checksums[label].append((mass, energy))
+                checksums[label].append((mass, energy, rho, velo, work))
     return checksums
 
 def compare(case_name):
     chk1 = parse_checksums("C:/Lagrangian-AMR/log1.txt")
     chk4 = parse_checksums("C:/Lagrangian-AMR/log4.txt")
     
-    success = True
-    labels_order = ["Checkpoint 1: Start time loop", "Checkpoint 2: AMR", "Checkpoint 3: Predict", "Checkpoint 4: RiemannSolver", "Checkpoint 5: Update"]
+    # dynamically get labels from 1-core log in order of appearance
+    labels_order = []
+    with open("C:/Lagrangian-AMR/log1.txt", "r") as f:
+        for line in f:
+            match = re.search(r"Checksum \[(.*?)\]:", line)
+            if match:
+                label = match.group(1).strip()
+                if label not in labels_order:
+                    labels_order.append(label)
     
     for label in labels_order:
         if label not in chk1 or label not in chk4:
@@ -61,18 +71,18 @@ def compare(case_name):
         c1_list = chk1[label]
         c4_list = chk4[label]
         
-        for i, (m1, e1) in enumerate(c1_list):
+        for i, vals1 in enumerate(c1_list):
             if i >= len(c4_list):
                 print(f"[{case_name}] 4-core log is shorter than 1-core at {label} step {i}")
                 return False
-            m4, e4 = c4_list[i]
-            diff_m = abs(m1 - m4)
-            diff_e = abs(e1 - e4)
-            if diff_m > 1e-12 or diff_e > 1e-12:
+            vals4 = c4_list[i]
+            
+            diffs = [abs(vals1[k] - vals4[k]) for k in range(5)]
+            if any(d > 1e-12 for d in diffs):
                 print(f"[{case_name}] Mismatch at {label}, step {i}:")
-                print(f"  1-core: Mass={m1}, Energy={e1}")
-                print(f"  4-core: Mass={m4}, Energy={e4}")
-                print(f"  Diff:   Mass={diff_m}, Energy={diff_e}")
+                print(f"  1-core: {vals1}")
+                print(f"  4-core: {vals4}")
+                print(f"  Diffs:  {diffs}")
                 return False
     return True
 
