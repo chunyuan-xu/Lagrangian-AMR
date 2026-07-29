@@ -133,7 +133,7 @@ struct p4est_data_t {
 
 	p4est_data_t()
 	{
-		which_case = ProblemNo::SodCartesian;
+		which_case = ProblemNo::SedovCartesian;
 		end_time = 1.;
 		x_tree_number = 1;
 		y_tree_number = 1;
@@ -171,7 +171,7 @@ struct p4est_data_t {
 		max_dt = 1e-3;
 		equal_dt = false;
 		current_step = 0;
-		max_time_step = 1000;
+		max_time_step = 8000;
 
 		volume_varation_torelarion = 0.01;
 		dt_increase_percent = 1.001;

@@ -3906,10 +3906,13 @@ static void RiemannSolver(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_da
 		ComputeCornerNodeVelocity(p4est, ghost, ghost_data);
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
-		
 		ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est, ghost, ghost_data);
 
-		
+		p4est_data_t * p4est_data = (p4est_data_t *)p4est->user_pointer;
+		if (p4est_data->current_step == 1) {
+			//IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug_checkpoint", 0, iter_num);
+		}
+
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 	}
 
@@ -3979,7 +3982,7 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 
 		
 		CalculateHalfTimeVariable(p4est);
-		StatGlobalFieldChecksum(p4est, "Checkpoint 3: Predict");
+		//StatGlobalFieldChecksum(p4est, "Checkpoint 3: Predict");
 
 		
 		CalculateCornerRcpLcpNcp(p4est);
@@ -3994,7 +3997,7 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 		{
 			RiemannSolver(p4est, ghost, ghost_data);
 		}
-		StatGlobalFieldChecksum(p4est, "Checkpoint 4: RiemannSolver");
+		//StatGlobalFieldChecksum(p4est, "Checkpoint 4: RiemannSolver");
 
 		
 		ComputeDivergence(p4est);
@@ -4028,7 +4031,7 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 		ComputeSoundSpeed(p4est);
 		StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
 	}
-	StatGlobalFieldChecksum(p4est, "Checkpoint 5: Update");
+	//StatGlobalFieldChecksum(p4est, "Checkpoint 5: Update");
 	p4est_data->used_dt = p4est_data->delta_time;
 }
 
@@ -5233,7 +5236,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 	for (t = start_time; t < end_time; t += p4est_data->delta_time)
 	{
 		p4est_data->current_step += 1;
-		StatGlobalFieldChecksum(p4est, "Checkpoint 1: Start time loop");
+		//StatGlobalFieldChecksum(p4est, "Checkpoint 1: Start time loop");
 		if(p4est_data->current_step>p4est_data->max_time_step)
 		{
 			P4EST_GLOBAL_PRODUCTIONF("The current step %d is larger than the max step %d, simulation is stopped!\n",
@@ -5289,7 +5292,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			ghost = NULL;
 			ghost_data = NULL;
 		}
-		StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");
+		//StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");
 
 		
 		if (p4est_data->current_step &&
@@ -5521,7 +5524,7 @@ int main(int argc, char **argv)
 	p4est_partition(p4est, partforcoarsen, NULL);
 
 	// Test call to the debug VTU output
-	IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug_checkpoint", 0, 0);
+	//IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug_checkpoint", 0, 0);
 
 	advance_time_step(p4est,                    
 		p4est_data->start_time,    
