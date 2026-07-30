@@ -122,7 +122,7 @@ def parse_pvtu_file(pvtu_path):
         'data': all_data
     }
 
-def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('Density', 'Pressure')):
+def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('density', 'Pressure')):
     """
     Compares target_path against ref_path.
     Returns True if passed, False otherwise.
@@ -177,7 +177,7 @@ def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('Density', 'P
 
     check_fields = list(fields_to_check)
     # Also check additional fields if present in both
-    for extra in ['InternalEnergy', 'NodeX', 'NodeY', 'NodeU', 'NodeV', 'Position',
+    for extra in ['density', 'InternalEnergy', 'NodeX', 'NodeY', 'NodeU', 'NodeV', 'Position',
                   'Pressure_c0', 'Pressure_c1', 'Pressure_c2', 'Pressure_c3',
                   'VelocityU_c0', 'VelocityU_c1', 'VelocityU_c2', 'VelocityU_c3',
                   'VelocityV_c0', 'VelocityV_c1', 'VelocityV_c2', 'VelocityV_c3',

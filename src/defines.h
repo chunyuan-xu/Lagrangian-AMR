@@ -141,7 +141,7 @@ struct p4est_data_t {
 
 		local_dt = 100000.;
 		delta_time = 1e-5;
-		refine_coarsen_time = 0.0001;
+		refine_coarsen_time = 0.0;
 		minus_level = 4;
 		max_level = 7;
 		
