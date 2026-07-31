@@ -236,3 +236,64 @@ mpiexec -n 8 ./bin/AMR_Solver.exe  # 8核
 - 节点速度求解: `main.cpp: RiemannSolver()` (~L3891)
 - 能量守恒检查: `main.cpp: StatTotalEnergyError()` (~L3752)
 - Ghost 层刷新: `main.cpp: refresh_after_balance()` (~L4734)
+
+---
+
+## 时间步宏观二分 + Global ID 串并行严密比对策略 (Time-step Bisection & Global ID Sync Check)
+
+在拉格朗日框架下，一旦发生发散，网格的物理坐标 `(cx, cy)` 就会随着错误的速度场发生漂移。因此，**绝对禁止在发散后依赖物理坐标去跨串并行对齐网格**。
+
+必须使用以下基于 **Global ID** 的全盘对比策略：
+
+### 1. 宏观/微观二分对比法思路
+- **时间步宏观二分**：检查第 $n$ 步开始时的初始物理量（P, Rho）是否对齐。若对齐，但第 $n$ 步结束时角点速度发散，说明错误精确锁定在第 $n$ 步的物理求解器（如 `two_stage_Runge_Kutta`）内。
+- **微观函数二分**：在锁定时间步后，继续在物理求解器的各个子函数（如 Predictor, RiemannSolver）前后执行全局数据 Dump，重点输出该步骤的核心计算结果（如节点受力、角点速度等），精确缩小错误范围。
+
+### 2. 获取网格绝对身份证 (Global ID)
+在 `p4est_iterate` 的回调函数中，利用底层的 Z-曲线索引获取网格的全局编号。无论在几个核心上运行，这个编号在串并行下是一一对应的：
+```cpp
+long long global_id = info->p4est->global_first_quadrant[info->p4est->mpirank] + info->quadid + tree->quadrants_offset;
+```
+
+### 3. C++ 植入全场日志导出回调
+在目标时间步（如 `current_step == 2`）的特定子步骤（如节点求解器前后），调用一个独立的回调函数，将**所有网格**的关键物理量（如 P, Rho, 以及四个角点的速度）连同 `global_id` 一起写入纯文本。**特别注意：因为是节点求解器，一定要输出四个角点的速度，而不是仅输出网格中心速度。**
+
+```cpp
+// 示例：在 two_stage_Runge_Kutta 的目标子函数前后调用
+if (p4est_data->current_step == 2) {
+    p4est_iterate(p4est, NULL, NULL, quadrant_debug_dump_callback, NULL, NULL);
+}
+
+// 示例回调实现：
+static void quadrant_debug_dump_callback(p4est_iter_volume_info_t *info, void *user_data) {
+    p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+    p4est_tree_t *tree = p4est_tree_array_index(info->p4est->trees, info->treeid);
+    long long global_id = info->p4est->global_first_quadrant[info->p4est->mpirank] + info->quadid + tree->quadrants_offset;
+    
+    char fname[256];
+    sprintf(fname, "debug_vars_rank_%d.txt", info->p4est->mpirank);
+    FILE *f = fopen(fname, "a");
+    if (f) {
+        quad_data_t *m_data = (quad_data_t *)info->quad->p.user_data;
+        // 打印所有的网格中心变量(P, Rho) 和 四个角点的独立变量(角点速度)
+        for (int cnid = 0; cnid < CNDIM; cnid++) {
+            fprintf(f, "Step %d, GlobalID %lld, Corner %d, P=%e, Rho=%e, Velo=(%e, %e)\n", 
+                p4est_data->current_step, global_id, cnid,
+                m_data->m_vara.DouCData[idPressure], m_data->m_vara.DouCData[idDensity],
+                m_data->m_vara.VecCnData[idcnVelocity_lag][cnid].x, m_data->m_vara.VecCnData[idcnVelocity_lag][cnid].y);
+        }
+        fclose(f);
+    }
+}
+```
+
+### 4. 执行与 Python 自动比对 (抓出犯事网格)
+1. 清理旧日志：`Remove-Item debug_vars_*.txt -ErrorAction SilentlyContinue`
+2. 串行运行：`make -j 8 && .\bin\AMR_Solver.exe`，重命名 `debug_vars_rank_0.txt` -> `serial_vars.txt`
+3. 并行运行：`mpiexec -n 4 .\bin\AMR_Solver.exe`
+4. 编写 Python 脚本解析日志。**以 `GlobalID` 和 `Corner` 为 Key**，严格对比串并行的 `P`, `Rho`, `Vx`, `Vy`。若最大误差 (`Max Diff`) 大于 1e-10，立即打印出导致发散的那个 `GlobalID` 以及具体的角点序号。
+
+## Critical Principles for Debugging the Main Loop
+
+* **Include AMR Routines in Checkpoints:** AMR adaptation steps (e.g., `p4est_refine`, `p4est_balance`, `refresh_after_balance`, `quadrant_update_after_balance_callback`) are NOT just topological mesh changes. They perform critical physical field interpolations for new/hanging nodes. **They must be treated as physical computations.**
+* **No Blind Spots:** When performing step-by-step or sub-step bisection to locate a divergence, **every function inside the main time loop** must be considered a candidate for checkpointing. Never assume a function is "safe" or "unrelated" if it operates on the physics state.
