@@ -870,6 +870,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 - **实施**：增加显式 `solver_type` 与 `coord_type` 判定接口，先保留旧比较作诊断对照，再切换调用。
 - **专项验收**：每种合法组合均进入预期分支；不依赖枚举底层整数碰巧相等；通过 G1。
 
+**完成记录（2026-08-03）**：起点提交 `0f44dcf`。审计确认原条件 `coord_type == RiemannSolver::GridAligned` 实际依赖 `plane == GridAligned == 0`，并未检查 solver 类型；默认黄金组合 `plane + Rotated` 证明该处设计意图是平面坐标门控。新增类型化 `CoordinateType`、`SolverType`、legacy 转换和 `should_run_riemann`，四种合法组合及非法整数范围专项测试 PASS；`plane` 下两种 solver 均执行 Riemann，`cylinder` 下均不执行，保持现有数值路径。跨枚举旧比较已被唯一显式门控替代，无临时诊断或额外旧分支可清理。G1 的 Noh Uniform（4112）、Sod AMR（3046）、Sedov AMR（3933）全部 PASS，`param.ini` 恢复。状态：**完成**。
+
 #### M1.4 RK 阶段语义
 
 - **实施**：先记录当前单阶段行为；根据设计依据决定“重命名为单阶段”或“实现完整 RK2”。两种方案不得混合推进。

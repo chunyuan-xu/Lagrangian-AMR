@@ -1,6 +1,7 @@
 #include "alg.h"
 #include "amr/amr_criteria.h"
 #include "solver/corner_solver.h"
+#include "solver/solver_gate.h"
 #include "io/vtk_writer.h"
 #include "io/config_parser.h"
 #include "physics/timestep_reduction.h"
@@ -4163,7 +4164,11 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
 		
-		if (p4est_data->coord_type == p4est_data_t::RiemannSolver::GridAligned)
+		const SolverGate::CoordinateType coordinate_type =
+			SolverGate::coordinate_type_from_legacy(p4est_data->coord_type);
+		const SolverGate::SolverType solver_type =
+			SolverGate::solver_type_from_legacy(p4est_data->solver_type);
+		if (SolverGate::should_run_riemann(coordinate_type, solver_type))
 		{
 			RiemannSolver(p4est, ghost, ghost_data);
 		}
