@@ -128,12 +128,18 @@ powershell -File validate_current.ps1
 4. **失败即回退**: 若串行测试失败，立即 `git checkout -- src/`
 5. **禁止批量修改**: 单步单验证
 
-**调试重点领域**:
-- Ghost 层数据失效（p4est_refine/coarsen 后未重建 ghost）
-- 迭代回调中 NULL ghost 解引用
-- 分区边界的节点力不对称
-- 全局量 Allreduce（能量、时间步）
-- partition 后的数据迁移（`p4est_partition` 时序）
+**调试重点领域（按优先级排列）**:
+1. **【最高优先级】p4est_iterate 接口的影像区（ghost）数据交互审计**:
+   串并行不一致时，**很大概率是并行通信没做好**。最优先排查**所有**调用 `p4est_iterate` 的接口函数，**尤其是**其回调涉及 `p4est_iter_face_info_t` 或 `p4est_iter_corner_info_t` 的（面/角迭代会跨 rank 访问邻居单元）：
+   - 检查 `p4est_iterate` 的 `ghost` / `ghost_data` 入参是否真的传入了**已创建并完成数据交换**的 ghost，而不是 `NULL`；
+   - 逐一核对回调内部访问邻居/主点单元时，是否按 `side->is_hanging.is_ghost[]` / `side->is.full.is_ghost` / `is_ghost` 正确走 `ghost_data[...]` 分支，还是错误地直接用本地 `p.user_data`；
+   - **一旦发现某个接口漏传 ghost（传入 NULL）或回调内有影像区分支缺失，立即停止后续调试并报告**，先把该通信补齐再做任何逐单元数值比对。
+   - 反例佐证（本项目）：step2/3 BUG 根因是 `ComputeHangingNodeVelocity...` 的 `p4est_iterate` 传了 `NULL` ghost；step4 BUG 根因是 `refresh_after_balance` 的 `p4est_iterate` 传了 `NULL` ghost。二者都表现为"跨 rank 的 coarse-fine / 悬挂面被漏算"，串行正常而 MPI 错。
+2. Ghost 层数据失效（p4est_refine/coarsen 后未重建 ghost）
+3. 迭代回调中 NULL ghost 解引用
+4. 分区边界的节点力不对称
+5. 全局量 Allreduce（能量、时间步）
+6. partition 后的数据迁移（`p4est_partition` 时序）
 
 **全场 VTU 锚点比对策略 (Debug Anchor Strategy)**:
 1. **植入锚点**: 在目标代码处（如黎曼求解器后、节点速度组装后），插入 `IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug", 0, location_id);`，对全场物理量进行快照输出。此操作只读，绝对安全。
@@ -254,6 +260,18 @@ mpiexec -n 8 ./bin/AMR_Solver.exe  # 8核
 ```cpp
 long long global_id = info->p4est->global_first_quadrant[info->p4est->mpirank] + info->quadid + tree->quadrants_offset;
 ```
+
+> ### ⚠️ Global ID 的可靠性与替代对齐键 (Stable Key Alignment)
+> **注意**：`info->quadid` 是 p4est 在当前 rank、当前 tree 上下文下的**局部编号**，**不是跨分区稳定、永久有效的全局编号**。上面这个公式只有在单 tree、且各 rank 起始偏移恰好对齐的简单场景下，数值上才近似等于全局 SFC ordinal。在**多 rank 分区 / AMR 细分之后**，用 `global_id` 去跨串并行对齐单元**不可靠**，容易出现对不齐、甚至错位的假象。
+>
+> **更稳健的稳定对齐键**：使用单元的
+> `(level, 逻辑 x, 逻辑 y)` —— 即 `info->quad->level`、`info->quad->x`、`info->quad->y`。
+> 这三个值是 p4est 的客观几何身份，**在任何 rank、任何分片下都逐位一致**，是跨串并行逐单元比对的可靠 Key。
+> ```cpp
+> // 稳定对齐键 = (level, x, y)，作为 Python 比对脚本的 key
+> key = (info->quad->level, info->quad->x, info->quad->y)
+> ```
+> **推荐做法**：当发现 global_id 难以对齐（或怀疑对齐失真）时，立即改用 `(level, x, y)` 作为串并行逐单元比对的 Key。这不依赖网格全局编号，也不依赖发生漂移后的物理坐标。
 
 ### 3. C++ 植入全场日志导出回调
 在目标时间步（如 `current_step == 2`）的特定子步骤（如节点求解器前后），调用一个独立的回调函数，将**所有网格**的关键物理量（如 P, Rho, 以及四个角点的速度）连同 `global_id` 一起写入纯文本。**特别注意：因为是节点求解器，一定要输出四个角点的速度，而不是仅输出网格中心速度。**
@@ -323,12 +341,18 @@ static void quadrant_debug_dump_callback(p4est_iter_volume_info_t *info, void *u
 4. **失败即回退**: 若串行测试失败，立即 `git checkout -- src/`
 5. **禁止批量修改**: 单步单验证
 
-**调试重点领域**:
-- Ghost 层数据失效（p4est_refine/coarsen 后未重建 ghost）
-- 迭代回调中 NULL ghost 解引用
-- 分区边界的节点力不对称
-- 全局量 Allreduce（能量、时间步）
-- partition 后的数据迁移（`p4est_partition` 时序）
+**调试重点领域（按优先级排列）**:
+1. **【最高优先级】p4est_iterate 接口的影像区（ghost）数据交互审计**:
+   串并行不一致时，**很大概率是并行通信没做好**。最优先排查**所有**调用 `p4est_iterate` 的接口函数，**尤其是**其回调涉及 `p4est_iter_face_info_t` 或 `p4est_iter_corner_info_t` 的（面/角迭代会跨 rank 访问邻居单元）：
+   - 检查 `p4est_iterate` 的 `ghost` / `ghost_data` 入参是否真的传入了**已创建并完成数据交换**的 ghost，而不是 `NULL`；
+   - 逐一核对回调内部访问邻居/主点单元时，是否按 `side->is_hanging.is_ghost[]` / `side->is.full.is_ghost` / `is_ghost` 正确走 `ghost_data[...]` 分支，还是错误地直接用本地 `p.user_data`；
+   - **一旦发现某个接口漏传 ghost（传入 NULL）或回调内有影像区分支缺失，立即停止后续调试并报告**，先把该通信补齐再做任何逐单元数值比对。
+   - 反例佐证（本项目）：step2/3 BUG 根因是 `ComputeHangingNodeVelocity...` 的 `p4est_iterate` 传了 `NULL` ghost；step4 BUG 根因是 `refresh_after_balance` 的 `p4est_iterate` 传了 `NULL` ghost。二者都表现为"跨 rank 的 coarse-fine / 悬挂面被漏算"，串行正常而 MPI 错。
+2. Ghost 层数据失效（p4est_refine/coarsen 后未重建 ghost）
+3. 迭代回调中 NULL ghost 解引用
+4. 分区边界的节点力不对称
+5. 全局量 Allreduce（能量、时间步）
+6. partition 后的数据迁移（`p4est_partition` 时序）
 
 **全场 VTU 锚点比对策略 (Debug Anchor Strategy)**:
 1. **植入锚点**: 在目标代码处（如黎曼求解器后、节点速度组装后），插入 `IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug", 0, location_id);`，对全场物理量进行快照输出。此操作只读，绝对安全。
@@ -449,6 +473,18 @@ mpiexec -n 8 ./bin/AMR_Solver.exe  # 8核
 ```cpp
 long long global_id = info->p4est->global_first_quadrant[info->p4est->mpirank] + info->quadid + tree->quadrants_offset;
 ```
+
+> ### ⚠️ Global ID 的可靠性与替代对齐键 (Stable Key Alignment)
+> **注意**：`info->quadid` 是 p4est 在当前 rank、当前 tree 上下文下的**局部编号**，**不是跨分区稳定、永久有效的全局编号**。上面这个公式只有在单 tree、且各 rank 起始偏移恰好对齐的简单场景下，数值上才近似等于全局 SFC ordinal。在**多 rank 分区 / AMR 细分之后**，用 `global_id` 去跨串并行对齐单元**不可靠**，容易出现对不齐、甚至错位的假象。
+>
+> **更稳健的稳定对齐键**：使用单元的
+> `(level, 逻辑 x, 逻辑 y)` —— 即 `info->quad->level`、`info->quad->x`、`info->quad->y`。
+> 这三个值是 p4est 的客观几何身份，**在任何 rank、任何分片下都逐位一致**，是跨串并行逐单元比对的可靠 Key。
+> ```cpp
+> // 稳定对齐键 = (level, x, y)，作为 Python 比对脚本的 key
+> key = (info->quad->level, info->quad->x, info->quad->y)
+> ```
+> **推荐做法**：当发现 global_id 难以对齐（或怀疑对齐失真）时，立即改用 `(level, x, y)` 作为串并行逐单元比对的 Key。这不依赖网格全局编号，也不依赖发生漂移后的物理坐标。
 
 ### 3. C++ 植入全场日志导出回调
 在目标时间步（如 `current_step == 2`）的特定子步骤（如节点求解器前后），调用一个独立的回调函数，将**所有网格**的关键物理量（如 P, Rho, 以及四个角点的速度）连同 `global_id` 一起写入纯文本。**特别注意：因为是节点求解器，一定要输出四个角点的速度，而不是仅输出网格中心速度。**
