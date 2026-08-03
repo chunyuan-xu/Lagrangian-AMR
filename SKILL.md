@@ -50,11 +50,30 @@ make -j8      # 并行编译（约 30 秒）
 | `src/defines.h` | 全局常量和变量索引 |
 | `param.ini` | 运行参数（算例类型、AMR层级、时间设置、输出频率） |
 | `validate_current.ps1` | 一键回归验证脚本（编译 + 运行 3 个基准算例 + 结果比对） |
-| `compare_vtu.py` | VTU 文件数值比对（容差 1e-12） |
+| `python/` | 回退测试 & MPI debug 的 Python 脚本集（见下节） |
 | `reference/` | 基准参考结果（Noh_32x32.vtu、SedovAMR.vtu、SodAMR.vtu） |
 | `reference/par4_sod/` | **并行(4核)黄金参考**：Sod AMR 4 核 `p4est_Lagrangian_3046.pvtu` + 4 个 rank 分块 |
 | `reference/par4_sedov/` | **并行(4核)黄金参考**：Sedov AMR 4 核 `p4est_Lagrangian_3933.pvtu` + 4 个 rank 分块 |
 | `WORKFLOW.md` 或 `task.md` | 当前任务清单和里程碑状态 |
+
+### Python 脚本集 (`python/`)
+
+回退测试与 MPI debug 的核心 Python 脚本统一放在 `python/`（自包含，内部用相对自身路径引用兄弟模块）：
+
+| 脚本 | 用途 |
+|---|---|
+| `python/compare_vtu.py` | VTU/PVTU 数值比对（容差 1e-12），支持网格对齐 |
+| `python/quick_consistency_test.py` | 任意步数串行/MPI 一致性单命令测试（`--step N --ranks K`） |
+| `python/run_tests.py` | 三个串行锚点（Noh/Sod/Sedov）官方回归 |
+| `python/_anchor_regression.py` | 串行锚点回退执行器（含 PATH/参数/末帧优化，见 `[GOLDEN-PASS]`） |
+| `python/mpi_bisection_debug.py` | MPI 并行分歧二分调试（step 定位） |
+| `python/compare_100_by_geometry.py` | 按几何键对齐串并行网格的字段比对 |
+| `python/compare_vars.py` / `python/compare_locs.py` | 变量/位置对照工具 |
+| `python/generate_refs.py` | 参考 VTU 生成辅助 |
+
+> 运行约定：脚本从项目根目录调用，仅 python 解释器在 `<venv>`（含 NumPy），如
+> `"C:\\Users\\<user>\\.workbuddy\\binaries\\python\\envs\\default\\Scripts\\python.exe" python/_anchor_regression.py`。
+> 脚本内部已用 `Path(__file__).resolve().parent` 定位 `python/` 下兄弟模块与项目根（`param.ini`/`bin/`/`reference/`）。
 
 ---
 

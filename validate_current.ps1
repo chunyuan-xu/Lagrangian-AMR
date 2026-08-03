@@ -20,7 +20,7 @@ if ($makeExit -ne 0) {
 
 # 2. Strict Regression Testing
 Write-Host "=> Executing regression validation suite..." -ForegroundColor Yellow
-python run_tests.py
+python python/run_tests.py
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Regression validation failed! Current code breaks the baseline!" -ForegroundColor Red
     exit 1
