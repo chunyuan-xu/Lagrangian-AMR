@@ -271,7 +271,7 @@ mpiexec -n 8 ./bin/AMR_Solver.exe  # 8核
    - 主要状态变量（必须持久化）
    - 几何变量
    - 求解器临时缓存（可清除）
-5. 用 LaTeX 格式撰写数学文档（输出为 `math_formulation.md`）
+5. 用 LaTeX 格式撰写数学文档（输出为 `docs/math_formulation.md`）
 
 ---
 
