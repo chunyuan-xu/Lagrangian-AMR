@@ -103,6 +103,7 @@ powershell -File validate_current.ps1
 3. **代码里的默认值 / 硬编码（param.ini 未暴露）**：
    - 例如 `defines.h` 里 `refine_coarsen_enum = RefineCriteria::DensityGradient` 等默认值；
    - 求解器内部其它魔法常数、迭代次数、单位、边界条件默认值。
+   - **`refine_coarsen_time` 已从源码隐藏改为 ini 可读**（提交 `4ae893e` 后 `defines.h` 的 `load_from_config` 会读它），`_anchor_regression.py` 会显式写 `refine_coarsen_time=0.0001`，回退时无需再手工改源码 + 重编译。
 
 > **本项目真实反例**：GOLDEN-PASS 参考锚点（`reference/SodAMR.vtu`、`reference/SedovAMR.vtu`）是在 **`refine_err=1.0, coarsen_error=0.8`**（宽松阈值）下生成的；而当前 `param.ini` 里是 **`0.1 / 0.05`**（step55 调试阶段被调严）。直接拿当前 .ini 跑回归，Sod/Sedov 的 AMR 网格因阈值不同而明显更细（Sod 从锚点 4390 cells 变成 9253 cells，Sedov 从 5422 变成 6628），`compare_vtu.py` 报 cell 数不匹配。**这不是物理求解没回退，而是配置参数与锚点不一致造成的假性失败。** 无 AMR 的 Noh 不受阈值影响，能逐位一致回退（证明物理核心完好）。
 
