@@ -3,6 +3,7 @@
 #include "solver/corner_solver.h"
 #include "io/vtk_writer.h"
 #include "io/config_parser.h"
+#include "physics/timestep_reduction.h"
 #include <cstdlib>
 #include <cstring>
 #ifdef _WIN32
@@ -1326,8 +1327,10 @@ static void quadrant_predict_timestep_callback(p4est_iter_volume_info_t *info, v
 	double quad_increased_dt = p4est_data->delta_time * p4est_data->dt_increase_percent;
 
 	
-	p4est_data->local_dt = min(quad_cfl_dt,
+	const double quad_dt = min(quad_cfl_dt,
 		min(quad_vol_dt, quad_increased_dt));
+	p4est_data->local_dt = TimestepReduction::accumulate_local_minimum(
+		p4est_data->local_dt, quad_dt);
 
 	if (p4est_data->local_dt < m_eps)
 	{
@@ -1341,6 +1344,7 @@ static void
 predict_timestep(p4est_t *p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data->local_dt = TimestepReduction::initial_local_minimum();
 
 	p4est_iterate(p4est,
 		NULL,

@@ -855,6 +855,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 - **专项验收**：改变本地遍历顺序和 MPI rank 数不改变全局 `dt`；通过 G1+G2。
 - **清理**：回退通过后再移除临时诊断和旧覆盖路径，随后再次 G1。
 
+**完成记录（2026-08-03）**：起点提交 `6171376`。新增 `TimestepReduction::initial_local_minimum` 与 `accumulate_local_minimum`，在每次 `p4est_iterate` 前以正无穷初始化，并在 volume callback 中累计 rank 内最小值；原有 `MPI_Allreduce(MIN)` 保持不变。遍历顺序专项单元测试 PASS；G2 step 3/4/10/50/54 在 2 ranks 下全部 PASS；清理后 G1 的 Noh Uniform（4112）、Sod AMR（3046）、Sedov AMR（3933）全部 PASS，且 `param.ini` 逐字节恢复。未引入临时诊断，无额外旧路径可删除。状态：**完成**。
+
 #### M1.2 coarsen family 判据
 
 - **实施**：先把现有行为包装为兼容函数；用四子单元顺序置换测试确认目标语义，再切换实现。
