@@ -24,7 +24,8 @@ from compare_100_by_geometry import (
     parse_vtu,
 )
 
-ROOT = Path(__file__).resolve().parent
+# Project root = parent of python/ (where param.ini, bin/, reference/ live).
+ROOT = Path(__file__).resolve().parent.parent
 PARAM = ROOT / "param.ini"
 SOLVER = ROOT / "bin" / "AMR_Solver.exe"
 OUTPUT = ROOT / "output"

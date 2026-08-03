@@ -12,6 +12,11 @@ For efficiency, write_interval_step is pushed very high so only the final
 terminal frame is emitted (the comparison needs only that one).
 """
 import os, re, shutil, subprocess, datetime, time, sys
+from pathlib import Path
+
+# Resolve sibling tools relative to this script so python/ is self-contained.
+_THIS = Path(__file__).resolve().parent
+COMPARE_VTU = str(_THIS / 'compare_vtu.py')
 
 MSYS_PATHS = [
     "C:/msys64/usr/bin",
@@ -74,7 +79,7 @@ def run_test(name, case_id, end_time, amr, minus, maxlvl, ref_file, ref_enum=0):
         return False
     latest = f"output/{outs[-1]}"
     print(f"Comparing {latest} vs reference/{ref_file}", flush=True)
-    c = subprocess.run([sys.executable, 'compare_vtu.py', '--target', latest,
+    c = subprocess.run([sys.executable, COMPARE_VTU, '--target', latest,
                         '--ref', f'reference/{ref_file}', '--tol', '1e-12'],
                        capture_output=True, text=True)
     if c.returncode != 0:

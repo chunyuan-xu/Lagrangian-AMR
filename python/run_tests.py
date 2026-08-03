@@ -3,6 +3,17 @@ import sys
 import subprocess
 import re
 import shutil
+from pathlib import Path
+
+# Project root = parent of python/ (where param.ini, bin/, reference/ live).
+# Resolve paths from here so the script works regardless of the invoking cwd.
+ROOT = Path(__file__).resolve().parent.parent
+_COMPARE_VTU = str(Path(__file__).resolve().parent / 'compare_vtu.py')
+
+
+def _rooted(p):
+    return str(ROOT / p)
+
 
 def update_param(filepath, updates):
     with open(filepath, 'r') as f:
@@ -16,12 +27,12 @@ def run_test(name, case_id, end_time, amr_enabled, minus_level, max_level, ref_f
     print(f"\n{'='*50}\nRunning {name}\n{'='*50}")
     
     # Clean output dir
-    out_dir = "output"
+    out_dir = _rooted('output')
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.makedirs(out_dir, exist_ok=True)
     
-    update_param('param.ini', {
+    update_param(_rooted('param.ini'), {
         'which_case': case_id,
         'end_time': end_time,
         'enable_amr': amr_enabled,
@@ -34,22 +45,24 @@ def run_test(name, case_id, end_time, amr_enabled, minus_level, max_level, ref_f
     
     # Run solver
     print("Executing solver...")
-    result = subprocess.run(['./bin/AMR_Solver.exe'], capture_output=True, text=True)
+    result = subprocess.run([_rooted('bin/AMR_Solver.exe')], capture_output=True, text=True, cwd=str(ROOT))
     if result.returncode != 0:
         print(f"FAILED: Solver crashed for {name}!\nSTDOUT:\n{result.stdout[-1000:]}\nSTDERR:\n{result.stderr[-1000:]}")
         return False
         
     # Get output file
-    outputs = [f for f in os.listdir('output') if f.endswith('.vtu') and f.startswith('p4est_Lagrangian')]
+    outputs = [f for f in os.listdir(_rooted('output')) if f.endswith('.vtu') and f.startswith('p4est_Lagrangian')]
     if not outputs:
         print("FAILED: No VTU output generated!")
         return False
     outputs.sort()
-    latest_out = f"output/{outputs[-1]}"
+    latest_out = _rooted(f"output/{outputs[-1]}")
     
     # Check comparison
     print(f"Comparing {latest_out} against reference/{ref_file}")
-    comp_result = subprocess.run(['python', 'compare_vtu.py', '--target', latest_out, '--ref', f'reference/{ref_file}', '--tol', '1e-12'], capture_output=True, text=True)
+    comp_result = subprocess.run([sys.executable, _COMPARE_VTU, '--target', latest_out,
+                                  '--ref', _rooted(f'reference/{ref_file}'), '--tol', '1e-12'],
+                                 capture_output=True, text=True, cwd=str(ROOT))
     
     if comp_result.returncode != 0:
         print(f"FAILED: Comparison failed for {name}!\n{comp_result.stdout}\n{comp_result.stderr}")
@@ -59,7 +72,7 @@ def run_test(name, case_id, end_time, amr_enabled, minus_level, max_level, ref_f
     return True
 
 def main():
-    if not os.path.exists('bin/AMR_Solver.exe'):
+    if not os.path.exists(_rooted('bin/AMR_Solver.exe')):
         print("Error: bin/AMR_Solver.exe not found. Please compile first.")
         sys.exit(1)
         
