@@ -920,66 +920,6 @@ static int Lagrangian_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_
 {
 	return AMRAgorithm::CoarsenErrorEstimate(p4est, which_tree, children);
 }
-#if 0
-
-
-	parent_gradient = 0.;
-	for (int i = 0; i < P4EST_CHILDREN; i++)
-	{
-		data = (quad_data_t *)children[i]->p.user_data;
-		p4est_qcoord_t qx = children[i]->x;
-		p4est_qcoord_t qy = children[i]->y;
-		int			level = children[i]->level;
-		p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
-
-
-		if (data->m_vara.IntCData[idAllowCoarsening] == p4est_data_t::CoarseningEnum::CoarsingNotAllowed)
-		{
-			return 0;
-		}
-
-		if (level<=p4est_data->minus_level)
-		{
-			return 0;
-		}
-
-		if (level > p4est_data->max_level)
-		{
-			return 1;
-		}
-
-		if (p4est_data->refine_coarsen_enum == RefineCriteria::Distance)
-		{
-			double dist = sqrt(pow(data->m_vara.VecCData[idCentroidCoord_cur].x, 2) +
-				pow(data->m_vara.VecCData[idCentroidCoord_cur].y, 2));
-			if (fabs(dist - p4est_data->shock_velocity*p4est_data->current_time) > p4est_data->coarsen_error)
-			{
-				return 1;
-			}
-			else
-			{
-				return 0;
-			}
-		}
-
-		if (data->m_vara.DouCData[idCPara] < p4est_data->coarsen_error)
-		{
-			return 1;
-		}
-		parent_gradient += data->m_vara.DouCData[idCPara];
-	}
-	parent_gradient /= P4EST_CHILDREN;
-	if (parent_gradient < p4est_data->coarsen_error)
-	{
-		return 1;
-	}
-	else {
-		return 0;
-	}
-}
-#endif
-
-
 static int Lagrangian_init_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
 	p4est_quadrant_t *children[])
 {

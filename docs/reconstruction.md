@@ -863,6 +863,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 - **专项验收**：24 种 sibling 排序结果一致；阈值相等、NaN/Inf、level 边界有明确测试；通过 G1+G2。
 - **清理**：新 policy 覆盖全部调用后再删除旧分支，再次 G1。
 
+**完成记录（2026-08-03）**：起点提交 `e4ff042`。将四个 child 投影为脱离 p4est 的 `ChildIndicator` family，由纯函数统一处理禁止标志、level 边界和指标。目标语义冻结为与黄金路径兼容且顺序无关的“family 全局否决后，任一 child 满足指标即可粗化”；梯度使用严格 `< coarsen_error`，Distance 使用严格 `> coarsen_error`，相等和非有限指标不满足条件。24 种 sibling 排列、禁止标志、阈值相等、NaN/Inf、minimum/maximum level 专项测试 PASS；G2 step 3/4/10/50/54 全部 PASS；迁移完成 G1 全部 PASS。曾验证“所有 child 均满足”方案会使 Sod 末帧从 4390 增至 5104 cells，故未更新黄金参考并在本子里程碑内回退为兼容语义。删除 `main.cpp` 中已禁用的重复 coarsen 判据后，清理后 G1 的 Noh Uniform（4112）、Sod AMR（3046）、Sedov AMR（3933）再次全部 PASS，`param.ini` 恢复。状态：**完成**。
+
 #### M1.3 solver/coordinate 枚举门控
 
 - **实施**：增加显式 `solver_type` 与 `coord_type` 判定接口，先保留旧比较作诊断对照，再切换调用。
