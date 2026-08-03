@@ -891,6 +891,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 
 **M1 完成条件**：M1.1～M1.5 各自有独立提交和 G1 证据，整体再通过 G1+G2+G3。
 
+**M1 整体完成记录（2026-08-04）**：M1.1～M1.5 已分别完成并形成独立提交：时间步局部最小值 `e4ff042`、coarsen family 判据 `0f44dcf`、solver/coordinate 门控 `9b34708`、单阶段语义 `d2c435c`、输出戳语义 `e186712`、refresh 幂等验证 `a8f91f3`。整体闭环重新执行 G1，Noh Uniform（16.5s）、Sod AMR（61.7s）、Sedov AMR（49.2s）全部 PASS，且 `param.ini` 恢复；G2 step 3/4/10/50/54 全部 PASS；G3 四核 Sod AMR（30.6s）与四核 Sedov AMR（25.9s）均对并行黄金参考 PASS。状态：**M1 完成**，下一实施子里程碑为 M2.1 类型化配置和时钟。
+
 ### M2：类型化配置与状态访问
 
 **目标**：先建立兼容层，不立即改变 `quad_data_t/CVariable` 的底层布局。
