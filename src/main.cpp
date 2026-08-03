@@ -11,6 +11,45 @@
 #endif 
 using namespace std;
 
+static int g_trace_riemann_iter = -1;
+
+static FILE *open_corner2_trace(p4est_t *p4est)
+{
+	char fname[256];
+	sprintf(fname, "corner2_trace_%d_rank_%d.txt", p4est->mpisize, p4est->mpirank);
+	return fopen(fname, "a");
+}
+
+static bool is_trace_fine(const p4est_quadrant_t *quad)
+{
+	return quad->x == 134217728 && quad->y == 528482304 && quad->level == 7;
+}
+
+static bool is_trace_sibling(const p4est_quadrant_t *quad)
+{
+	return quad->x == 142606336 && quad->y == 528482304 && quad->level == 7;
+}
+
+static bool is_trace_parent(const p4est_quadrant_t *quad)
+{
+	return quad->x == 134217728 && quad->y == 536870912 && quad->level == 6;
+}
+
+static bool is_trace_refine_parent(const p4est_quadrant_t *quad)
+{
+	return quad->x == 134217728 && quad->y == 520093696 && quad->level == 6;
+}
+
+static void trace_matrix(FILE *f, const char *name, const CDoubleMatrix &m)
+{
+	fprintf(f, " %s=(%.17e,%.17e,%.17e,%.17e)", name, m.xx, m.xy, m.yx, m.yy);
+}
+
+static void trace_vector(FILE *f, const char *name, const CDoubleVector &v)
+{
+	fprintf(f, " %s=(%.17e,%.17e)", name, v.x, v.y);
+}
+
 #ifndef P4_TO_P8
 #include<p4est_vtk.h>
 #include<p4est_bits.h>
@@ -27,6 +66,39 @@ using namespace std;
 #include<p8est_io.h>
 #include<p8est_communication.h>
 #endif 
+
+static const char *g_trace_snapshot_stage = NULL;
+
+static void trace_target_snapshot_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	if ((p4est_data->current_step != 2 && p4est_data->current_step != 3) || g_trace_snapshot_stage == NULL ||
+		(!is_trace_fine(info->quad) && !is_trace_parent(info->quad) && !is_trace_refine_parent(info->quad))) {
+		return;
+	}
+	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
+	CVariable *v = &data->m_vara;
+	FILE *f = open_corner2_trace(info->p4est);
+	if (f) {
+		fprintf(f, "TRACE stage=SNAPSHOT step=%d point=%s cell=(%d,%d,L%d)", p4est_data->current_step, g_trace_snapshot_stage,
+			info->quad->x, info->quad->y, info->quad->level);
+		fprintf(f, " rho_cur=%.17e p_cur=%.17e sound=%.17e", v->DouCData[idDensity_cur], v->DouCData[idPressure_cur], v->DouCData[idSoundSpeed]);
+		for (int c = 0; c < CNDIM; ++c) {
+			char name[64];
+			sprintf(name, "cur%d", c); trace_vector(f, name, v->VecCnData[idcnVelocity_cur][c]);
+			sprintf(name, "lag%d", c); trace_vector(f, name, v->VecCnData[idcnVelocity_lag][c]);
+		}
+		fprintf(f, "\n");
+		fclose(f);
+	}
+}
+
+static void trace_target_snapshot(p4est_t *p4est, const char *stage)
+{
+	g_trace_snapshot_stage = stage;
+	p4est_iterate(p4est, NULL, NULL, trace_target_snapshot_callback, NULL, NULL);
+	g_trace_snapshot_stage = NULL;
+}
 
 
 static void get_hanging_edge_info_from_logical_position(const int which_face, const p4est_qcoord_t qx1, const p4est_qcoord_t qy1,
@@ -357,6 +429,25 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			}
 
 			CDoubleVector hanging_velo = 0.5 * (master_velocity[0] + master_velocity[1]);
+
+			if (p4est_data->current_step == 3 &&
+				((is_trace_fine(quad_child1) && is_trace_sibling(quad_child2)) ||
+				 (is_trace_sibling(quad_child1) && is_trace_fine(quad_child2)))) {
+				FILE *f = open_corner2_trace(info->p4est);
+				if (f) {
+					fprintf(f, "TRACE stage=HANGING_OVERRIDE iter=%d child0=(%d,%d,L%d,c%d,g%d) child1=(%d,%d,L%d,c%d,g%d) parent=(%d,%d,L%d,face%d,g%d)",
+						g_trace_riemann_iter, quad_child1->x, quad_child1->y, quad_child1->level, m_which_corner[0], side[i]->is.hanging.is_ghost[0] ? 1 : 0,
+						quad_child2->x, quad_child2->y, quad_child2->level, m_which_corner[1], side[i]->is.hanging.is_ghost[1] ? 1 : 0,
+						quad_parent->x, quad_parent->y, quad_parent->level, parent_face_index, side[full_index]->is.full.is_ghost ? 1 : 0);
+					trace_vector(f, "master0", master_velocity[0]);
+					trace_vector(f, "master1", master_velocity[1]);
+					trace_vector(f, "before0", m_child1_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[0]]);
+					trace_vector(f, "before1", m_child2_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[1]]);
+					trace_vector(f, "hanging", hanging_velo);
+					fprintf(f, "\n");
+					fclose(f);
+				}
+			}
 
 			m_child1_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[0]] = hanging_velo;
 			m_child2_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[1]] = hanging_velo;
@@ -2129,6 +2220,22 @@ static void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info,
 		
 		if (PCInfo[k].IsParentChildBoun == true)
 		{
+			if (p4est_data->current_step == 3 || p4est_data->current_step == 4) {
+				char fname[256];
+				sprintf(fname, "edge_matrix_dbg_%d_%d.txt", info->p4est->mpisize, info->p4est->mpirank);
+				FILE* f_dbg = fopen(fname, "a");
+				if (f_dbg) {
+					if (info->p4est->mpisize == 1 && info->quadid == 397) {
+						fprintf(f_dbg, "STEP %d: SERIAL 397 found! quad->x=%d, quad->y=%d, k=%d, IsParentChildBoun=true\n",
+							p4est_data->current_step, info->quad->x, info->quad->y, k);
+					} else {
+						// For parallel, we just print everything for now to find the matching x and y
+						// Or just let's log any quadrant whose x and y matches a known suspicious value
+						// But for now, just print the serial 397 to see its x and y.
+					}
+					fclose(f_dbg);
+				}
+			}
 			double Divergence = 0.;
 			CDoubleVector	LcpNcpPc, LcpNcp;
 			m_vara->DouCnData[idReconstructDensity][k] = m_vara->DouCData[idDensity_cur];
@@ -2148,6 +2255,22 @@ static void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info,
 			m_vara->VecCnData[ideMcpUc][k] = GeometryAlg::MatrixDotVector(m_vara->MarCnData[ideMcp][k],
 				m_vara->VecCnData[idReconstructVelocity][k]);
 			m_vara->VecCnData[ideRHS][k] = LcpNcpPc + m_vara->VecCnData[ideMcpUc][k];
+			if (p4est_data->current_step == 3 && is_trace_parent(info->quad)) {
+				FILE *f = open_corner2_trace(info->p4est);
+				if (f) {
+					fprintf(f, "TRACE stage=PARENT_EDGE iter=%d face=%d is_pc=%d", g_trace_riemann_iter, k, PCInfo[k].IsParentChildBoun ? 1 : 0);
+					trace_vector(f, "hanging_in", PCInfo[k].Hanging_velocity);
+					fprintf(f, " L=(%.17e,%.17e)", PCInfo[k].Lcp[0], PCInfo[k].Lcp[1]);
+					trace_vector(f, "N0", PCInfo[k].Ncp[0]);
+					trace_vector(f, "N1", PCInfo[k].Ncp[1]);
+					fprintf(f, " Z=%.17e", PCInfo[k].Zcp);
+					trace_vector(f, "delta_u", DeltaU[k]);
+					trace_matrix(f, "ideMcp", m_vara->MarCnData[ideMcp][k]);
+					trace_vector(f, "ideRHS", m_vara->VecCnData[ideRHS][k]);
+					fprintf(f, "\n");
+					fclose(f);
+				}
+			}
 		}
 	}
 }
@@ -2228,6 +2351,17 @@ static void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *i
 		m_vara->VecCnData[idcnMcpUc][k] = GeometryAlg::MatrixDotVector(m_vara->MarCnData[idcnMcp][k],
 			m_vara->VecCnData[idReconstructVelocity][k]);
 		m_vara->VecCnData[idcnRHS][k] = LcpNcpPc + m_vara->VecCnData[idcnMcpUc][k];
+		if (p4est_data->current_step == 3 && is_trace_parent(info->quad) && (k == 0 || k == 3)) {
+			FILE *f = open_corner2_trace(info->p4est);
+			if (f) {
+				fprintf(f, "TRACE stage=LOCAL_CORNER iter=%d corner=%d", g_trace_riemann_iter, k);
+				trace_matrix(f, "idcnMcp", m_vara->MarCnData[idcnMcp][k]);
+				trace_vector(f, "idcnRHS", m_vara->VecCnData[idcnRHS][k]);
+				trace_vector(f, "velocity_in", m_vara->VecCnData[idcnVelocity_lag][k]);
+				fprintf(f, "\n");
+				fclose(f);
+			}
+		}
 	}
 }
 
@@ -2631,6 +2765,7 @@ static void
 quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, void *user_data)
 {
 	p4est_t			*p4est = info->p4est;
+	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	quad_data_t		*ghost_data = (quad_data_t *)user_data;
 	quad_data_t		*m_quad_data, *m_quad_data_aside, *m_quad_data_full;
 	p4est_iter_face_side_t *side[2];
@@ -2732,6 +2867,27 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			RHS = m_quad_data->m_vara.VecCnData[idcnRHS][m_which_corner[0]] +
 				m_quad_data_aside->m_vara.VecCnData[idcnRHS][m_which_corner[1]] +
 				m_quad_data_full->m_vara.VecCnData[ideRHS][parent_face_index];
+			if (p4est_data->current_step == 3 &&
+				((is_trace_fine(quad) && is_trace_sibling(quad_aside)) ||
+				 (is_trace_sibling(quad) && is_trace_fine(quad_aside)))) {
+				FILE *f = open_corner2_trace(info->p4est);
+				if (f) {
+					fprintf(f, "TRACE stage=HANGING_SUM iter=%d fine0=(%d,%d,L%d,c%d,g%d) fine1=(%d,%d,L%d,c%d,g%d) parent=(%d,%d,L%d,face%d,g%d)",
+						g_trace_riemann_iter, quad->x, quad->y, quad->level, m_which_corner[0], side[i]->is.hanging.is_ghost[0] ? 1 : 0,
+						quad_aside->x, quad_aside->y, quad_aside->level, m_which_corner[1], side[i]->is.hanging.is_ghost[1] ? 1 : 0,
+						quad_full->x, quad_full->y, quad_full->level, parent_face_index, side[full_index]->is.full.is_ghost ? 1 : 0);
+					trace_matrix(f, "fine0_M", m_quad_data->m_vara.MarCnData[idcnMcp][m_which_corner[0]]);
+					trace_vector(f, "fine0_R", m_quad_data->m_vara.VecCnData[idcnRHS][m_which_corner[0]]);
+					trace_matrix(f, "fine1_M", m_quad_data_aside->m_vara.MarCnData[idcnMcp][m_which_corner[1]]);
+					trace_vector(f, "fine1_R", m_quad_data_aside->m_vara.VecCnData[idcnRHS][m_which_corner[1]]);
+					trace_matrix(f, "parent_M", m_quad_data_full->m_vara.MarCnData[ideMcp][parent_face_index]);
+					trace_vector(f, "parent_R", m_quad_data_full->m_vara.VecCnData[ideRHS][parent_face_index]);
+					trace_matrix(f, "sum_M", MatrixP);
+					trace_vector(f, "sum_R", RHS);
+					fprintf(f, "\n");
+					fclose(f);
+				}
+			}
 			m_quad_data->points[m_which_corner[0]].MatrixP = MatrixP;
 			m_quad_data->points[m_which_corner[0]].RHS = RHS;
 			m_quad_data_aside->points[m_which_corner[1]].MatrixP = MatrixP;
@@ -2951,8 +3107,8 @@ void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p
 
 	
 	p4est_iterate(p4est,
-		NULL,          
-		NULL,   
+		ghost,          
+		(void*) ghost_data,  
 		NULL, 
 		quadrant_relaxed_hanging_solver_callback,
 #ifdef P4_TO_P8
@@ -3046,6 +3202,21 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 
 		
 		m_vara->VecCnData[idcnVelocity_lag][cnid] = m_data->points[cnid].velo_lag;
+		p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+		if (p4est_data->current_step == 3 && !is_ghost &&
+			((is_trace_fine(side[i]->quad) && cnid == 2) ||
+			 (is_trace_parent(side[i]->quad) && (cnid == 0 || cnid == 3)))) {
+			FILE *f = open_corner2_trace(info->p4est);
+			if (f) {
+				fprintf(f, "TRACE stage=CORNER_SOLVE iter=%d cell=(%d,%d,L%d,c%d) hanging=%d", g_trace_riemann_iter,
+					side[i]->quad->x, side[i]->quad->y, side[i]->quad->level, cnid, m_data->points[cnid].IsHanging ? 1 : 0);
+				trace_matrix(f, "MatrixP", m_data->points[cnid].MatrixP);
+				trace_vector(f, "RHS", m_data->points[cnid].RHS);
+				trace_vector(f, "velo", m_data->points[cnid].velo_lag);
+				fprintf(f, "\n");
+				fclose(f);
+			}
+		}
 
 
 	}
@@ -3898,15 +4069,19 @@ static void RiemannSolver(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_da
 	
 	for (int iter_num = 0; iter_num < fixed_iter_num; iter_num++)
 	{
+		g_trace_riemann_iter = iter_num;
 		
 		MatrixAssemble(p4est, ghost, ghost_data);
+		trace_target_snapshot(p4est, "AFTER_MATRIX");
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
 		
 		ComputeCornerNodeVelocity(p4est, ghost, ghost_data);
+		trace_target_snapshot(p4est, "AFTER_CORNER_SOLVE");
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
 		ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est, ghost, ghost_data);
+		trace_target_snapshot(p4est, "AFTER_HANGING");
 
 		p4est_data_t * p4est_data = (p4est_data_t *)p4est->user_pointer;
 		if (p4est_data->current_step == 1) {
@@ -3982,14 +4157,17 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 
 		
 		CalculateHalfTimeVariable(p4est);
+		trace_target_snapshot(p4est, "AFTER_HALF");
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 3: Predict");
 
 		
 		CalculateCornerRcpLcpNcp(p4est);
+		trace_target_snapshot(p4est, "AFTER_RCP");
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
 		
 		Get_AMR_BDY_info(p4est,ghost,ghost_data);
+		trace_target_snapshot(p4est, "AFTER_AMR_BDY");
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 
 		
@@ -3997,6 +4175,45 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 		{
 			RiemannSolver(p4est, ghost, ghost_data);
 		}
+		
+		// Debug step 3 after RiemannSolver
+		if (p4est_data->current_step == 3) {
+			auto dbg_cb = [](p4est_iter_volume_info_t *info, void *user_data) {
+				quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
+				CVariable *m_vara = &data->m_vara;
+				if (info->p4est->mpisize == 1 && info->quadid == 397) {
+					char fname[256];
+					sprintf(fname, "riemann_dbg_%d.txt", info->p4est->mpisize);
+					FILE* f = fopen(fname, "a");
+					if (f) {
+						fprintf(f, "SERIAL 397 (x=%d, y=%d) corner velocities:\n", info->quad->x, info->quad->y);
+						for (int j = 0; j < P4EST_CHILDREN; j++) {
+							fprintf(f, "  Corner %d: vx=%f, vy=%f\n", j, 
+								m_vara->VecCnData[idcnVelocity_cur][j].x, 
+								m_vara->VecCnData[idcnVelocity_cur][j].y);
+						}
+						fclose(f);
+					}
+				}
+				// In parallel, we don't know quadid. We match by x and y of the serial 397!
+				if (info->p4est->mpisize > 1 && info->quad->x == 134217728 && info->quad->y == 528482304) {
+					char fname[256];
+					sprintf(fname, "riemann_dbg_%d.txt", info->p4est->mpisize);
+					FILE* f = fopen(fname, "a");
+					if (f) {
+						fprintf(f, "PARALLEL MATCH (x=%d, y=%d) corner velocities:\n", info->quad->x, info->quad->y);
+						for (int j = 0; j < P4EST_CHILDREN; j++) {
+							fprintf(f, "  Corner %d: vx=%f, vy=%f\n", j, 
+								m_vara->VecCnData[idcnVelocity_cur][j].x, 
+								m_vara->VecCnData[idcnVelocity_cur][j].y);
+						}
+						fclose(f);
+					}
+				}
+			};
+			p4est_iterate(p4est, ghost, ghost_data, dbg_cb, NULL, NULL);
+		}
+		
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 4: RiemannSolver");
 
 		
@@ -4382,11 +4599,42 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			p4est_qcoord_t qx = incoming[i]->x;
 			p4est_qcoord_t qy = incoming[i]->y;
 
+			if (p4est_data->current_step == 3 && is_trace_fine(incoming[i])) {
+				FILE *f = open_corner2_trace(p4est);
+				if (f) {
+					fprintf(f, "TRACE stage=REFINE_TRANSFER child_index=%d parent=(%d,%d,L%d) child=(%d,%d,L%d)", i,
+						outgoing[0]->x, outgoing[0]->y, outgoing[0]->level, incoming[i]->x, incoming[i]->y, incoming[i]->level);
+					for (int c = 0; c < CNDIM; ++c) {
+						char name[64];
+						sprintf(name, "parent_lag%d", c); trace_vector(f, name, parent_data->m_vara.VecCnData[idcnVelocity_lag][c]);
+						sprintf(name, "buffer_lag%d", c); trace_vector(f, name, parent_data->m_vara.ChildrenCnGeomVara[m_geometry_id::m_velo][i][c]);
+					}
+					fprintf(f, " parent_rho=%.17e buffer_rho=%.17e parent_ie=%.17e buffer_ie=%.17e\n",
+						parent_data->m_vara.DouCData[idDensity_lag], parent_data->m_vara.ChildrenPhysicalVara[m_physical_id::m_density][i],
+						parent_data->m_vara.DouCData[idInternalEnergy_lag], parent_data->m_vara.ChildrenPhysicalVara[m_physical_id::m_internal_energy][i]);
+					fclose(f);
+				}
+			}
+
+			double px = parent_data->m_vara.VecCData[idCentroidCoord_cur].x;
+			double py = parent_data->m_vara.VecCData[idCentroidCoord_cur].y;
+			p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+			char fname[256];
+			sprintf(fname, "refine_dbg_%d_%d.txt", p4est->mpisize, p4est->mpirank);
+			FILE* f_dbg = fopen(fname, "a");
+			if (f_dbg) {
+				fprintf(f_dbg, "REFINE_STEP_%d_PARENT at (%.6f, %.6f): parent SoundSpeed=%e, mass=%e, vol=%e\n",
+					p4est_data->current_step, px, py, parent_data->m_vara.DouCData[idSoundSpeed], parent_data->m_vara.DouCData[idMass], parent_data->m_vara.DouCData[idVolume]);
+			}
 			
 			for (int j = 0; j < idDoubleCellVariableNum; j++)
 			{
 				
 				child_data->m_vara.DouCData[j] = parent_data->m_vara.DouCData[j];
+				if (j == idSoundSpeed && f_dbg) {
+					fprintf(f_dbg, "REFINE_STEP_%d_CHILD at (%.6f, %.6f): child SoundSpeed=%e\n",
+						p4est_data->current_step, px, py, child_data->m_vara.DouCData[idSoundSpeed]);
+				}
 				if (parent_data->m_vara.DouCData[idInternalEnergy_cur] > m_eps)
 				{
 				}
@@ -4395,6 +4643,9 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 					P4EST_GLOBAL_PRODUCTIONF("The cihldren internal energy is illegal in refining!\n");
 					abort();
 				}
+			}
+			if (f_dbg) {
+				fclose(f_dbg);
 			}
 			for (int j = idReconstructPressure; j < idDoubleCornerVariableNum; j++)
 			{
@@ -4788,11 +5039,11 @@ quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, voi
 }
 
 static void
-refresh_after_balance(p4est_t *p4est)
+refresh_after_balance(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 {
 	p4est_iterate(p4est,
-		NULL,
-		NULL,
+		ghost,
+		(void *)ghost_data,
 		NULL,
 		quadrant_update_after_balance_callback,
 #ifdef  P4_TO_P8
@@ -5236,6 +5487,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 	for (t = start_time; t < end_time; t += p4est_data->delta_time)
 	{
 		p4est_data->current_step += 1;
+		trace_target_snapshot(p4est, "STEP_BEGIN");
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 1: Start time loop");
 		if(p4est_data->current_step>p4est_data->max_time_step)
 		{
@@ -5247,6 +5499,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 
 		
 		PreProcess(p4est, ghost, ghost_data);
+		trace_target_snapshot(p4est, "AFTER_PREPROCESS");
 
 		
 		if (p4est_data->current_step && !(p4est_data->current_step%p4est_data->refine_period)
@@ -5317,7 +5570,8 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		}
 
 		
-		refresh_after_balance(p4est);
+		refresh_after_balance(p4est, ghost, ghost_data);
+		trace_target_snapshot(p4est, "AFTER_AMR_REFRESH");
 		
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
 

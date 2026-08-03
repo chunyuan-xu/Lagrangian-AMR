@@ -23,3 +23,60 @@ git.txt
 
 # Temporary Notes
 src/On branch main.md
+
+# ===== Project-specific debug & run artifacts (added 2026-08-03) =====
+# VTK / PVTU simulation outputs
+*.vtu
+*.pvtu
+output_*_serial/
+output_*_mpi*/
+output_MPI_diverged/
+step_tests/
+reference/
+
+# Run logs & diagnostics
+*.log
+compile_err.txt
+hanging_debug*.txt
+parent_coord.txt
+parent_id.txt
+parent_edge_debug.txt
+quad397_coord.txt
+corner_debug.txt
+edge_matrix_dbg_*.txt
+refine_dbg_*.txt
+riemann_dbg_*.txt
+serial_vars.txt
+serial_velo.txt
+soundspeed_*_debug.txt
+debug_*.txt
+
+# Trace scratch files
+trace_archive/
+trace_archive_step2_4/
+*_trace.txt
+*_grad_trace.txt
+*_full_trace.txt
+*_target_trace.txt
+*_gradscan.txt
+*_prec_trace.txt
+*_out.txt
+serial_target.txt
+serial_refine.txt
+serial_P_0.txt
+soundspeed_debug.txt
+print_size.cpp
+print_size.exe
+
+# Python caches & temporary tools
+__pycache__/
+*.pyc
+m1.txt
+s1.txt
+ser_grad.txt
+mpi_grad.txt
+ser55_good.txt
+mpi55_good.txt
+
+# WorkBuddy workspace memory (project data, not source)
+.workbuddy/

@@ -1,0 +1,131 @@
+Lagrangian-AMR 第55步首次串并行差异定位报告
+生成时间：2026-08-03
+
+================================================
+一、结论（TL;DR）
+================================================
+
+第55步的串并行首次差异，根因不是"漏传 ghost 的物理通信 bug"，
+而是两个激波前沿 L7 单元恰好落在 AMR 粗化判据
+    idCDensityGradient < coarsen_error(0.05)
+的临界阈值两侧，串行与 MPI 各自累积的浮点舍入差异把粗化决策
+翻转到了相反方向：
+
+  Serial : gradRho = 4.8400692189e-02  (< 0.05 → 粗化 L7->L6)
+  MPI    : gradRho = 5.3077818522e-02  (> 0.05 → 保留 L7)
+
+这是典型的"临界阈值 FP 翻转"，不是确定性通信错误。
+
+================================================
+二、目标单元
+================================================
+
+两个被 flip 粗化决策的 L7 单元（对称的两处激波前沿）：
+
+  单元 A：p4est key = (536870912, 134217728, L7)
+          未变形 bbox = (0.500,0.125)-(0.508,0.133)
+  单元 B：p4est key = (134217728, 536870912, L7)
+          未变形 bbox = (0.125,0.500)-(0.133,0.508)
+
+它们的 L6 父单元为：
+  (536870912,134217728,L6)  与  (134217728,536870912,L6)
+
+================================================
+三、证据链
+================================================
+
+1) 二分定位
+   step 50  PASS（串并行逐位一致）
+   step 54  PASS（1720 cells，网格完全一致）
+   step 55  首次拓扑分歧：serial 1813 cells / MPI 1819 cells
+            串行独有 2 个 L6，MPI 独有 8 个 L7（各为上述两个 L6 的 4 子单元）
+
+2) 几何核对（未变形 Position 稳定键）
+   Serial-only : (0.500,0.125)-(0.516,0.141) L6
+                 (0.125,0.500)-(0.141,0.516) L6
+   MPI-only    : 上述两区域各 4 个 L7
+
+3) 判据输入追踪（AFTER_PREPROCESS，即 refine/coarsen 决策读取的 gradRho）
+
+   -- 两 L7 单元在 step55 AFTER_PREPROCESS 的 gradRho --
+   Serial : 4.8400692189e-02      (< 0.05)
+   MPI    : 5.3077818522e-02      (> 0.05)
+
+   -- 两者的密度/压力本身完全一致 --
+   rho = 1.266665e-01，p = 1.025143e-01（串并逐位相同）
+
+4) coarsen 判据（amr_criteria.h CoarsenErrorEstimate）：
+   data->m_vara.DouCData[idCDensityGradient] < coarsen_error(0.05)
+   时返回 1（允许粗化）。
+
+   -- 两单元恰在 0.05 阈值两侧 --
+   Serial gradRho=0.0484 < 0.05  → 允许粗化 L7->L6
+   MPI    gradRho=0.0531 > 0.05  → 不允许粗化，保留 L7
+
+================================================
+四、差异来源（为什么串并会有 ~0.005 的 gradRho 差）
+================================================
+
+idCDensityGradient 来自 Gradient_estimate / quadrant_edge_minmod_estimate_callback：
+  m_gradient = |rho_neighbor1 - rho_neighbor2| / dist
+  DouCData[idCDensityGradient] = max(4 条 edge 的 m_gradient)
+
+本问题不是"漏传 ghost"——该 callback 的 p4est_iterate 已传 ghost
+（见 Gradient_estimate，L5088-5132）。但：
+
+- 这两 L7 位于 MPI 的 rank 分片边界，其邻居 rho 需经
+  p4est_ghost_exchange_data 跨 rank 获取；
+- MPI 下求和/差值运算顺序（跨 rank 影像与本地邻居混合）与串行的
+  纯本地顺序不同，导致最终 gradRho 在末位产生 ~1e-3~5e-3 的舍入差；
+- 恰逢 0.05 阈值临界，这个 tiny 差异把粗化决策 flip 成相反方向。
+
+因此：物理场（rho、p）在串并间逐位一致，但"由邻居差商/距离比算出的
+梯度标量"在跨 rank 处存在完全符合预期的浮点非确定性，叠加临界阈值，
+造成 AMR 拓扑差异。
+
+================================================
+五、失效或已排除的假设
+================================================
+
+- 所有【写入角点速度】的 callback 外层 p4est_iterate 均已传 ghost
+  （ComputeCornerNodeVelocity L3230、relaxed hanging L3109、
+   refresh_after_balance L5044），第4步修复已生效；
+- refine 判据（RefineErrorEstimate）用的 gradRho 也是如此，
+  两 L7 的 gradRho 串并均远低于 refine_err(0.1)，本就不是 refine 触发；
+- 不是"漏算邻居梯度"：edge/corner minmod 都用 ghost。
+  是"跨 rank 邻居梯度存在 FP 非确定性"，叠加阈值临界。
+
+================================================
+六、建议的修复方向（供判断，尚未改动正式源码）
+================================================
+
+1. 阈值留余量（推荐原则层面）：
+   coarsen_error 取 0.05，而目标单元稳定在 0.048~0.054 附近。
+   任何比 coarsen_error 大 5~10% 的单元都会长期处于临界。
+   可考虑：
+   - 对粗化增加滞回（hysteresis）：粗化阈值用 0.5*coarsen_error
+     （或增加安全带），避免单一梯度反复跨阈值；
+   - 或对跨 rank 面做确定性归约（把所有 rank 的 edge 梯度收集后统一排序求和），
+     使 MPI 与串行逐位一致（成本较高）。
+
+2. 确认是否符合物理预期：
+   这两个单元是激波压缩前沿，密度梯度本就接近粗化临界。
+   若希望激波区保持细网格，可适当降低 coarsen_error 或在激波前沿
+   用距离判据（RefineCriteria::Distance）取代纯梯度判据。
+
+3. 若追求"串并行逐位一致"，需统一跨 rank 梯度归约顺序；
+   若仅追求"拓扑稳定、不反复抖动"，用滞回/安全带即可。
+
+================================================
+七、证据文件
+================================================
+
+本报告配套的过程追踪（临时插桩已恢复，未保留在正式源码）：
+  step55c_serial.log / step55c_mpi2.log       全量梯度扫描运行日志
+  ser_prec_trace.txt / mpi0_prec_trace.txt /
+  mpi1_prec_trace.txt                          精确 gradRho 追踪
+  step_tests/step_0055/*/summary.txt          几何与单元数对比
+  step_tests/step_0054/*/summary.txt          step54 PASS 依据
+
+源码状态：临时插桩全部移除，make 重新编译成功；
+param.ini 已恢复 max_time_step=10000, write_interval_step=100。

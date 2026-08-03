@@ -1,0 +1,93 @@
+Lagrangian-AMR Sod AMR 第 20 步串行/MPI 2 核一致性检查
+生成时间：2026-08-03
+
+一、执行与停止判据
+
+按照本次要求，首先只检查第 20 步单元数；若单元数不同则立即停止。
+测试时临时设置：
+  max_time_step = 20
+  write_interval_step = 20
+测试完成后已恢复：
+  max_time_step = 10000
+  write_interval_step = 100
+
+串行与 MPI 2 核均正常完成第 20 步，并在 current_step=21 时停止，退出码均为 0。
+为避免共享 output 目录互相覆盖，最终有效测试严格按以下顺序重新执行：
+  1. 串行运行并立即复制第 20 步输出；
+  2. MPI 2 核运行并立即复制第 20 步输出。
+
+二、单元数检查
+
+串行：
+  1510 cells
+  6040 points
+
+MPI rank 0：
+  770 cells
+  3080 points
+
+MPI rank 1：
+  740 cells
+  2960 points
+
+MPI 合计：
+  1510 cells
+  6040 points
+
+判定：单元数与点条目数一致，因此没有触发“停止任务”条件，继续执行一致性比较。
+
+三、网格集合检查
+
+标准输出没有 Global_SFC_ID，因此使用 VTK Position 中未变形四角坐标构造稳定单元几何键。
+
+结果：
+  common cells      = 1510
+  serial-only cells = 0
+  MPI-only cells    = 0
+  duplicate keys    = 0
+
+判定：第 20 步串行和 MPI 不仅单元数相同，具体 AMR 叶单元集合也完全相同。
+
+四、角点速度及其他字段
+
+阈值：1e-10
+标准 VTU 字段为 Float32；下列差异显著高于量化误差。
+
+字段               最大绝对差             超阈值条目
+NodeU              1.809745338e-01         252 / 6040
+NodeV              6.100535393e-04         234 / 6040
+NodeX              1.663714647e-05          30 / 6040
+NodeY              2.980232239e-07          12 / 6040
+Pressure           9.359121323e-04          28 / 1510
+density            9.461641312e-04          20 / 1510
+internal_energy    2.967119217e-04          20 / 1510
+
+NodeU 最大差异：
+  undeformed bbox = (0.109414063, 0.492226571) - (0.117148437, 0.499960929)
+  corner = 3
+  serial = 1.905522496e-01
+  MPI    = 9.577715769e-03
+  abs diff = 1.809745338e-01
+
+同一单元同一角点的 NodeV：
+  serial = 5.083658695e-01
+  MPI    = 5.077558160e-01
+  abs diff = 6.100535393e-04
+
+原 compare_vtu.py 也得到相同最大差异；Position 最大差为 0，进一步验证串行数组顺序与按 rank 拼接的 MPI 数组顺序在第 20 步一致。
+
+五、结论
+
+1. 第 20 步串行与 MPI 的网格规模一致：均为 1510 cells / 6040 points。
+2. 第 20 步具体 AMR 单元集合也完全一致。
+3. 但数值场不一致，尤其角点 NodeU 最大差达到 1.809745338e-01，因此第 20 步串并行计算不能判定为一致。
+4. 网格集合尚未分歧，说明第 100 步拓扑差异是第 20 步以后由已有数值误差传播并触发不同 AMR 判据造成的。
+5. 下一步若继续定位，应在第 3 步到第 20 步之间查找角点速度首次重新出现差异的时间步；不应等到网格数量开始不同才定位。
+
+相关文件：
+  run_20_serial.log
+  run_20_mpi2.log
+  output_20_serial/p4est_Lagrangian_0020_0000.vtu
+  output_20_mpi2/p4est_Lagrangian_0020.pvtu
+  compare_20_vtu.log
+  compare_20_by_geometry.log

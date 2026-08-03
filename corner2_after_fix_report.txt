@@ -1,0 +1,65 @@
+Relaxed hanging solver 通信修复回归报告
+=========================================
+
+回归配置
+--------
+- Sod AMR: which_case=7, enable_amr=true, max_time_step=3
+- 串行: bin/AMR_Solver.exe
+- 并行: mpiexec.exe -n 2 bin/AMR_Solver.exe
+- 构建: Makefile, make -j8，成功（仅有既有编译警告）
+
+修复内容
+--------
+ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes 中调用
+quadrant_relaxed_hanging_solver_callback 的 p4est_iterate 已传入 ghost 和 ghost_data。
+
+第 2 步：首次 BUG 位置回归
+---------------------------
+目标父单元: (134217728, 520093696), level=6, Corner 2
+
+AFTER_CORNER_SOLVE（覆盖前）:
+- 串行: (0.261019799039738876, 0.261019799039738876)
+- MPI 2 核: (0.261019799039738876, 0.261019799039738876)
+
+AFTER_HANGING（覆盖后）:
+- 串行: (0.184672475669776598, 0.184762585364110027)
+- MPI 2 核: (0.184672475669776598, 0.184762585364110027)
+
+结论：MPI 2 核现在实际执行了 relaxed hanging 约束覆盖，且结果与串行逐位一致。
+
+第 3 步：AMR 传播链回归
+-----------------------
+REFINE_TRANSFER 生成目标 child (134217728, 528482304), level=7 的 Corner 2:
+- 串行: (0.276940143735372180, 0.277038410140395763)
+- MPI 2 核: (0.276940143735372180, 0.277038410140395763)
+
+目标 child 在 AFTER_AMR_REFRESH 的 Corner 3:
+- 串行: (0.249375784358014274, 0.138642334147484919)
+- MPI 2 核: (0.249375784358014274, 0.138642334147484919)
+
+第 3 步 relaxed hanging callback 跨 rank 证据
+---------------------------------------------
+MPI rank 0:
+- fine children 为本地数据 g0
+- coarse parent 为 ghost 数据 g1
+- before Corner 2 = (0.276940143735372180, 0.277038410140395763)
+- hanging = (0.184878665644353707, 0.184913990230217262)
+
+MPI rank 1:
+- fine children 为 ghost 数据 g1
+- coarse parent 为本地数据 g0
+- 计算出相同 hanging 值
+
+这说明传入 ghost/ghost_data 后，跨 rank coarse-fine face 被 callback 正确枚举；owner 数据在 rank 0 上被覆盖，随后可由 ghost exchange 同步。
+
+整体守恒回归
+------------
+第 3 步最终总能量误差:
+- 串行: 6.778941568809387e-15
+- MPI 2 核: 5.183896493795272e-15
+
+两者均回到浮点舍入误差量级。修复前 MPI 约为 2.44e-8，因此该异常已消失。
+
+最终结论
+--------
+用户对 relaxed hanging solver 的通信修复有效。此前定位的首次分歧点现已恢复串并行一致，且第 3 步目标单元 Corner 2、Corner 3 以及整体能量守恒均完成回归。当前证据支持：原 BUG 的直接原因就是最后一次 p4est_iterate 未传 ghost 和 ghost_data，导致跨 rank hanging face 未执行约束覆盖。

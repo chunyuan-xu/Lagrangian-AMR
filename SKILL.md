@@ -288,6 +288,201 @@ static void quadrant_debug_dump_callback(p4est_iter_volume_info_t *info, void *u
 ```
 
 ### 4. 执行与 Python 自动比对 (抓出犯事网格)
+**调用时机**: 任何代码修改后，需要官方验证并提交时。
+
+**完整 SOP**:
+1. **智能体定义约束**: 必须以 `enable_write_tools=true` 权限定义/唤醒。
+2. **首步提权**: 唤醒后的第一步，必须强制使用 `ask_permission` 批量申请底层环境的持久化运行授权 (`make`, `git`, `python`, `$env:PATH`, `.\bin\AMR_Solver.exe`)，避免中途因无终端权限被静默阻塞。
+3. 运行：`powershell -File .\validate_current.ps1` 或根据配置文件手动执行所有算例。
+4. **若通过（Exit Code 0 / 0误差）**:
+   - `git add .`
+   - `git commit -m "chore: [GOLDEN-PASS] pass validation regression suite"`
+   - `git push origin main`
+   - 报告 PASS + commit hash
+5. **若失败（Exit Code 1 / 误差超标）**:
+   - **严禁修改源码**
+   - 立即向用户/调度者报告失败指标
+   - 附上失败算例名称和误差数值
+
+**硬约束**: 验证智能体永远不修改 `.cpp` 文件。
+
+---
+
+### 2. MPI 并行调试智能体 (MPI Debug Agent)
+
+**角色**: MPI 并行 BUG 专家，专注通信、幽灵数据、分区边界问题。
+
+**调用时机**: MPI 并行运行崩溃、能量非守恒、结果与串行不一致时。
+
+**完整 SOP**:
+1. **建立 BUG 清单（5~8 条）**: 先从代码分析推断潜在问题，列成条目
+2. **串行逐条推进**: 每次只修一条，不跳跃
+3. **每修一条后必须验证**:
+   - 串行 [GOLDEN-PASS]: `powershell -File validate_current.ps1`
+   - 确认串行通过后，再测 MPI: `mpiexec -n 4 ./bin/AMR_Solver.exe`
+4. **失败即回退**: 若串行测试失败，立即 `git checkout -- src/`
+5. **禁止批量修改**: 单步单验证
+
+**调试重点领域**:
+- Ghost 层数据失效（p4est_refine/coarsen 后未重建 ghost）
+- 迭代回调中 NULL ghost 解引用
+- 分区边界的节点力不对称
+- 全局量 Allreduce（能量、时间步）
+- partition 后的数据迁移（`p4est_partition` 时序）
+
+**全场 VTU 锚点比对策略 (Debug Anchor Strategy)**:
+1. **植入锚点**: 在目标代码处（如黎曼求解器后、节点速度组装后），插入 `IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug", 0, location_id);`，对全场物理量进行快照输出。此操作只读，绝对安全。
+2. **生成参照**:
+   - **串行**: 运行 `.\bin\AMR_Solver.exe` 产生参照文件 `output/debug_checkpoint_0000_locX_0000.vtu`，并重命名为 `ref.vtu`。
+   - **并行**: 运行 `mpiexec -n 4 .\bin\AMR_Solver.exe` 产生多区块文件 `output/debug_checkpoint_0000_locX.pvtu`。
+3. **强制对齐与比对**: 
+   - 使用升级版的 `compare_vtu.py`：`python compare_vtu.py --target output/debug_checkpoint_...pvtu --ref output/ref.vtu --tol 1e-12`
+   - 该脚本将利用数据结构中的 `Global_SFC_ID` 作为空间索引，自动将乱序并行的 `.pvtu` 与串行的 `.vtu` 进行精确的网格对齐。
+4. **锚点二分法**: 利用该策略在迭代步内不断前移或后移锚点位置（`location_id`），直到精确锁定引发串并行数据第一次发生误差（>1e-12）的代码行。
+
+**MPI 运行命令**:
+```powershell
+mpiexec -n 4 ./bin/AMR_Solver.exe  # 4核
+mpiexec -n 8 ./bin/AMR_Solver.exe  # 8核
+```
+
+---
+
+### 3. 数学物理智能体 (Math Agent)
+
+**角色**: 数学推导与物理方程文档化专家。
+
+**调用时机**: 需要推导方程、解释算法、建立 C++ 变量与论文符号的映射关系时。
+
+**职责**:
+1. 基于论文推导 Lagrangian 流体动力学控制方程（质量、动量、能量守恒）
+2. 推导角节点速度求解器矩阵方程和 p4est AMR 限制公式
+3. 时空离散化方案（1 阶显式格式）
+4. 建立 `quad_data_t` / `CCorner_data` 物理量分类表
+   - 主要状态变量（必须持久化）
+   - 几何变量
+   - 求解器临时缓存（可清除）
+5. 用 LaTeX 格式撰写数学文档（输出为 `math_formulation.md`）
+
+---
+
+### 4. 架构分析智能体 (Code Analyzer / Architecture Agent)
+
+**角色**: 代码库架构审计与重构规划专家。
+
+**调用时机**: 需要理解代码结构、规划重构、识别耦合与瓶颈时。
+
+**分析范围**:
+- `src/main.cpp`（约5400行）、`src/alg.cpp`、`src/variable.h`、`src/defines.h`
+- 关键数据结构与全局状态
+- 函数调用依赖图与执行流
+- 代码缺陷与架构瓶颈
+- 重构策略（模块化拆分为 Physics/Mesh/TimeIntegrator/IO/Callbacks）
+
+---
+
+### 5. 项目管理智能体 (Task Agent)
+
+**角色**: 动态任务清单维护和里程碑跟踪。
+
+**调用时机**: 里程碑推进后需要更新任务状态时。
+
+**职责**:
+1. 维护 `task.md`（`[ ]`未完成 / `[/]`进行中 / `[x]`已完成）
+2. 每个任务必须包含具体验收标准
+3. 根据用户反馈动态调整优先级
+4. 已完成的 BUG 条目在串行验证通过后从活跃清单移除
+
+---
+
+## 三条核心行为规则
+
+### 规则 A：极速一键验证 (Scripted Referee Validation)
+- 验证时**必须**调用 `validate_current.ps1`，严禁分步调用 `make` 和测试程序
+- 失败即中止，绝对禁止当场修改源码
+- 成功立即 `git add && git commit && git push`
+
+### 规则 B：清单化串行排查与黄金前提 (Checklist & Golden Premise)
+- 复杂 BUG 必须先列清单（5~8 条），再逐条推进
+- 每修一条必须先通过串行 [GOLDEN-PASS]，才能继续下一条
+- 若破坏串行，必须无条件回退
+
+### 规则 C：失败只报不修 (Report-Only on Failures)
+- 用户指定的运行/测试失败时，只报告失败事实和崩溃分析
+- 绝对禁止擅自修改代码尝试修复
+- 排错任务由用户手动分配
+
+---
+
+## 当前项目状态（快照）
+
+### 串行基准 [GOLDEN-PASS]
+- ✅ Noh 32x32 均匀串行
+- ✅ Sod AMR 串行
+- ✅ Sedov AMR 串行
+
+### MPI 并行状态
+- ✅ 无 AMR 均匀网格（Noh 32x32）：4核/8核 通过
+- 🔄 AMR 并行（Sedov AMR）：BUG 1-5 已修复，BUG 7（分区边界节点力）调查中
+
+### 主要代码位置
+- 时间推进主循环: `main.cpp: advance_time_step()` (~L5160)
+- AMR 回调（refine/coarsen/balance replace）: `main.cpp: Lagrangian_replace_quads()` (~L4130)
+- 节点速度求解: `main.cpp: RiemannSolver()` (~L3891)
+- 能量守恒检查: `main.cpp: StatTotalEnergyError()` (~L3752)
+- Ghost 层刷新: `main.cpp: refresh_after_balance()` (~L4734)
+
+---
+
+## 时间步宏观二分 + Global ID 串并行严密比对策略 (Time-step Bisection & Global ID Sync Check)
+
+在拉格朗日框架下，一旦发生发散，网格的物理坐标 `(cx, cy)` 就会随着错误的速度场发生漂移。因此，**绝对禁止在发散后依赖物理坐标去跨串并行对齐网格**。
+
+必须使用以下基于 **Global ID** 的全盘对比策略：
+
+### 1. 宏观/微观二分对比法思路
+- **时间步宏观二分**：检查第 $n$ 步开始时的初始物理量（P, Rho）是否对齐。若对齐，但第 $n$ 步结束时角点速度发散，说明错误精确锁定在第 $n$ 步的物理求解器（如 `two_stage_Runge_Kutta`）内。
+- **微观函数二分**：在锁定时间步后，继续在物理求解器的各个子函数（如 Predictor, RiemannSolver）前后执行全局数据 Dump，重点输出该步骤的核心计算结果（如节点受力、角点速度等），精确缩小错误范围。
+
+### 2. 获取网格绝对身份证 (Global ID)
+在 `p4est_iterate` 的回调函数中，利用底层的 Z-曲线索引获取网格的全局编号。无论在几个核心上运行，这个编号在串并行下是一一对应的：
+```cpp
+long long global_id = info->p4est->global_first_quadrant[info->p4est->mpirank] + info->quadid + tree->quadrants_offset;
+```
+
+### 3. C++ 植入全场日志导出回调
+在目标时间步（如 `current_step == 2`）的特定子步骤（如节点求解器前后），调用一个独立的回调函数，将**所有网格**的关键物理量（如 P, Rho, 以及四个角点的速度）连同 `global_id` 一起写入纯文本。**特别注意：因为是节点求解器，一定要输出四个角点的速度，而不是仅输出网格中心速度。**
+
+```cpp
+// 示例：在 two_stage_Runge_Kutta 的目标子函数前后调用
+if (p4est_data->current_step == 2) {
+    p4est_iterate(p4est, NULL, NULL, quadrant_debug_dump_callback, NULL, NULL);
+}
+
+// 示例回调实现：
+static void quadrant_debug_dump_callback(p4est_iter_volume_info_t *info, void *user_data) {
+    p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+    p4est_tree_t *tree = p4est_tree_array_index(info->p4est->trees, info->treeid);
+    long long global_id = info->p4est->global_first_quadrant[info->p4est->mpirank] + info->quadid + tree->quadrants_offset;
+    
+    char fname[256];
+    sprintf(fname, "debug_vars_rank_%d.txt", info->p4est->mpirank);
+    FILE *f = fopen(fname, "a");
+    if (f) {
+        quad_data_t *m_data = (quad_data_t *)info->quad->p.user_data;
+        // 打印所有的网格中心变量(P, Rho) 和 四个角点的独立变量(角点速度)
+        for (int cnid = 0; cnid < CNDIM; cnid++) {
+            fprintf(f, "Step %d, GlobalID %lld, Corner %d, P=%e, Rho=%e, Velo=(%e, %e)\n", 
+                p4est_data->current_step, global_id, cnid,
+                m_data->m_vara.DouCData[idPressure], m_data->m_vara.DouCData[idDensity],
+                m_data->m_vara.VecCnData[idcnVelocity_lag][cnid].x, m_data->m_vara.VecCnData[idcnVelocity_lag][cnid].y);
+        }
+        fclose(f);
+    }
+}
+```
+
+### 4. 执行与 Python 自动比对 (抓出犯事网格)
 1. 清理旧日志：`Remove-Item debug_vars_*.txt -ErrorAction SilentlyContinue`
 2. 串行运行：`make -j 8 && .\bin\AMR_Solver.exe`，重命名 `debug_vars_rank_0.txt` -> `serial_vars.txt`
 3. 并行运行：`mpiexec -n 4 .\bin\AMR_Solver.exe`
@@ -297,3 +492,24 @@ static void quadrant_debug_dump_callback(p4est_iter_volume_info_t *info, void *u
 
 * **Include AMR Routines in Checkpoints:** AMR adaptation steps (e.g., `p4est_refine`, `p4est_balance`, `refresh_after_balance`, `quadrant_update_after_balance_callback`) are NOT just topological mesh changes. They perform critical physical field interpolations for new/hanging nodes. **They must be treated as physical computations.**
 * **No Blind Spots:** When performing step-by-step or sub-step bisection to locate a divergence, **every function inside the main time loop** must be considered a candidate for checkpointing. Never assume a function is "safe" or "unrelated" if it operates on the physics state.
+
+## ⚠️ 调试排错四大避坑指南 (4 Critical Pitfalls to Avoid)
+
+在执行后续的二分法调试或测试时，请务必当心以下四个极易踩中的坑：
+
+1. **代码插入偏差与回退 (Code Replacement Pitfalls)**
+   - **坑**：使用文本替换工具注入 `quadrant_debug_dump_callback` 时，如果锚定词（如 `RiemannSolver`）不够唯一，极易匹配到文件上方的废弃代码，导致主干代码被大面积覆盖。
+   - **避坑准则**：在做代码替换前，务必先用精确查询定位到准确行号，尽量缩小修改范围。一旦发现改乱了，**立刻执行 `git restore <file>` 或 `git checkout -- <file>`** 进行安全回退，然后再换个精确定位点（例如 `AcceptNumericalSolution`）重试。
+
+2. **环境变量编译问题 (MSYS2 PATH Environment)**
+   - **坑**：智能体在全新的上下文或子会话中直接运行 `make`，会报 `CommandNotFoundException`。
+   - **避坑准则**：Windows 下必须手动附加 MSYS2 编译环境。执行编译前必须使用组合命令：
+     `$env:PATH = 'C:\msys64\usr\bin;C:\msys64\ucrt64\bin;' + $env:PATH; make clean; make -j8`
+
+3. **参数文件限制 (param.ini Constraints)**
+   - **坑**：辛辛苦苦配置好了第 100 步的代码回调，结果程序跑到第 2 步就停了。
+   - **避坑准则**：在执行长步数测试前，务必检查 `param.ini` 中的 `max_time_step`。之前的测试很可能把它锁死在了 2 步，必须动态将其放开。
+
+4. **比对脚本写死 (Hardcoded Python Scripts)**
+   - **坑**：Python 比对脚本跑完却没输出结果。因为脚本最初是为了测 1、2 步写的，里面写死了 `for step in ['Step 1', 'Step 2']`。
+   - **避坑准则**：任何校验脚本必须写成**动态解析**的形式（通过解析文本中的 Step N 动态生成键值），绝对禁止在脚本里硬编码测试的目标步数。
