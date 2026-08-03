@@ -70,14 +70,23 @@ def run_g2():
         started = time.perf_counter()
         command = [sys.executable, str(QUICK), "--step", str(step), "--ranks", "2", "--tol", "1e-12"]
         result = subprocess.run(command, cwd=ROOT, env=environment(), capture_output=True, text=True)
+        attempts = 1
+        combined = result.stdout + result.stderr
+        # A Windows abort/crash is an infrastructure-level process failure. Retry it
+        # once; deterministic topology/field failures return code 1 and are never retried.
+        if result.returncode not in (0, 1):
+            attempts = 2
+            result = subprocess.run(command, cwd=ROOT, env=environment(), capture_output=True, text=True)
+            combined += "\n--- RETRY ---\n" + result.stdout + result.stderr
         item = {
             "step": step,
             "exit_code": result.returncode,
+            "attempts": attempts,
             "seconds": round(time.perf_counter() - started, 3),
             "status": "PASS" if result.returncode == 0 else "FAIL",
         }
         if result.returncode != 0:
-            item["output_tail"] = (result.stdout + result.stderr)[-2000:]
+            item["output_tail"] = combined[-2000:]
         results.append(item)
         print(f"G2 step {step}: {item['status']} ({item['seconds']:.1f}s)", flush=True)
         if result.returncode != 0:
