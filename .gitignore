@@ -67,6 +67,14 @@ serial_P_0.txt
 soundspeed_debug.txt
 print_size.cpp
 print_size.exe
+make_err.txt
+make_out.txt
+mpi_out.txt
+out_serial.txt
+serial_out.txt
+step4_velocity_trace_*.txt
+step4_trace_*.log
+test/
 
 # Python caches & temporary tools
 __pycache__/
