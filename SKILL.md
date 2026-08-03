@@ -87,6 +87,36 @@ powershell -File validate_current.ps1
 
 ---
 
+## ⚠️ 回退测试第一件事：先核对每个算例的基本配置参数 (Rollback Anchor Config Audit)
+
+在做「回退到锚点」的算例测试（如 GOLDEN-PASS 三基准、或任何要和 reference/ 比对锚点的回归）时，**第一件必须做的事不是编译、不是运行，而是先确认每个算例的「基本配置参数」当前值，并保证它们与『上一个回退通过的算例』（即被当作锚点的那个版本）完全一致。**
+
+### 为什么必须先做这一步
+- 配置参数直接决定网格形态、AMR 判据、输出步数等信息。**只要有一个参数与锚点版本不同，即使物理求解核心完全正确，最终输出（尤其细胞数/点数）也会和 reference/ 对不上**，从而被误判为「回退失败」。
+- 这类配置**不只在 `param.ini` 里**，还可能**藏在代码里**（尚未集成到 .ini）。只盯着 `.ini` 核对会漏掉真正的差异来源。
+
+### 配置参数的可能存放位置（都要核对）
+1. **`param.ini`（显式字段）**：`which_case`、`end_time`、`minus_level`、`max_level`、`enable_amr`、`refine_period`、`write_interval_time`、`write_interval_step`、`max_time_step`、`delta_time` 等。
+2. **`param.ini` 中可能没有、但影响 AMR 的字段（易漏项）**：
+   - `refine_err` / `coarsen_error`（AMR 细/粗阈值，**直接决定 AMR 网格形态与细胞数**）；
+   - `refine_coarsen_enum`（用哪种梯度/距离判据，取值决定选 `idCPressureGradient` / `idCDensityGradient` / `Distance` 之一）。
+3. **代码里的默认值 / 硬编码（param.ini 未暴露）**：
+   - 例如 `defines.h` 里 `refine_coarsen_enum = RefineCriteria::DensityGradient` 等默认值；
+   - 求解器内部其它魔法常数、迭代次数、单位、边界条件默认值。
+
+> **本项目真实反例**：GOLDEN-PASS 参考锚点（`reference/SodAMR.vtu`、`reference/SedovAMR.vtu`）是在 **`refine_err=1.0, coarsen_error=0.8`**（宽松阈值）下生成的；而当前 `param.ini` 里是 **`0.1 / 0.05`**（step55 调试阶段被调严）。直接拿当前 .ini 跑回归，Sod/Sedov 的 AMR 网格因阈值不同而明显更细（Sod 从锚点 4390 cells 变成 9253 cells，Sedov 从 5422 变成 6628），`compare_vtu.py` 报 cell 数不匹配。**这不是物理求解没回退，而是配置参数与锚点不一致造成的假性失败。** 无 AMR 的 Noh 不受阈值影响，能逐位一致回退（证明物理核心完好）。
+
+### 标准动作（回退测试启动前）
+1. **从 git 确认锚点配置**：用 `git show <GOLDEN-PASS/anchor commit>:param.ini` 取出锚点版本的 `.ini`，同样地 `git show <anchor commit>:<源码文件>` 核对代码内默认值（如 `defines.h` 的 `refine_coarsen_enum`、`refine_err`/`coarsen_error` 等）。
+2. **逐项比对**：把当前 `param.ini` + 当前代码里的相关默认值，与锚点版本逐字段比对，列出差异清单。
+3. **有差异就先统一**，再编译/运行/比对。特别留意 `refine_err`、`coarsen_error`、`refine_coarsen_enum`、`write_interval_step`、`max_time_step` 这类「不常改但会改网格/输出」的项。
+4. **运行类脚本若未显式写某些字段**（本项目 `run_tests.py` 只写 `which_case/end_time/enable_amr/minus_level/max_level/refine_coarsen_enum/write_interval_time/max_time_step`，**不写 `refine_err/coarsen_error`**），它就会静默继承当前 `param.ini` 的残留值——这是常见的隐性不一致来源，务必人工补上锚点值（脚本里 `update_param` 加 `'refine_err': 1.0, 'coarsen_error': 0.8` 这类）。
+5. **验证通过后把 param.ini 恢复**，避免把调试期的阈值等残留带回日常状态。
+
+**结论**：回退测试的第一步永远是「配置一致性审计」，否则一切数值比对（尤其 Amr 细胞数）都会失真。
+
+---
+
 ## 五大智能体 SOP
 
 ### 1. 裁判验证智能体 (Referee Validation Agent)
