@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "  VALIDATION SCRIPT (CURRENT WORKING DIRECTORY)   " -ForegroundColor Cyan
@@ -19,8 +19,14 @@ if ($makeExit -ne 0) {
 }
 
 # 2. Strict Regression Testing
-Write-Host "=> Executing regression validation suite..." -ForegroundColor Yellow
-python python/run_tests.py
+Write-Host "=> Executing serial GOLDEN regression suite..." -ForegroundColor Yellow
+$PythonExe = "C:\Users\a9ood\.workbuddy\binaries\python\envs\default\Scripts\python.exe"
+if (-not (Test-Path -LiteralPath $PythonExe)) {
+    Write-Host "ERROR: NumPy-enabled Python not found: $PythonExe" -ForegroundColor Red
+    exit 1
+}
+
+& $PythonExe python/run_tests.py
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Regression validation failed! Current code breaks the baseline!" -ForegroundColor Red
     exit 1

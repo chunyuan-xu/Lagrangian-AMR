@@ -1,99 +1,208 @@
+"""Canonical serial GOLDEN regression entry point.
+
+Runs Noh Uniform, Sod AMR, and Sedov AMR with the complete frozen GOLDEN
+configuration, compares terminal VTU files at tolerance 1e-12, writes a
+machine-readable JSON summary, and restores param.ini byte-for-byte.
+"""
+
+import json
 import os
-import sys
-import subprocess
 import re
-import shutil
+import subprocess
+import sys
+import time
+from datetime import datetime
 from pathlib import Path
 
-# Project root = parent of python/ (where param.ini, bin/, reference/ live).
-# Resolve paths from here so the script works regardless of the invoking cwd.
 ROOT = Path(__file__).resolve().parent.parent
-_COMPARE_VTU = str(Path(__file__).resolve().parent / 'compare_vtu.py')
+PARAM = ROOT / "param.ini"
+SOLVER = ROOT / "bin" / "AMR_Solver.exe"
+OUTPUT = ROOT / "output"
+COMPARE_VTU = Path(__file__).resolve().parent / "compare_vtu.py"
+SUMMARY = ROOT / "serial_golden_summary.json"
+MSYS_PATHS = [
+    "C:/msys64/usr/bin",
+    "C:/msys64/ucrt64/bin",
+    "C:/Program Files/Microsoft MPI/Bin",
+]
+GOLDEN_COMMON = {
+    "refine_err": 1.0,
+    "coarsen_error": 0.8,
+    "refine_period": 4,
+    "refine_coarsen_time": 0.0001,
+    "write_interval_step": 200000,
+    "max_time_step": 200000,
+}
+CASES = [
+    {
+        "name": "Noh Uniform",
+        "which_case": 4,
+        "end_time": 0.6,
+        "enable_amr": "false",
+        "minus_level": 5,
+        "max_level": 5,
+        "reference": "Noh_32x32.vtu",
+    },
+    {
+        "name": "Sod AMR",
+        "which_case": 7,
+        "end_time": 0.2,
+        "enable_amr": "true",
+        "minus_level": 5,
+        "max_level": 7,
+        "reference": "SodAMR.vtu",
+    },
+    {
+        "name": "Sedov AMR",
+        "which_case": 1,
+        "end_time": 0.5,
+        "enable_amr": "true",
+        "minus_level": 5,
+        "max_level": 7,
+        "reference": "SedovAMR.vtu",
+    },
+]
 
 
-def _rooted(p):
-    return str(ROOT / p)
+def solver_env():
+    environment = dict(os.environ)
+    environment["PATH"] = os.pathsep.join(MSYS_PATHS + [environment.get("PATH", "")])
+    return environment
 
 
-def update_param(filepath, updates):
-    with open(filepath, 'r') as f:
-        content = f.read()
-    for k, v in updates.items():
-        content = re.sub(rf'^{k}\s*=.*', f'{k} = {v}', content, flags=re.MULTILINE)
-    with open(filepath, 'w') as f:
-        f.write(content)
+def update_param_text(text, updates):
+    result = text
+    for key, value in updates.items():
+        pattern = rf"(?m)^(\s*{re.escape(key)}\s*=\s*)[^\r\n]*(\r?\n|$)"
+        result, count = re.subn(pattern, rf"\g<1>{value}\g<2>", result, count=1)
+        if count == 0:
+            result = result.rstrip("\r\n") + f"\n{key} = {value}\n"
+    return result
 
-def run_test(name, case_id, end_time, amr_enabled, minus_level, max_level, ref_file, refine_coarsen_enum=0):
-    print(f"\n{'='*50}\nRunning {name}\n{'='*50}")
-    
-    # Clean output dir
-    out_dir = _rooted('output')
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir)
-    os.makedirs(out_dir, exist_ok=True)
-    
-    update_param(_rooted('param.ini'), {
-        'which_case': case_id,
-        'end_time': end_time,
-        'enable_amr': amr_enabled,
-        'minus_level': minus_level,
-        'max_level': max_level,
-        'refine_coarsen_enum': refine_coarsen_enum,
-        'write_interval_time': end_time,
-        'max_time_step': 200000
-    })
-    
-    # Run solver
-    print("Executing solver...")
-    result = subprocess.run([_rooted('bin/AMR_Solver.exe')], capture_output=True, text=True, cwd=str(ROOT))
-    if result.returncode != 0:
-        print(f"FAILED: Solver crashed for {name}!\nSTDOUT:\n{result.stdout[-1000:]}\nSTDERR:\n{result.stderr[-1000:]}")
-        return False
-        
-    # Get output file
-    outputs = [f for f in os.listdir(_rooted('output')) if f.endswith('.vtu') and f.startswith('p4est_Lagrangian')]
+
+def reset_output():
+    OUTPUT.mkdir(exist_ok=True)
+    for path in OUTPUT.iterdir():
+        if path.is_file():
+            path.unlink()
+        else:
+            raise RuntimeError(f"Unexpected directory inside output/: {path}")
+
+
+def terminal_vtu():
+    outputs = sorted(OUTPUT.glob("p4est_Lagrangian_*_0000.vtu"))
     if not outputs:
-        print("FAILED: No VTU output generated!")
-        return False
-    outputs.sort()
-    latest_out = _rooted(f"output/{outputs[-1]}")
-    
-    # Check comparison
-    print(f"Comparing {latest_out} against reference/{ref_file}")
-    comp_result = subprocess.run([sys.executable, _COMPARE_VTU, '--target', latest_out,
-                                  '--ref', _rooted(f'reference/{ref_file}'), '--tol', '1e-12'],
-                                 capture_output=True, text=True, cwd=str(ROOT))
-    
-    if comp_result.returncode != 0:
-        print(f"FAILED: Comparison failed for {name}!\n{comp_result.stdout}\n{comp_result.stderr}")
-        return False
-        
-    print(f"PASS: {name}")
-    return True
+        raise FileNotFoundError("No serial VTU output generated")
+    return outputs[-1]
+
+
+def run_case(case, original_param):
+    updates = {
+        "which_case": case["which_case"],
+        "end_time": case["end_time"],
+        "enable_amr": case["enable_amr"],
+        "minus_level": case["minus_level"],
+        "max_level": case["max_level"],
+        "refine_coarsen_enum": 0,
+        "write_interval_time": case["end_time"],
+        **GOLDEN_COMMON,
+    }
+    PARAM.write_text(update_param_text(original_param, updates), encoding="utf-8", newline="")
+    reset_output()
+
+    print(f"\n{'=' * 50}\nRunning {case['name']}\n{'=' * 50}", flush=True)
+    started = time.perf_counter()
+    solver = subprocess.run(
+        [str(SOLVER)], cwd=ROOT, env=solver_env(), capture_output=True, text=True
+    )
+    elapsed = time.perf_counter() - started
+    result = {
+        "name": case["name"],
+        "reference": case["reference"],
+        "seconds": round(elapsed, 3),
+        "solver_exit_code": solver.returncode,
+        "compare_exit_code": None,
+        "status": "FAIL",
+    }
+    print(f"[solve] {case['name']} took {elapsed:.1f}s", flush=True)
+    if solver.returncode != 0:
+        result["failure"] = "solver"
+        result["stderr_tail"] = solver.stderr[-1000:]
+        return result
+
+    target = terminal_vtu()
+    compare = subprocess.run(
+        [
+            sys.executable,
+            str(COMPARE_VTU),
+            "--target",
+            str(target),
+            "--ref",
+            str(ROOT / "reference" / case["reference"]),
+            "--tol",
+            "1e-12",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    result["target"] = str(target.relative_to(ROOT))
+    result["compare_exit_code"] = compare.returncode
+    if compare.returncode != 0:
+        result["failure"] = "comparison"
+        result["comparison_output"] = compare.stdout + compare.stderr
+        return result
+
+    result["status"] = "PASS"
+    print(f"PASS: {case['name']} -> {result['target']}", flush=True)
+    return result
+
 
 def main():
-    if not os.path.exists(_rooted('bin/AMR_Solver.exe')):
-        print("Error: bin/AMR_Solver.exe not found. Please compile first.")
-        sys.exit(1)
-        
-    # Strictly sequenced execution, aborting on first failure.
-    
-    # Phase 1: Serial Uniform (Non-AMR) - Tests basic physics solver
-    if not run_test("Noh Uniform (Serial Non-AMR)", case_id=4, end_time=0.6, amr_enabled="false", minus_level=5, max_level=5, ref_file="Noh_32x32.vtu"):
-        print("\nABORT: Failed at Phase 1: Serial Uniform (Non-AMR). Stopping further tests.")
-        sys.exit(1)
-        
-    # Phase 2: Serial AMR - Tests adaptive mesh logic
-    if not run_test("Sod AMR (Serial AMR)", case_id=7, end_time=0.2, amr_enabled="true", minus_level=5, max_level=7, ref_file="SodAMR.vtu"):
-        print("\nABORT: Failed at Phase 2: Serial AMR (Sod). Stopping further tests.")
-        sys.exit(1)
-        
-    if not run_test("Sedov AMR (Serial AMR)", case_id=1, end_time=0.5, amr_enabled="true", minus_level=5, max_level=7, ref_file="SedovAMR.vtu"):
-        print("\nABORT: Failed at Phase 2: Serial AMR (Sedov). Stopping further tests.")
-        sys.exit(1)
-    
-    print("\nALL REGRESSION TESTS PASSED SUCCESSFULLY!")
-    sys.exit(0)
+    if not SOLVER.exists():
+        print(f"ERROR: solver not found: {SOLVER}", file=sys.stderr)
+        return 2
 
-if __name__ == '__main__':
-    main()
+    original_bytes = PARAM.read_bytes()
+    original_param = original_bytes.decode("utf-8")
+    results = []
+    started_at = datetime.now().astimezone().isoformat()
+    exit_code = 1
+    try:
+        for case in CASES:
+            result = run_case(case, original_param)
+            results.append(result)
+            if result["status"] != "PASS":
+                print(f"FAIL: {case['name']} ({result.get('failure')})", file=sys.stderr)
+                break
+        exit_code = 0 if len(results) == len(CASES) and all(
+            result["status"] == "PASS" for result in results
+        ) else 1
+    except Exception as error:
+        results.append({"name": "runner", "status": "ERROR", "error": str(error)})
+        print(f"ERROR: {error}", file=sys.stderr)
+        exit_code = 2
+    finally:
+        PARAM.write_bytes(original_bytes)
+
+    summary = {
+        "schema": "lagrangian-amr.serial-golden.v1",
+        "started_at": started_at,
+        "tolerance": 1.0e-12,
+        "golden_common": GOLDEN_COMMON,
+        "param_restored": PARAM.read_bytes() == original_bytes,
+        "status": "PASS" if exit_code == 0 else "FAIL",
+        "cases": results,
+    }
+    SUMMARY.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    print("\n==== SERIAL GOLDEN SUMMARY ====")
+    for result in results:
+        print(f"{result['name']}: {result['status']}")
+    print(f"param.ini restored: {summary['param_restored']}")
+    print(f"machine summary: {SUMMARY}")
+    return exit_code if summary["param_restored"] else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

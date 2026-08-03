@@ -36,6 +36,7 @@ reference/
 
 # Run logs & diagnostics
 *.log
+serial_golden_summary.json
 compile_err.txt
 hanging_debug*.txt
 parent_coord.txt
