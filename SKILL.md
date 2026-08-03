@@ -107,13 +107,28 @@ powershell -File validate_current.ps1
 > **本项目真实反例**：GOLDEN-PASS 参考锚点（`reference/SodAMR.vtu`、`reference/SedovAMR.vtu`）是在 **`refine_err=1.0, coarsen_error=0.8`**（宽松阈值）下生成的；而当前 `param.ini` 里是 **`0.1 / 0.05`**（step55 调试阶段被调严）。直接拿当前 .ini 跑回归，Sod/Sedov 的 AMR 网格因阈值不同而明显更细（Sod 从锚点 4390 cells 变成 9253 cells，Sedov 从 5422 变成 6628），`compare_vtu.py` 报 cell 数不匹配。**这不是物理求解没回退，而是配置参数与锚点不一致造成的假性失败。** 无 AMR 的 Noh 不受阈值影响，能逐位一致回退（证明物理核心完好）。
 
 ### 标准动作（回退测试启动前）
-1. **从 git 确认锚点配置**：用 `git show <GOLDEN-PASS/anchor commit>:param.ini` 取出锚点版本的 `.ini`，同样地 `git show <anchor commit>:<源码文件>` 核对代码内默认值（如 `defines.h` 的 `refine_coarsen_enum`、`refine_err`/`coarsen_error` 等）。
+0. **【先检测/关闭高频调试 I/O】** 在做**任何**回退/长期算例运行前，先排查近期调试遗留的高频 IO 或额外全场遍历，否则一个完整算例会被拖慢数倍甚至数十倍：
+   - **排查项**：
+     - 每时间步多次的 `StatGlobalFieldChecksum`（每步约 8 次全场扫描 + 8 次 allreduce，3046 步累计 2.4 万行、占运行时间大头）；
+     - 高频 `refine_dbg_*` 文件（在 `Lagrangian_replace_quads` 里对每个 child `fopen/fprintf/fclose`，曾造成单次运行写出 877 MB / 936 万行）；
+     - 每步多次的额外 `p4est_iterate`（如 `trace_target_snapshot*`，即使回调不写文件也会遍历全场）；
+     - 详细 `DEBUG: Entering/Finished ...` 控制台日志。
+   - **本项目的关闭开关（环境变量，默认即关闭，无需设置）**：
+     ```text
+     LAGRANGIAN_TRACE_TARGET      # 目标单元/阶段快照、edge/riemann 定点日志
+     LAGRANGIAN_TRACE_REFINE      # refine_dbg_* 高频文件
+     LAGRANGIAN_VERBOSE_AMR       # DEBUG Entering/Finished 详细控制台日志
+     LAGRANGIAN_TRACE_CHECKSUM    # 每步 SubStep 全场的 checksum 输出
+     ```
+   - **验证方式**：跑一个短步数（如 4 步）冒烟，确认日志里 `grep -c 'Checksum \[SubStep'` 为 0、`grep -c 'DEBUG: Entering'` 为 0，且不新增 `refine_dbg_*`/`corner2_trace_*`/`riemann_dbg_*` 文件。若仍异常地慢，优先怀疑某处高频 IO 未纳入开关。
+   - **本节真实反例**：调试期间把上述 checksum/refine 日志全量留在正式路径，一个正常约 1 分钟的 Sod 算例被拖到约 5 分钟甚至 3 小时，会让人误判为「算例本身很慢」或掩盖真正的回归问题。
+1. **从 git 确认锚点配置**：用 `git show <GOLDEN-PASS/anchor commit>:param.ini` 取出锚点版本的 `.ini`，同样地 `git show <anchor commit>:<源码文件>` 核对代码内默认值（如 `defines.h` 的 `refine_coarsen_enum`、`refine_err`/`coarsen_error`、`refine_coarsen_time` 等）。
 2. **逐项比对**：把当前 `param.ini` + 当前代码里的相关默认值，与锚点版本逐字段比对，列出差异清单。
-3. **有差异就先统一**，再编译/运行/比对。特别留意 `refine_err`、`coarsen_error`、`refine_coarsen_enum`、`write_interval_step`、`max_time_step` 这类「不常改但会改网格/输出」的项。
-4. **运行类脚本若未显式写某些字段**（本项目 `run_tests.py` 只写 `which_case/end_time/enable_amr/minus_level/max_level/refine_coarsen_enum/write_interval_time/max_time_step`，**不写 `refine_err/coarsen_error`**），它就会静默继承当前 `param.ini` 的残留值——这是常见的隐性不一致来源，务必人工补上锚点值（脚本里 `update_param` 加 `'refine_err': 1.0, 'coarsen_error': 0.8` 这类）。
+3. **有差异就先统一**，再编译/运行/比对。特别留意 `refine_err`、`coarsen_error`、`refine_coarsen_enum`、`refine_coarsen_time`、`refine_period`、`write_interval_step`、`max_time_step` 这类「不常改但会改网格/输出/AMR 调度」的项。例如 GOLDEN 锚点使用 `refine_period=4`、`refine_coarsen_time=0.0001`，而调试期常被改成 `period=1`、`time=0.0`——二者都会改变首次 AMR 时机和频率，必须对齐到锚点才能回到同样网格。
+4. **运行类脚本若未显式写某些字段**（本项目 `run_tests.py` 只写 `which_case/end_time/enable_amr/minus_level/max_level/refine_coarsen_enum/write_interval_time/max_time_step`，**不写 `refine_err/coarsen_error`，也不写 `refine_period/refine_coarsen_time`**），它就会静默继承当前 `param.ini` 或源码里的残留值——这是常见的隐性不一致来源，务必人工补上锚点值（脚本里 `update_param` 加 `'refine_err': 1.0, 'coarsen_error': 0.8, 'refine_period': 4` 这类，并在源码层把 `refine_coarsen_time` 也改为锚点值）。
 5. **验证通过后把 param.ini 恢复**，避免把调试期的阈值等残留带回日常状态。
 
-**结论**：回退测试的第一步永远是「配置一致性审计」，否则一切数值比对（尤其 Amr 细胞数）都会失真。
+**结论**：回退测试的第一步永远是「**高频调试 IO 检测/关闭** + 配置一致性审计」，否则要么算例慢到让人误判、要么数值比对（尤其 Amr 细胞数）失真。
 
 ---
 

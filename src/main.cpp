@@ -3,6 +3,8 @@
 #include "solver/corner_solver.h"
 #include "io/vtk_writer.h"
 #include "io/config_parser.h"
+#include <cstdlib>
+#include <cstring>
 #ifdef _WIN32
 #include <direct.h>
 #else
@@ -13,8 +15,47 @@ using namespace std;
 
 static int g_trace_riemann_iter = -1;
 
+static bool debug_flag_enabled(const char *name)
+{
+	const char *value = std::getenv(name);
+	return value != NULL && value[0] != '\0' && std::strcmp(value, "0") != 0;
+}
+
+static bool target_trace_enabled()
+{
+	static const bool enabled = debug_flag_enabled("LAGRANGIAN_TRACE_TARGET");
+	return enabled;
+}
+
+static bool refine_trace_enabled()
+{
+	static const bool enabled = debug_flag_enabled("LAGRANGIAN_TRACE_REFINE");
+	return enabled;
+}
+
+static bool verbose_amr_log_enabled()
+{
+	static const bool enabled = debug_flag_enabled("LAGRANGIAN_VERBOSE_AMR");
+	return enabled;
+}
+
+static bool checksum_trace_enabled()
+{
+	static const bool enabled = debug_flag_enabled("LAGRANGIAN_TRACE_CHECKSUM");
+	return enabled;
+}
+
+#define AMR_DEBUG_LOG(...) do { \
+	if (verbose_amr_log_enabled()) { \
+		P4EST_GLOBAL_PRODUCTIONF(__VA_ARGS__); \
+	} \
+} while (0)
+
 static FILE *open_corner2_trace(p4est_t *p4est)
 {
+	if (!target_trace_enabled()) {
+		return NULL;
+	}
 	char fname[256];
 	sprintf(fname, "corner2_trace_%d_rank_%d.txt", p4est->mpisize, p4est->mpirank);
 	return fopen(fname, "a");
@@ -95,6 +136,13 @@ static void trace_target_snapshot_callback(p4est_iter_volume_info_t *info, void 
 
 static void trace_target_snapshot(p4est_t *p4est, const char *stage)
 {
+	if (!target_trace_enabled()) {
+		return;
+	}
+	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	if (p4est_data->current_step != 2 && p4est_data->current_step != 3) {
+		return;
+	}
 	g_trace_snapshot_stage = stage;
 	p4est_iterate(p4est, NULL, NULL, trace_target_snapshot_callback, NULL, NULL);
 	g_trace_snapshot_stage = NULL;
@@ -430,7 +478,7 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 
 			CDoubleVector hanging_velo = 0.5 * (master_velocity[0] + master_velocity[1]);
 
-			if (p4est_data->current_step == 3 &&
+			if (target_trace_enabled() && p4est_data->current_step == 3 &&
 				((is_trace_fine(quad_child1) && is_trace_sibling(quad_child2)) ||
 				 (is_trace_sibling(quad_child1) && is_trace_fine(quad_child2)))) {
 				FILE *f = open_corner2_trace(info->p4est);
@@ -2220,7 +2268,7 @@ static void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info,
 		
 		if (PCInfo[k].IsParentChildBoun == true)
 		{
-			if (p4est_data->current_step == 3 || p4est_data->current_step == 4) {
+			if (target_trace_enabled() && (p4est_data->current_step == 3 || p4est_data->current_step == 4)) {
 				char fname[256];
 				sprintf(fname, "edge_matrix_dbg_%d_%d.txt", info->p4est->mpisize, info->p4est->mpirank);
 				FILE* f_dbg = fopen(fname, "a");
@@ -2255,7 +2303,7 @@ static void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info,
 			m_vara->VecCnData[ideMcpUc][k] = GeometryAlg::MatrixDotVector(m_vara->MarCnData[ideMcp][k],
 				m_vara->VecCnData[idReconstructVelocity][k]);
 			m_vara->VecCnData[ideRHS][k] = LcpNcpPc + m_vara->VecCnData[ideMcpUc][k];
-			if (p4est_data->current_step == 3 && is_trace_parent(info->quad)) {
+			if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_parent(info->quad)) {
 				FILE *f = open_corner2_trace(info->p4est);
 				if (f) {
 					fprintf(f, "TRACE stage=PARENT_EDGE iter=%d face=%d is_pc=%d", g_trace_riemann_iter, k, PCInfo[k].IsParentChildBoun ? 1 : 0);
@@ -2351,7 +2399,7 @@ static void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *i
 		m_vara->VecCnData[idcnMcpUc][k] = GeometryAlg::MatrixDotVector(m_vara->MarCnData[idcnMcp][k],
 			m_vara->VecCnData[idReconstructVelocity][k]);
 		m_vara->VecCnData[idcnRHS][k] = LcpNcpPc + m_vara->VecCnData[idcnMcpUc][k];
-		if (p4est_data->current_step == 3 && is_trace_parent(info->quad) && (k == 0 || k == 3)) {
+		if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_parent(info->quad) && (k == 0 || k == 3)) {
 			FILE *f = open_corner2_trace(info->p4est);
 			if (f) {
 				fprintf(f, "TRACE stage=LOCAL_CORNER iter=%d corner=%d", g_trace_riemann_iter, k);
@@ -2867,7 +2915,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			RHS = m_quad_data->m_vara.VecCnData[idcnRHS][m_which_corner[0]] +
 				m_quad_data_aside->m_vara.VecCnData[idcnRHS][m_which_corner[1]] +
 				m_quad_data_full->m_vara.VecCnData[ideRHS][parent_face_index];
-			if (p4est_data->current_step == 3 &&
+			if (target_trace_enabled() && p4est_data->current_step == 3 &&
 				((is_trace_fine(quad) && is_trace_sibling(quad_aside)) ||
 				 (is_trace_sibling(quad) && is_trace_fine(quad_aside)))) {
 				FILE *f = open_corner2_trace(info->p4est);
@@ -3203,7 +3251,7 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 		
 		m_vara->VecCnData[idcnVelocity_lag][cnid] = m_data->points[cnid].velo_lag;
 		p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-		if (p4est_data->current_step == 3 && !is_ghost &&
+		if (target_trace_enabled() && p4est_data->current_step == 3 && !is_ghost &&
 			((is_trace_fine(side[i]->quad) && cnid == 2) ||
 			 (is_trace_parent(side[i]->quad) && (cnid == 0 || cnid == 3)))) {
 			FILE *f = open_corner2_trace(info->p4est);
@@ -4177,7 +4225,7 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 		}
 		
 		// Debug step 3 after RiemannSolver
-		if (p4est_data->current_step == 3) {
+		if (target_trace_enabled() && p4est_data->current_step == 3) {
 			auto dbg_cb = [](p4est_iter_volume_info_t *info, void *user_data) {
 				quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
 				CVariable *m_vara = &data->m_vara;
@@ -4218,35 +4266,35 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 
 		
 		ComputeDivergence(p4est);
-		StatGlobalFieldChecksum(p4est, "SubStep 3: Divergence");
+		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 3: Divergence");
 
 		
 		ComputeCoordinate(p4est);
-		StatGlobalFieldChecksum(p4est, "SubStep 4: Coordinate");
+		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 4: Coordinate");
 
 		
 		UpdateDensity(p4est);
-		StatGlobalFieldChecksum(p4est, "SubStep 5: Density");
+		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 5: Density");
 
 		
 		UpdateMomentumEquation(p4est);
-		StatGlobalFieldChecksum(p4est, "SubStep 6: Momentum");
+		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 6: Momentum");
 
 		
 		ComputeWork(p4est);
-		StatGlobalFieldChecksum(p4est, "SubStep 7: Work");
+		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 7: Work");
 
 		
 		UpdateEnergyEquation(p4est);
-		StatGlobalFieldChecksum(p4est, "SubStep 8: EnergyEq");
+		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 8: EnergyEq");
 
 		
 		UpdateEquationOfState(p4est);
-		StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
+		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
 
 		
 		ComputeSoundSpeed(p4est);
-		StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
+		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
 	}
 	//StatGlobalFieldChecksum(p4est, "Checkpoint 5: Update");
 	p4est_data->used_dt = p4est_data->delta_time;
@@ -4599,7 +4647,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			p4est_qcoord_t qx = incoming[i]->x;
 			p4est_qcoord_t qy = incoming[i]->y;
 
-			if (p4est_data->current_step == 3 && is_trace_fine(incoming[i])) {
+			if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_fine(incoming[i])) {
 				FILE *f = open_corner2_trace(p4est);
 				if (f) {
 					fprintf(f, "TRACE stage=REFINE_TRANSFER child_index=%d parent=(%d,%d,L%d) child=(%d,%d,L%d)", i,
@@ -4616,15 +4664,19 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 				}
 			}
 
-			double px = parent_data->m_vara.VecCData[idCentroidCoord_cur].x;
-			double py = parent_data->m_vara.VecCData[idCentroidCoord_cur].y;
-			p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-			char fname[256];
-			sprintf(fname, "refine_dbg_%d_%d.txt", p4est->mpisize, p4est->mpirank);
-			FILE* f_dbg = fopen(fname, "a");
-			if (f_dbg) {
-				fprintf(f_dbg, "REFINE_STEP_%d_PARENT at (%.6f, %.6f): parent SoundSpeed=%e, mass=%e, vol=%e\n",
-					p4est_data->current_step, px, py, parent_data->m_vara.DouCData[idSoundSpeed], parent_data->m_vara.DouCData[idMass], parent_data->m_vara.DouCData[idVolume]);
+			FILE *f_dbg = NULL;
+			double px = 0.;
+			double py = 0.;
+			if (refine_trace_enabled()) {
+				px = parent_data->m_vara.VecCData[idCentroidCoord_cur].x;
+				py = parent_data->m_vara.VecCData[idCentroidCoord_cur].y;
+				char fname[256];
+				sprintf(fname, "refine_dbg_%d_%d.txt", p4est->mpisize, p4est->mpirank);
+				f_dbg = fopen(fname, "a");
+				if (f_dbg) {
+					fprintf(f_dbg, "REFINE_STEP_%d_PARENT at (%.6f, %.6f): parent SoundSpeed=%e, mass=%e, vol=%e\n",
+						p4est_data->current_step, px, py, parent_data->m_vara.DouCData[idSoundSpeed], parent_data->m_vara.DouCData[idMass], parent_data->m_vara.DouCData[idVolume]);
+				}
 			}
 			
 			for (int j = 0; j < idDoubleCellVariableNum; j++)
@@ -5506,35 +5558,35 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			&& p4est_data->current_time>p4est_data->refine_coarsen_time)
 
 		{
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_refine_ext\n");
+			AMR_DEBUG_LOG("DEBUG: Entering p4est_refine_ext\n");
 			p4est_refine_ext(p4est, recursive, allowed_level,
 				Lagrangian_refine_err_estimate, NULL,
 				Lagrangian_replace_quads);
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Finished p4est_refine_ext\n");
+			AMR_DEBUG_LOG("DEBUG: Finished p4est_refine_ext\n");
 
 			if (ghost) {
-				P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_ghost_destroy\n");
+				AMR_DEBUG_LOG("DEBUG: Entering p4est_ghost_destroy\n");
 				p4est_ghost_destroy(ghost);
-				P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering P4EST_FREE(ghost_data)\n");
+				AMR_DEBUG_LOG("DEBUG: Entering P4EST_FREE(ghost_data)\n");
 				P4EST_FREE(ghost_data);
 			}
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_ghost_new\n");
+			AMR_DEBUG_LOG("DEBUG: Entering p4est_ghost_new\n");
 			ghost = p4est_ghost_new(p4est, P4EST_CONNECT_FULL);
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering P4EST_ALLOC(ghost_data)\n");
+			AMR_DEBUG_LOG("DEBUG: Entering P4EST_ALLOC(ghost_data)\n");
 			ghost_data = P4EST_ALLOC(quad_data_t, ghost->ghosts.elem_count);
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_ghost_exchange_data\n");
+			AMR_DEBUG_LOG("DEBUG: Entering p4est_ghost_exchange_data\n");
 			p4est_ghost_exchange_data(p4est, ghost, ghost_data);
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Finished p4est_ghost_exchange_data\n");
+			AMR_DEBUG_LOG("DEBUG: Finished p4est_ghost_exchange_data\n");
 
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering set_allowing_coarsening_tag\n");
+			AMR_DEBUG_LOG("DEBUG: Entering set_allowing_coarsening_tag\n");
 			set_allowing_coarsening_tag(p4est, ghost, ghost_data);
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Finished set_allowing_coarsening_tag\n");
+			AMR_DEBUG_LOG("DEBUG: Finished set_allowing_coarsening_tag\n");
 
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Entering p4est_coarsen_ext\n");
+			AMR_DEBUG_LOG("DEBUG: Entering p4est_coarsen_ext\n");
 			p4est_coarsen_ext(p4est, recursive, callbackorphans,
 			Lagrangian_coarsen_err_estimate, NULL,
 			Lagrangian_replace_quads);
-			P4EST_GLOBAL_PRODUCTIONF("DEBUG: Finished p4est_coarsen_ext\n");
+			AMR_DEBUG_LOG("DEBUG: Finished p4est_coarsen_ext\n");
 
 			StatTotalEnergyError(p4est);
 			p4est_balance_ext(p4est, P4EST_CONNECT_CORNER, NULL,
