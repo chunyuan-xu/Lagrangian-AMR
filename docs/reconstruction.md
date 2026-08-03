@@ -887,6 +887,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 
 **M1.5a 完成记录（2026-08-03）**：起点提交 `d2c435c`。审计确认现有输出位于物理推进和 `AcceptNumericalSolution` 之前，文件 `N` 保存已接受的 `N-1` 步状态，VTK `TimeValue` 对应该步前状态；本子区间不移动输出、不重命名文件、不改变 VTU 数值内容。新增类型化 `OutputStamp`，显式记录 `FileStep=N`、`StateStep=N-1`、`TimeValue=current_time`、`OutputPhase=PreStep(0)`；专项测试覆盖首步、后续步和零步边界。Sedov 末帧实测元数据为 `FileStep=3933`、`StateStep=3932`、`TimeValue=0.4995868398544829`、`OutputPhase=0`。G1 三黄金全部 PASS 且 `param.ini` 恢复；G2 step 3/4/10/50/54 全部 PASS。真正的步后/终态输出留作独立、需新输出契约的后续变更。状态：**完成**。
 
+**M1.5b 完成记录（2026-08-03）**：起点提交 `e186712`。新增默认关闭的 `LAGRANGIAN_CHECK_REFRESH_IDEMPOTENCE` 专项开关；启用时在第一次 `refresh_after_balance` 后记录本 rank 全部 owner quadrant 与 ghost mirror 的 `quad_data_t` 字节快照，立即重复 refresh 并再次快照，逐字节比较后通过 `MPI_Allreduce(MIN)` 汇总所有 rank，任一差异都会中止。启用专项检查的完整 G1 中 Noh Uniform、Sod AMR、Sedov AMR 全部 PASS，且 `param.ini` 恢复；启用检查的 G2 step 3/4/10/50/54 全部 PASS，覆盖跨 rank 和 AMR 场景。随后删除逐步 PASS 日志、预留快照容量以降低诊断开销，并在默认关闭检查的生产路径再次执行 G1，三黄金全部 PASS（20.5s、61.5s、49.1s），`param.ini` 恢复。结论：在当前覆盖范围内，无拓扑变化时连续 refresh 对 owner 与 ghost 状态严格字节幂等；本子区间不改变 refresh 调用频率或数值算法。状态：**完成**。
+
 **M1 完成条件**：M1.1～M1.5 各自有独立提交和 G1 证据，整体再通过 G1+G2+G3。
 
 ### M2：类型化配置与状态访问

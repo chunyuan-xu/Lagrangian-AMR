@@ -9,6 +9,7 @@
 #include "physics/stage_policy.h"
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 #ifdef _WIN32
 #include <direct.h>
 #else
@@ -46,6 +47,13 @@ static bool verbose_amr_log_enabled()
 static bool checksum_trace_enabled()
 {
 	static const bool enabled = debug_flag_enabled("LAGRANGIAN_TRACE_CHECKSUM");
+	return enabled;
+}
+
+static bool refresh_idempotence_check_enabled()
+{
+	static const bool enabled =
+		debug_flag_enabled("LAGRANGIAN_CHECK_REFRESH_IDEMPOTENCE");
 	return enabled;
 }
 
@@ -5029,6 +5037,40 @@ quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, voi
 	}
 }
 
+static void append_refresh_snapshot(
+	p4est_t *p4est,
+	p4est_ghost_t *ghost,
+	void *ghost_data,
+	std::vector<unsigned char> &snapshot)
+{
+	const size_t ghost_count = ghost == NULL ? 0 : ghost->ghosts.elem_count;
+	const size_t snapshot_size =
+		(static_cast<size_t>(p4est->local_num_quadrants) + ghost_count) *
+		sizeof(quad_data_t);
+	snapshot.clear();
+	snapshot.reserve(snapshot_size);
+
+	for (p4est_topidx_t tree_id = p4est->first_local_tree;
+		tree_id <= p4est->last_local_tree; ++tree_id) {
+		p4est_tree_t *tree = p4est_tree_array_index(p4est->trees, tree_id);
+		for (size_t index = 0; index < tree->quadrants.elem_count; ++index) {
+			p4est_quadrant_t *quad =
+				p4est_quadrant_array_index(&tree->quadrants, index);
+			const unsigned char *bytes = static_cast<const unsigned char *>(
+				quad->p.user_data);
+			snapshot.insert(snapshot.end(), bytes, bytes + sizeof(quad_data_t));
+		}
+	}
+
+	const unsigned char *ghost_bytes =
+		static_cast<const unsigned char *>(ghost_data);
+	const size_t ghost_size = ghost_count * sizeof(quad_data_t);
+	if (ghost_size > 0) {
+		snapshot.insert(
+			snapshot.end(), ghost_bytes, ghost_bytes + ghost_size);
+	}
+}
+
 static void
 refresh_after_balance(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 {
@@ -5580,6 +5622,19 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 
 		
 		refresh_after_balance(p4est, ghost, ghost_data);
+		if (refresh_idempotence_check_enabled()) {
+			std::vector<unsigned char> first_refresh;
+			std::vector<unsigned char> second_refresh;
+			append_refresh_snapshot(p4est, ghost, ghost_data, first_refresh);
+			refresh_after_balance(p4est, ghost, ghost_data);
+			append_refresh_snapshot(p4est, ghost, ghost_data, second_refresh);
+			const int local_match = first_refresh == second_refresh ? 1 : 0;
+			int global_match = 0;
+			sc_MPI_Allreduce(&local_match, &global_match, 1, sc_MPI_INT,
+				sc_MPI_MIN, p4est->mpicomm);
+			SC_CHECK_ABORT(global_match,
+				"refresh_after_balance is not idempotent");
+		}
 		trace_target_snapshot(p4est, "AFTER_AMR_REFRESH");
 		
 		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
