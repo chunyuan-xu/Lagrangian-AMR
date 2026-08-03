@@ -214,6 +214,7 @@ struct p4est_data_t {
 		if (cfg.HasKey("refine_err")) refine_err = cfg.GetDouble("refine_err", refine_err);
 		if (cfg.HasKey("coarsen_error")) coarsen_error = cfg.GetDouble("coarsen_error", coarsen_error);
 		if (cfg.HasKey("refine_period")) refine_period = cfg.GetInt("refine_period", refine_period);
+		if (cfg.HasKey("refine_coarsen_time")) refine_coarsen_time = cfg.GetDouble("refine_coarsen_time", refine_coarsen_time);
 		if (cfg.HasKey("write_interval_time")) write_interval_time = cfg.GetDouble("write_interval_time", write_interval_time);
 		if (cfg.HasKey("write_interval_step")) write_interval_step = cfg.GetInt("write_interval_step", write_interval_step);
 		if (cfg.HasKey("max_time_step")) max_time_step = cfg.GetInt("max_time_step", max_time_step);
