@@ -4,6 +4,7 @@
 #include "solver/solver_gate.h"
 #include "io/vtk_writer.h"
 #include "io/config_parser.h"
+#include "io/output_stamp.h"
 #include "physics/timestep_reduction.h"
 #include "physics/stage_policy.h"
 #include <cstdlib>
@@ -5327,7 +5328,7 @@ static void write_distance_profiles(p4est_t *p4est)
 		NULL);
 }
 
-static void write_solution(p4est_t *p4est, const int &time_step)
+static void write_solution(p4est_t *p4est, const IOAlgorithm::OutputStamp &stamp)
 {
 	char				filename[BUFSIZ] = "";
 	int					retval;
@@ -5351,7 +5352,7 @@ static void write_solution(p4est_t *p4est, const int &time_step)
 	const char* path_format = "output/"P4EST_STRING "_Lagrangian_%04d";
 #endif
 
-	snprintf(filename, BUFSIZ, path_format, time_step);
+	snprintf(filename, BUFSIZ, path_format, stamp.file_step);
 
 	numquads = p4est->local_num_quadrants;
 
@@ -5445,7 +5446,25 @@ static void write_solution(p4est_t *p4est, const int &time_step)
 				f = fopen(pvtu_filename, "wb");
 				if (f) {
 					fprintf(f, "%s", string);
-					fprintf(f, "  <FieldData>\n    <DataArray type=\"Float64\" Name=\"TimeValue\" NumberOfTuples=\"1\" format=\"ascii\">\n      %.16g\n    </DataArray>\n  </FieldData>\n</VTKFile>\n", ((p4est_data_t *)p4est->user_pointer)->current_time);
+					fprintf(f,
+						"  <FieldData>\n"
+						"    <DataArray type=\"Float64\" Name=\"TimeValue\" NumberOfTuples=\"1\" format=\"ascii\">\n"
+						"      %.16g\n"
+						"    </DataArray>\n"
+						"    <DataArray type=\"Int32\" Name=\"FileStep\" NumberOfTuples=\"1\" format=\"ascii\">\n"
+						"      %d\n"
+						"    </DataArray>\n"
+						"    <DataArray type=\"Int32\" Name=\"StateStep\" NumberOfTuples=\"1\" format=\"ascii\">\n"
+						"      %d\n"
+						"    </DataArray>\n"
+						"    <DataArray type=\"Int32\" Name=\"OutputPhase\" NumberOfTuples=\"1\" format=\"ascii\">\n"
+						"      %d\n"
+						"    </DataArray>\n"
+						"  </FieldData>\n</VTKFile>\n",
+						stamp.time,
+						stamp.file_step,
+						stamp.state_step,
+						IOAlgorithm::phase_code(stamp.phase));
 					fclose(f);
 				}
 			}
@@ -5569,18 +5588,21 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		if (p4est_data->equal_dt == false) { predict_timestep(p4est); }
 
 		
+		const IOAlgorithm::OutputStamp output_stamp =
+			IOAlgorithm::make_pre_step_stamp(
+				p4est_data->current_step, p4est_data->current_time);
 		if (!(p4est_data->current_step % p4est_data->write_interval_step))
 		{
-			write_solution(p4est, p4est_data->current_step);
+			write_solution(p4est, output_stamp);
 		}
 		else if (current_output_index > p4est_data->last_output_index)
 		{
 			p4est_data->last_output_index = current_output_index;
-			write_solution(p4est, p4est_data->current_step);
+			write_solution(p4est, output_stamp);
 		}
 		else if (p4est_data->current_time+ p4est_data->delta_time >= p4est_data->end_time)
 		{
-			write_solution(p4est, p4est_data->current_step);
+			write_solution(p4est, output_stamp);
 		}
 
 		

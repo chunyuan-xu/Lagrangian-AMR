@@ -885,6 +885,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 - **实施**：分别明确输出是步前还是步后；验证 `refresh_after_balance` 在无拓扑变化时的幂等性。
 - **专项验收**：文件名、step、time、VTK `TimeValue` 一致；连续调用 refresh 不改变状态；通过 G1+G2。
 
+**M1.5a 完成记录（2026-08-03）**：起点提交 `d2c435c`。审计确认现有输出位于物理推进和 `AcceptNumericalSolution` 之前，文件 `N` 保存已接受的 `N-1` 步状态，VTK `TimeValue` 对应该步前状态；本子区间不移动输出、不重命名文件、不改变 VTU 数值内容。新增类型化 `OutputStamp`，显式记录 `FileStep=N`、`StateStep=N-1`、`TimeValue=current_time`、`OutputPhase=PreStep(0)`；专项测试覆盖首步、后续步和零步边界。Sedov 末帧实测元数据为 `FileStep=3933`、`StateStep=3932`、`TimeValue=0.4995868398544829`、`OutputPhase=0`。G1 三黄金全部 PASS 且 `param.ini` 恢复；G2 step 3/4/10/50/54 全部 PASS。真正的步后/终态输出留作独立、需新输出契约的后续变更。状态：**完成**。
+
 **M1 完成条件**：M1.1～M1.5 各自有独立提交和 G1 证据，整体再通过 G1+G2+G3。
 
 ### M2：类型化配置与状态访问
