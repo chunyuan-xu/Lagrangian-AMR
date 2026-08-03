@@ -5816,6 +5816,8 @@ int main(int argc, char **argv)
 
 	IOAlgorithm::ConfigParser cfg("param.ini");
 	ctx.load_from_config(cfg);
+	SC_CHECK_ABORT(ctx.has_valid_simulation_settings(),
+		"Invalid simulation configuration or clock settings");
 
 	P4EST_GLOBAL_PRODUCTIONF("This is the p4est %dD demo for Lagrangian hydrodynamics\n", P4EST_DIM);
 
@@ -5823,10 +5825,12 @@ int main(int argc, char **argv)
 	p4est_connectivity_t *conn = p4est_connectivity_new_unitsquare();
 	
 
+	const SimulationModel::SimulationConfig startup_config =
+		ctx.simulation_config();
 	p4est_t *p4est = p4est_new_ext(mpicomm,				 
 		conn,					 
 		1,						 
-		ctx.minus_level,						 
+		startup_config.mesh.minimum_level,						 
 		1,						 
 		sizeof(quad_data_t), 
 		Lagrangian_init_condition,
@@ -5847,9 +5851,11 @@ int main(int argc, char **argv)
 	// Test call to the debug VTU output
 	//IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug_checkpoint", 0, 0);
 
-	advance_time_step(p4est,                    
-		p4est_data->start_time,    
-		p4est_data->end_time);     
+	const SimulationModel::SimulationClock startup_clock =
+		p4est_data->simulation_clock();
+	advance_time_step(p4est,
+		startup_clock.start_time,
+		startup_clock.end_time);
 
 								   
 	p4est_destroy(p4est);

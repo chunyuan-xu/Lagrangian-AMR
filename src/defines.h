@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include "io/config_parser.h"
+#include "core/simulation_config.h"
 #include "Variable.h"
 
 enum ProblemNo
@@ -141,6 +142,8 @@ struct p4est_data_t {
 
 		local_dt = 100000.;
 		delta_time = 1e-5;
+		dt_iter = 0.0;
+		used_dt = 0.0;
 		refine_coarsen_time = 0.0;
 		minus_level = 4;
 		max_level = 7;
@@ -160,6 +163,10 @@ struct p4est_data_t {
 		Scheme_type = ControlVolume;
 		solver_type = Rotated;
 		accuracy = first_order;
+		LeftBoun = -1;
+		RightBoun = -1;
+		BottomBoun = -1;
+		TopBoun = -1;
 		LeftBounVal = 0.;
 		RightBounVal = 0.;
 		BottomBounVal = 0.;
@@ -175,6 +182,9 @@ struct p4est_data_t {
 
 		volume_varation_torelarion = 0.01;
 		dt_increase_percent = 1.001;
+		total_energy_lag = 0.0;
+		total_energy_cur = 0.0;
+		total_energy_init = 0.0;
 		last_output_index = -1;
 		EnergyFile.open("EnergyError.plt");
 		EnergyFile.setf(ios::fixed, ios::floatfield);
@@ -187,6 +197,56 @@ struct p4est_data_t {
 		ErrorFile.open("ErrorFile.txt");
 		ErrorFile.setf(ios::fixed, ios::floatfield);
 		ErrorFile.precision(16);
+	}
+
+	SimulationModel::SimulationConfig simulation_config() const {
+		return SimulationModel::SimulationConfig{
+			which_case,
+			start_time,
+			end_time,
+			max_time_step,
+			SimulationModel::MeshConfig{
+				m_grid_info.global_nx,
+				m_grid_info.global_ny,
+				m_grid_info.tree_width,
+				m_grid_info.tree_height,
+				x_tree_number,
+				y_tree_number,
+				minus_level,
+				max_level,
+				refine_coarsen_enum,
+				refine_err,
+				coarsen_error,
+				refine_period,
+				repartition_period,
+				refine_coarsen_time},
+			SimulationModel::SolverConfig{
+				coord_type,
+				Scheme_type,
+				solver_type,
+				accuracy,
+				m_cfl,
+				initial_dt,
+				max_dt,
+				equal_dt,
+				volume_varation_torelarion,
+				dt_increase_percent},
+			SimulationModel::OutputConfig{
+				write_interval_time,
+				write_interval_step,
+				profiletype}};
+	}
+
+	SimulationModel::SimulationClock simulation_clock() const {
+		return SimulationModel::SimulationClock{
+			start_time,
+			end_time,
+			current_time,
+			delta_time,
+			dt_iter,
+			used_dt,
+			current_step,
+			max_time_step};
 	}
 
 	void load_from_config(const IOAlgorithm::ConfigParser& cfg) {
@@ -205,7 +265,10 @@ struct p4est_data_t {
 			else if (case_str == "TaylorGreen") which_case = ProblemNo::TaylorGreen;
 			else which_case = cfg.GetInt("which_case", which_case); 
 		}
-		if (cfg.HasKey("start_time")) start_time = cfg.GetDouble("start_time", start_time);
+		if (cfg.HasKey("start_time")) {
+			start_time = cfg.GetDouble("start_time", start_time);
+			current_time = start_time;
+		}
 		if (cfg.HasKey("end_time")) end_time = cfg.GetDouble("end_time", end_time);
 		if (cfg.HasKey("delta_time")) delta_time = cfg.GetDouble("delta_time", delta_time);
 		if (cfg.HasKey("refine_coarsen_enum")) refine_coarsen_enum = cfg.GetInt("refine_coarsen_enum", refine_coarsen_enum);
@@ -218,6 +281,11 @@ struct p4est_data_t {
 		if (cfg.HasKey("write_interval_time")) write_interval_time = cfg.GetDouble("write_interval_time", write_interval_time);
 		if (cfg.HasKey("write_interval_step")) write_interval_step = cfg.GetInt("write_interval_step", write_interval_step);
 		if (cfg.HasKey("max_time_step")) max_time_step = cfg.GetInt("max_time_step", max_time_step);
+	}
+
+	bool has_valid_simulation_settings() const {
+		return SimulationModel::valid(simulation_config()) &&
+			SimulationModel::valid(simulation_clock());
 	}
 };
 

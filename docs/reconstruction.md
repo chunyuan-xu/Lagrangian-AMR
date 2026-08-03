@@ -904,6 +904,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 - 调用点分批切换到类型化配置；
 - **专项验收**：非法配置启动即失败；运行中配置不可写；通过 G1。
 
+**完成记录（2026-08-04）**：起点提交 `f1d3067`。新增 `SimulationConfig`、`MeshConfig`、`SolverConfig`、`OutputConfig` 和 `SimulationClock` 值类型，由旧 `p4est_data_t` 单向生成只读快照，旧字段继续作为唯一写入源，未改变 `quad_data_t/CVariable` 布局。启动阶段首批切换初始网格层级以及时间循环起止时间，动态时间步归约、AMR callback、时钟递增和数值更新继续使用旧可变字段，避免双向状态与浮点顺序变化。新增统一配置/时钟校验，在 p4est 网格创建前拒绝非正层级/周期/输出间隔/时间步/CFL、反向时间区间和 NaN/Inf；专项测试覆盖 legacy 字段映射、clock 快照及非法边界。审计中补齐旧结构此前未初始化的 `dt_iter`、`used_dt`、边界类型和累计能量字段，均使用既有运行语义的中性初值。迁移后 G1 三黄金全部 PASS；清理后 G1 的 Noh Uniform（19.8s）、Sod AMR（61.5s）、Sedov AMR（48.8s）再次全部 PASS，且 `param.ini` 恢复。状态：**完成**。
+
 #### M2.2 typed accessor
 
 - 为 cell/edge/corner 与 current/half/lag 状态增加命名 accessor；
