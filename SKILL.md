@@ -52,6 +52,8 @@ make -j8      # 并行编译（约 30 秒）
 | `validate_current.ps1` | 一键回归验证脚本（编译 + 运行 3 个基准算例 + 结果比对） |
 | `compare_vtu.py` | VTU 文件数值比对（容差 1e-12） |
 | `reference/` | 基准参考结果（Noh_32x32.vtu、SedovAMR.vtu、SodAMR.vtu） |
+| `reference/par4_sod/` | **并行(4核)黄金参考**：Sod AMR 4 核 `p4est_Lagrangian_3046.pvtu` + 4 个 rank 分块 |
+| `reference/par4_sedov/` | **并行(4核)黄金参考**：Sedov AMR 4 核 `p4est_Lagrangian_3933.pvtu` + 4 个 rank 分块 |
 | `WORKFLOW.md` 或 `task.md` | 当前任务清单和里程碑状态 |
 
 ---
@@ -84,6 +86,37 @@ powershell -File validate_current.ps1
 5. 每个算例与 `reference/` 比对（容差 1e-12）
 
 **通过条件**: 所有算例的输出误差 < 1e-12 → 打印 `ALL REGRESSION TESTS PASSED`
+
+---
+
+## 并行(4核)回退黄金算例 [PAR4-GOLDEN]
+
+除串行三基准外，另有两个 **4 核并行黄金参考**，用于核对 MPI 并行结果合理性与并行回退：
+
+| 算例 | 4 核参考 | 生成配置 | 规模(4核总) vs 串行锚点 |
+|---|---|---|---|
+| Sod AMR | `reference/par4_sod/p4est_Lagrangian_3046.pvtu` | `which_case=7, end_time=0.2, refine_err=1.0, coarsen_error=0.8, refine_period=4, refine_coarsen_time=0.0001` | 4387 cells (1111/1080/1105/1091) vs 串行 4390 |
+| Sedov AMR | `reference/par4_sedov/p4est_Lagrangian_3933.pvtu` | `which_case=1, end_time=0.5, refine_err=1.0, coarsen_error=0.8, refine_period=4, refine_coarsen_time=0.0001` | 5434 cells (1359/1356/1358/1361) vs 串行 5422 |
+
+每个 4 核参考 = 1 个 `.pvtu`（汇总）+ `.visit` + 4 个 rank 分块 `.vtu`（`_0000`~`_0003`），Paraview 直接打开 `.pvtu` 即可查看完整解。
+
+### 如何生成 / 核对（标准动作）
+1. **先切黄金配置**（阈值 1.0/0.8、`refine_period=4`、`refine_coarsen_time=0.0001`，并**关闭调试 IO**，见「回退测试第一件事」第 0 步）：
+   ```bash
+   export PATH="/c/msys64/usr/bin:/c/msys64/ucrt64/bin:$PATH"
+   mpiexec -n 4 env -u LAGRANGIAN_TRACE_TARGET -u LAGRANGIAN_TRACE_REFINE \
+          -u LAGRANGIAN_VERBOSE_AMR -u LAGRANGIAN_TRACE_CHECKSUM ./bin/AMR_Solver.exe
+   ```
+2. **合理性判据**（4 核结果应满足，否则需排查）：
+   - MPI 退出码 0、无 rank 崩溃；
+   - 每步总能量误差 ~`1e-15`（守恒完好）；
+   - 4 个 rank 分块 cell 数尽量均衡（分区负载均衡）；
+   - 4 核总 cell 数与串行锚点规模基本一致（差几个 cell = MPI 分片下 AMR 边界/粗化拓扑差异，黄金宽松阈值下属正常）。
+3. **比对**：`compare_vtu.py` 已支持 `.pvtu` 与 `.vtu` 对齐（用 `Global_SFC_ID` 或几何键）；比对 `output/<末帧>.pvtu`（本次运行）与 `reference/par4_<case>/*.pvtu`（黄金参考）。
+
+### 注意事项
+- 4 核参考是**黄金配置（宽松阈值 1.0/0.8）**下的结果；若用调试阈值（0.1/0.05）或 `refine_period=1`，网格会明显更细，与 4 核黄金参考对不上，属配置不一致而非回退失败。
+- `refine_coarsen_time` 已可从 ini 读（提交 `4ae893e`），但黄金参考本身是用 `0.0001` 生成的，核对时须保持该值。
 
 ---
 
