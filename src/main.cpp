@@ -5,6 +5,7 @@
 #include "io/vtk_writer.h"
 #include "io/config_parser.h"
 #include "physics/timestep_reduction.h"
+#include "physics/stage_policy.h"
 #include <cstdlib>
 #include <cstring>
 #ifdef _WIN32
@@ -4129,27 +4130,16 @@ static void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
     }
 }
 
-static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
+static void advance_single_stage(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
 {
 	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
 
 	
 	get_boundary_from_p4est(p4est);
+	p4est_data->dt_iter =
+		StagePolicy::timestep_scale(0) * p4est_data->delta_time;
 
-	for (size_t iter_num = 0; iter_num < 1; iter_num++)
-	{
-		switch (iter_num)
-		{
-		case 0:
-			p4est_data->dt_iter = p4est_data->delta_time;
-			break;
-		case 1:
-			p4est_data->dt_iter = 0.5 * p4est_data->delta_time;
-			break;
-		}
-
-		
-		CalculateHalfTimeVariable(p4est);
+	CalculateHalfTimeVariable(p4est);
 		trace_target_snapshot(p4est, "AFTER_HALF");
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 3: Predict");
 
@@ -4242,9 +4232,8 @@ static void two_stage_Runge_Kutta(p4est_t * p4est, p4est_ghost_t * ghost, void *
 		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
 
 		
-		ComputeSoundSpeed(p4est);
-		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
-	}
+	ComputeSoundSpeed(p4est);
+	if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
 	//StatGlobalFieldChecksum(p4est, "Checkpoint 5: Update");
 	p4est_data->used_dt = p4est_data->delta_time;
 }
@@ -5595,7 +5584,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		}
 
 		
-		two_stage_Runge_Kutta(p4est, ghost, (void *)ghost_data);
+		advance_single_stage(p4est, ghost, (void *)ghost_data);
 
 		
 		StatTotalEnergyError(p4est);
