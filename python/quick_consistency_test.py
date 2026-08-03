@@ -52,6 +52,7 @@ def replace_ini_value(text, key, value):
 
 
 def run_command(command, log_path, environment):
+    OUTPUT.mkdir(exist_ok=True)
     with log_path.open("w", encoding="utf-8", newline="") as log:
         result = subprocess.run(
             command,
