@@ -135,11 +135,11 @@ static void trace_target_snapshot_callback(p4est_iter_volume_info_t *info, void 
 	if (f) {
 		fprintf(f, "TRACE stage=SNAPSHOT step=%d point=%s cell=(%d,%d,L%d)", p4est_data->current_step, g_trace_snapshot_stage,
 			info->quad->x, info->quad->y, info->quad->level);
-		fprintf(f, " rho_cur=%.17e p_cur=%.17e sound=%.17e", v->DouCData[idDensity_cur], v->DouCData[idPressure_cur], v->DouCData[idSoundSpeed]);
+		fprintf(f, " rho_cur=%.17e p_cur=%.17e sound=%.17e", v->cell(idDensity_cur), v->cell(idPressure_cur), v->cell(idSoundSpeed));
 		for (int c = 0; c < CNDIM; ++c) {
 			char name[64];
-			sprintf(name, "cur%d", c); trace_vector(f, name, v->VecCnData[idcnVelocity_cur][c]);
-			sprintf(name, "lag%d", c); trace_vector(f, name, v->VecCnData[idcnVelocity_lag][c]);
+			sprintf(name, "cur%d", c); trace_vector(f, name, v->corner_vector(idcnVelocity_cur, c));
+			sprintf(name, "lag%d", c); trace_vector(f, name, v->corner_vector(idcnVelocity_lag, c));
 		}
 		fprintf(f, "\n");
 		fclose(f);
@@ -328,7 +328,7 @@ static void quadrant_compute_RcpLcpNcp_callback(p4est_iter_volume_info_t *info, 
 	for (int k = 0; k < CNDIM; k++)
 	{
 		int knext = GeometryAlg::GetCircleNext(CNDIM, k);
-		EdgeMiddle[k] = 0.5 * (m_vara->VecCnData[idcnCoords_cur][k] + m_vara->VecCnData[idcnCoords_cur][knext]);
+		EdgeMiddle[k] = 0.5 * (m_vara->corner_vector(idcnCoords_cur, k) + m_vara->corner_vector(idcnCoords_cur, knext));
 	}
 	for (int k = 0; k < CNDIM; k++)
 	{
@@ -345,24 +345,24 @@ static void quadrant_compute_RcpLcpNcp_callback(p4est_iter_volume_info_t *info, 
 		{
 			if (SolverType == p4est_data_t::RiemannSolver::GridAligned)
 			{
-				m_plus->Rcp = GeometryAlg::GetRcpWeightWithLinearDistribution(m_vara->VecCnData[idcnCoords_cur][k],EdgeMiddle[k]);
-				m_minus->Rcp = GeometryAlg::GetRcpWeightWithLinearDistribution(m_vara->VecCnData[idcnCoords_cur][k], EdgeMiddle[kpre]);
+				m_plus->Rcp = GeometryAlg::GetRcpWeightWithLinearDistribution(m_vara->corner_vector(idcnCoords_cur, k),EdgeMiddle[k]);
+				m_minus->Rcp = GeometryAlg::GetRcpWeightWithLinearDistribution(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[kpre]);
 			}
 			if (SolverType == p4est_data_t::RiemannSolver::Rotated)
 			{
-				m_plus->Rcp = GeometryAlg::GetRcpWeightWithConstDistribution(m_vara->VecCnData[idcnCoords_cur][k], EdgeMiddle[k]);
-				m_minus->Rcp = GeometryAlg::GetRcpWeightWithConstDistribution(m_vara->VecCnData[idcnCoords_cur][k], EdgeMiddle[kpre]);
+				m_plus->Rcp = GeometryAlg::GetRcpWeightWithConstDistribution(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[k]);
+				m_minus->Rcp = GeometryAlg::GetRcpWeightWithConstDistribution(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[kpre]);
 			}
 		}
 
-		m_plus->Lcp = GeometryAlg::GetPointToPointDistance(m_vara->VecCnData[idcnCoords_cur][k], EdgeMiddle[k]);
-		m_minus->Lcp = GeometryAlg::GetPointToPointDistance(m_vara->VecCnData[idcnCoords_cur][k], EdgeMiddle[kpre]);
+		m_plus->Lcp = GeometryAlg::GetPointToPointDistance(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[k]);
+		m_minus->Lcp = GeometryAlg::GetPointToPointDistance(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[kpre]);
 
 		
-		m_plus->Ncp = GeometryAlg::GetLineNormalVector(m_vara->VecCnData[idcnCoords_cur][k], EdgeMiddle[k]);
+		m_plus->Ncp = GeometryAlg::GetLineNormalVector(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[k]);
 
 		
-		m_minus->Ncp = GeometryAlg::GetLineNormalVector(EdgeMiddle[kpre], m_vara->VecCnData[idcnCoords_cur][k]);
+		m_minus->Ncp = GeometryAlg::GetLineNormalVector(EdgeMiddle[kpre], m_vara->corner_vector(idcnCoords_cur, k));
 	}
 }
 
@@ -381,8 +381,8 @@ static void quadrant_compute_relaxed_info_callback(p4est_iter_volume_info_t *inf
 	double			delta_time = p4est_data->dt_iter;
 	for (int k = 0; k < CNDIM; k++)
 	{
-		m_vara->VecCnData[idcnCoords_relaxed][k] = m_vara->VecCnData[idcnCoords_half][k] +
-			CDoubleVector(m_vara->VecCnData[idcnVelocity_relaxed][k].x * delta_time, m_vara->VecCnData[idcnVelocity_relaxed][k].y * delta_time);
+		m_vara->corner_vector(idcnCoords_relaxed, k) = m_vara->corner_vector(idcnCoords_half, k) +
+			CDoubleVector(m_vara->corner_vector(idcnVelocity_relaxed, k).x * delta_time, m_vara->corner_vector(idcnVelocity_relaxed, k).y * delta_time);
 	}
 }
 
@@ -471,20 +471,20 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			switch (parent_face_index)
 			{
 				case quad_data_t::EnumEdge::LEFT:
-					master_velocity[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTBOTTOM];
-					master_velocity[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTUP];
+					master_velocity[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+					master_velocity[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
 					break;
 				case quad_data_t::EnumEdge::RIGHT:
-					master_velocity[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTBOTTOM];
-					master_velocity[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTUP];
+					master_velocity[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
+					master_velocity[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
 					break;
 				case quad_data_t::EnumEdge::BOTTOM:
-					master_velocity[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTBOTTOM];
-					master_velocity[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTBOTTOM];
+					master_velocity[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+					master_velocity[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
 					break;
 				case quad_data_t::EnumEdge::UP:
-					master_velocity[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTUP];
-					master_velocity[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTUP];
+					master_velocity[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
+					master_velocity[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
 					break;
 			}
 
@@ -501,16 +501,16 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 						quad_parent->x, quad_parent->y, quad_parent->level, parent_face_index, side[full_index]->is.full.is_ghost ? 1 : 0);
 					trace_vector(f, "master0", master_velocity[0]);
 					trace_vector(f, "master1", master_velocity[1]);
-					trace_vector(f, "before0", m_child1_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[0]]);
-					trace_vector(f, "before1", m_child2_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[1]]);
+					trace_vector(f, "before0", m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]));
+					trace_vector(f, "before1", m_child2_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[1]));
 					trace_vector(f, "hanging", hanging_velo);
 					fprintf(f, "\n");
 					fclose(f);
 				}
 			}
 
-			m_child1_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[0]] = hanging_velo;
-			m_child2_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[1]] = hanging_velo;
+			m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]) = hanging_velo;
+			m_child2_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[1]) = hanging_velo;
 
 			CDoubleMatrix MatrixP = m_child1_data->points[m_which_corner[0]].MatrixP;
 			CDoubleVector m_rhs = m_child1_data->points[m_which_corner[0]].RHS;
@@ -518,14 +518,14 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			Flux_relaxed.x = MatrixP.xx * hanging_velo.x + MatrixP.xy * hanging_velo.y - m_rhs.x;
 			Flux_relaxed.y = MatrixP.yx * hanging_velo.x + MatrixP.yy * hanging_velo.y - m_rhs.y;
 
-			double child1_total_energy = m_child1_vara->DouCData[idMass] * m_child1_vara->DouCData[idTotalEnergy_cur];
-			double child2_total_energy = m_child2_vara->DouCData[idMass] * m_child2_vara->DouCData[idTotalEnergy_cur];
-			double parent_total_energy = m_parent_vara->DouCData[idMass] * m_parent_vara->DouCData[idTotalEnergy_cur];
+			double child1_total_energy = m_child1_vara->cell(idMass) * m_child1_vara->cell(idTotalEnergy_cur);
+			double child2_total_energy = m_child2_vara->cell(idMass) * m_child2_vara->cell(idTotalEnergy_cur);
+			double parent_total_energy = m_parent_vara->cell(idMass) * m_parent_vara->cell(idTotalEnergy_cur);
 
 
-			m_child1_vara->VecCnData[idcnFluxRelaxed][m_which_corner[0]] = child1_total_energy /
+			m_child1_vara->corner_vector(idcnFluxRelaxed, m_which_corner[0]) = child1_total_energy /
 				(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
-			m_child2_vara->VecCnData[idcnFluxRelaxed][m_which_corner[1]] = child2_total_energy /
+			m_child2_vara->corner_vector(idcnFluxRelaxed, m_which_corner[1]) = child2_total_energy /
 				(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
 			ParentBounInfo  *PCInfo = (ParentBounInfo  *)&m_parent_data->m_pc_edge_data;
 			m_parent_data->m_pc_edge_data[parent_face_index].IsParentChildBoun = true;
@@ -793,8 +793,8 @@ static void quadrant_vtk_coord_update_callback(p4est_iter_volume_info_t *info, v
 	double			new_node_coords[CNDIM][P4EST_DIM];
 	for (int cnid = 0; cnid < CNDIM; cnid++)
 	{
-		new_node_coords[cnid][0] = m_vara->VecCnData[idcnCoords_lag][cnid].x;
-		new_node_coords[cnid][1] = m_vara->VecCnData[idcnCoords_lag][cnid].y;
+		new_node_coords[cnid][0] = m_vara->corner_vector(idcnCoords_lag, cnid).x;
+		new_node_coords[cnid][1] = m_vara->corner_vector(idcnCoords_lag, cnid).y;
 	}
 	int m_size = connectivity->num_vertices;
 	for(int i = 0; i <m_size*3;i++)
@@ -809,7 +809,7 @@ static int Lagrangian_init_refine_err_estimate(p4est_t *p4est, p4est_topidx_t wh
 	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
 	quad_data_t		*data = (quad_data_t *)q->p.user_data;
 	CVariable	*m_vara = (CVariable *)&data->m_vara;
-	int			idCPara;
+	DoubleCellVariableID idCPara;
 	p4est_qcoord_t qx = q->x;
 	p4est_qcoord_t qy = q->y;
 	int			level = q->level;
@@ -844,7 +844,7 @@ static int Lagrangian_refine_fixed_estimate(p4est_t *p4est, p4est_topidx_t which
 	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
 	quad_data_t		*data = (quad_data_t *)q->p.user_data;
 	CVariable	*m_vara = (CVariable *)&data->m_vara;
-	int			idCPara;
+	DoubleCellVariableID idCPara;
 	p4est_qcoord_t qx = q->x;
 	p4est_qcoord_t qy = q->y;
 	int			level = q->level;
@@ -859,8 +859,10 @@ static int Lagrangian_refine_fixed_estimate(p4est_t *p4est, p4est_topidx_t which
 		idCPara = idCDensityGradient;
 		break;
 	case RefineCriteria::Distance:
-		idCPara = idCentroidCoord_cur;
-		
+		// idCentroidCoord_cur is a VectorCellVariableID, incompatible with the
+		// DoubleCellVariableID idCPara. idCPara is never read in this function,
+		// so the assignment was dead code and is dropped.
+
 	default:
 		break;
 	}
@@ -885,7 +887,7 @@ static int Lagrangian_coarsen_fixed_estimate(p4est_t *p4est, p4est_topidx_t whic
 	quad_data_t		*data;
 	
 
-	int			idCPara;
+	DoubleCellVariableID idCPara;
 	double		parent_gradient;
 
 	
@@ -937,7 +939,7 @@ static int Lagrangian_init_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t w
 	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
 	quad_data_t		*data;
 
-	int			idCPara;
+	DoubleCellVariableID idCPara;
 	double		parent_gradient;
 
 	
@@ -973,8 +975,8 @@ static int Lagrangian_init_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t w
 		}
 
 		
-		if (data->m_vara.DouCData[idCPara] > p4est_data->coarsen_error) { return 0; }
-		parent_gradient += data->m_vara.DouCData[idCPara];
+		if (data->m_vara.cell(idCPara) > p4est_data->coarsen_error) { return 0; }
+		parent_gradient += data->m_vara.cell(idCPara);
 	}
 	parent_gradient /= P4EST_CHILDREN;
 	if (parent_gradient > p4est_data->coarsen_error) { return 0; }
@@ -1002,11 +1004,11 @@ static void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariab
 		m_parent_velo[CNDIM], m_parent_concave_velo[CNDIM];
 	for (int cnid = 0; cnid < CNDIM; cnid++)
 	{
-		m_parent_coord[cnid] = m_vara->VecCnData[idcnCoords_lag][cnid];
-		m_parent_concave_coord[cnid] = m_vara->VecCnData[idcnCoords_lag][CNDIM-1-cnid];
+		m_parent_coord[cnid] = m_vara->corner_vector(idcnCoords_lag, cnid);
+		m_parent_concave_coord[cnid] = m_vara->corner_vector(idcnCoords_lag, CNDIM-1-cnid);
 
-		m_parent_velo[cnid] = m_vara->VecCnData[idcnVelocity_lag][cnid];
-		m_parent_concave_velo[cnid] = m_vara->VecCnData[idcnVelocity_lag][CNDIM - 1 - cnid];
+		m_parent_velo[cnid] = m_vara->corner_vector(idcnVelocity_lag, cnid);
+		m_parent_concave_velo[cnid] = m_vara->corner_vector(idcnVelocity_lag, CNDIM - 1 - cnid);
 	}
 
 	int IsConcaveQuad = GeometryAlg::is_concave_quad(m_parent_concave_coord);
@@ -1035,7 +1037,8 @@ static void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariab
 	enum m_geometry_id { m_coord, m_velo };
 	enum m_physical_id {m_density, m_internal_energy};
 	enum m_which_child {child1, child2, child3, child4};
-	int idCnIndex, idCIndex;
+	VectorCornerVariableID idCnIndex;
+	DoubleCellVariableID   idCIndex;
 	for (int idChildrenGeomIndex = m_geometry_id::m_coord; idChildrenGeomIndex <= m_geometry_id::m_velo; idChildrenGeomIndex++)
 	{
 		switch (idChildrenGeomIndex)
@@ -1054,21 +1057,21 @@ static void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariab
 
 		
 		EdgeData[quad_data_t::EnumEdge::LEFT] = 0.5*
-			(m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::LEFTBOTTOM] +
-				m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::LEFTUP]);
+			(m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::LEFTBOTTOM) +
+				m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::LEFTUP));
 		EdgeData[quad_data_t::EnumEdge::BOTTOM] = 0.5*
-			(m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::LEFTBOTTOM] +
-				m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::RIGHTBOTTOM]);
+			(m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::LEFTBOTTOM) +
+				m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::RIGHTBOTTOM));
 		EdgeData[quad_data_t::EnumEdge::RIGHT] = 0.5*
-			(m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::RIGHTBOTTOM] +
-				m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::RIGHTUP]);
+			(m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::RIGHTBOTTOM) +
+				m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::RIGHTUP));
 		EdgeData[quad_data_t::EnumEdge::UP] = 0.5*
-			(m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::RIGHTUP] +
-				m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::LEFTUP]);
+			(m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::RIGHTUP) +
+				m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::LEFTUP));
 
 
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child1][quad_data_t::EnumCorner::LEFTBOTTOM] =
-			m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::LEFTBOTTOM];
+			m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::LEFTBOTTOM);
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child1][quad_data_t::EnumCorner::LEFTUP] =
 			EdgeData[quad_data_t::EnumEdge::LEFT];
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child1][quad_data_t::EnumCorner::RIGHTUP] =
@@ -1084,13 +1087,13 @@ static void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariab
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child2][quad_data_t::EnumCorner::RIGHTUP] =
 			EdgeData[quad_data_t::EnumEdge::RIGHT];
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child2][quad_data_t::EnumCorner::RIGHTBOTTOM] =
-			m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::RIGHTBOTTOM];
+			m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::RIGHTBOTTOM);
 
 		
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child3][quad_data_t::EnumCorner::LEFTBOTTOM] =
 			EdgeData[quad_data_t::EnumEdge::LEFT];
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child3][quad_data_t::EnumCorner::LEFTUP] =
-			m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::LEFTUP];
+			m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::LEFTUP);
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child3][quad_data_t::EnumCorner::RIGHTUP] =
 			EdgeData[quad_data_t::EnumEdge::UP];
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child3][quad_data_t::EnumCorner::RIGHTBOTTOM] =
@@ -1102,7 +1105,7 @@ static void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariab
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child4][quad_data_t::EnumCorner::LEFTUP] =
 			EdgeData[quad_data_t::EnumEdge::UP];
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child4][quad_data_t::EnumCorner::RIGHTUP] =
-			m_vara->VecCnData[idCnIndex][quad_data_t::EnumCorner::RIGHTUP];
+			m_vara->corner_vector(idCnIndex, quad_data_t::EnumCorner::RIGHTUP);
 		m_vara->ChildrenCnGeomVara[idChildrenGeomIndex][m_which_child::child4][quad_data_t::EnumCorner::RIGHTBOTTOM] =
 			EdgeData[quad_data_t::EnumEdge::RIGHT];
 	}
@@ -1146,7 +1149,7 @@ static void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariab
 		for (int childid = 0; childid < P4EST_CHILDREN; childid++)
 		{
 			m_vara->ChildrenPhysicalVara[idChildrenPhysicalIndex][childid] =
-				m_vara->DouCData[idCIndex];
+				m_vara->cell(idCIndex);
 			if (m_vara->ChildrenPhysicalVara[idChildrenPhysicalIndex][childid] > m_eps)
 			{
 			}
@@ -1195,19 +1198,19 @@ static void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree,
 
 	for (int i = 0; i < CNDIM; i++)
 	{
-		m_vara->VecCnData[idcnCoords_cur][i].x = data->init_node_coords[i][0];
-		m_vara->VecCnData[idcnCoords_cur][i].y = data->init_node_coords[i][1];
-		m_vara->VecCnData[idcnVelocity_cur][i] = CDoubleVector(0.0, 0.0);
-		m_vara->VecCnData[idcnVelocity_lag][i] = CDoubleVector(0.0, 0.0);
+		m_vara->corner_vector(idcnCoords_cur, i).x = data->init_node_coords[i][0];
+		m_vara->corner_vector(idcnCoords_cur, i).y = data->init_node_coords[i][1];
+		m_vara->corner_vector(idcnVelocity_cur, i) = CDoubleVector(0.0, 0.0);
+		m_vara->corner_vector(idcnVelocity_lag, i) = CDoubleVector(0.0, 0.0);
 	}
 
 	CDoubleVector cnCoordCur[CNDIM], cnCoordLag[CNDIM], cnVeloCur[CNDIM], cnVeloLag[CNDIM];
 	for (int i = 0; i < CNDIM; i++)
 	{
-		cnCoordCur[i] = m_vara->VecCnData[idcnCoords_cur][i];
-		cnCoordLag[i] = m_vara->VecCnData[idcnCoords_lag][i];
-		cnVeloCur[i] = m_vara->VecCnData[idcnVelocity_cur][i];
-		cnVeloLag[i] = m_vara->VecCnData[idcnVelocity_lag][i];
+		cnCoordCur[i] = m_vara->corner_vector(idcnCoords_cur, i);
+		cnCoordLag[i] = m_vara->corner_vector(idcnCoords_lag, i);
+		cnVeloCur[i] = m_vara->corner_vector(idcnVelocity_cur, i);
+		cnVeloLag[i] = m_vara->corner_vector(idcnVelocity_lag, i);
 	}
 
 	PhysicalAlg::InitCondition(p4est_data->which_case,
@@ -1217,10 +1220,10 @@ static void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree,
 		m_vara->cell(idDensity_lag),
 		m_vara->cell(idVolume),
 		m_vara->cell(idMass),
-		m_vara->VecCData[idCentroidCoord_cur],
-		m_vara->VecCData[idCentroidCoord_lag],
-		m_vara->VecCData[idCentroidVelo_cur],
-		m_vara->VecCData[idCentroidVelo_lag],
+		m_vara->cell_vector(idCentroidCoord_cur),
+		m_vara->cell_vector(idCentroidCoord_lag),
+		m_vara->cell_vector(idCentroidVelo_cur),
+		m_vara->cell_vector(idCentroidVelo_lag),
 		m_vara->cell(idInternalEnergy_cur),
 		m_vara->cell(idInternalEnergy_lag),
 		m_vara->cell(idPressure_cur),
@@ -1240,10 +1243,10 @@ static void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree,
 
 	for (int i = 0; i < CNDIM; i++)
 	{
-		m_vara->VecCnData[idcnCoords_cur][i] = cnCoordCur[i];
-		m_vara->VecCnData[idcnCoords_lag][i] = cnCoordLag[i];
-		m_vara->VecCnData[idcnVelocity_cur][i] = cnVeloCur[i];
-		m_vara->VecCnData[idcnVelocity_lag][i] = cnVeloLag[i];
+		m_vara->corner_vector(idcnCoords_cur, i) = cnCoordCur[i];
+		m_vara->corner_vector(idcnCoords_lag, i) = cnCoordLag[i];
+		m_vara->corner_vector(idcnVelocity_cur, i) = cnVeloCur[i];
+		m_vara->corner_vector(idcnVelocity_lag, i) = cnVeloLag[i];
 	}
 
 	generate_children_info_from_parent(p4est_data, m_vara);
@@ -1259,7 +1262,7 @@ static void quadrant_predict_timestep_callback(p4est_iter_volume_info_t *info, v
 	CDoubleVector corner_coords[CNDIM];
 	for (int cnid = 0; cnid < CNDIM; cnid++)
 	{
-		corner_coords[cnid] = m_vara->VecCnData[idcnCoords_cur][cnid];
+		corner_coords[cnid] = m_vara->corner_vector(idcnCoords_cur, cnid);
 	}
 
 	if (m_vara->cell(idSoundSpeed) < m_eps)
@@ -1330,10 +1333,10 @@ static void quadrant_compute_divergence_callback(p4est_iter_volume_info_t *info,
 	CDoubleVector	cnCoord[CNDIM];
 	for (int k = 0; k < CNDIM; k++)
 	{
-		cnCoord[k] = m_vara->VecCnData[idcnCoords_lag][k];
-		cnVelocity[k] = m_vara->VecCnData[idcnVelocity_lag][k];
+		cnCoord[k] = m_vara->corner_vector(idcnCoords_lag, k);
+		cnVelocity[k] = m_vara->corner_vector(idcnVelocity_lag, k);
 	}
-	m_vara->DouCData[idDivergence] = PhysicalAlg::CalculateDivergence(p4est_data->coord_type, cnCoord, cnVelocity);
+	m_vara->cell(idDivergence) = PhysicalAlg::CalculateDivergence(p4est_data->coord_type, cnCoord, cnVelocity);
 }
 
 
@@ -1371,7 +1374,9 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 	p4est_iter_corner_side_t	*side[CNDIM];
 	sc_array_t	*sides = &(info->sides);
 	int	which_corner, cnid, is_ghost, is_ghost_aside, m_size;
-	int			quadid, quadid_aside, idCPara, idCNPara;
+	int			quadid, quadid_aside;
+	DoubleCellVariableID idCPara;
+	DoubleCornerVariableID idCNPara;
 	quad_data_t		*m_data, *m_data_aside;
 	CVariable		*m_vara, *m_vara_aside;
 	quad_data_t		*ghost_data = (quad_data_t  *)user_data;
@@ -1416,7 +1421,7 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 		}
 		m_vara = (CVariable  *)&m_data->m_vara;
 
-		m_vara->DouCnData[idCNPara][cnid] = 0.;
+		m_vara->corner(idCNPara, cnid) = 0.;
 		for (int j = 0; j < m_size; j++)
 		{
 			if (j == i) { continue; }
@@ -1434,9 +1439,9 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 			m_vara_aside = (CVariable  *)&m_data_aside->m_vara;
 
 			double m_dist = GeometryAlg::GetPointToPointDistance(
-				m_vara->VecCData[idCentroidCoord_cur], m_vara_aside->VecCData[idCentroidCoord_cur]);
-			ParaGradient = abs(m_vara->DouCData[idCPara] - m_vara_aside->DouCData[idCPara]) / m_dist;
-			m_vara->DouCnData[idCNPara][cnid] = SC_MAX(m_vara->DouCnData[idCNPara][cnid], ParaGradient);
+				m_vara->cell_vector(idCentroidCoord_cur), m_vara_aside->cell_vector(idCentroidCoord_cur));
+			ParaGradient = abs(m_vara->cell(idCPara) - m_vara_aside->cell(idCPara)) / m_dist;
+			m_vara->corner(idCNPara, cnid) = SC_MAX(m_vara->corner(idCNPara, cnid), ParaGradient);
 		}
 	}
 }
@@ -1486,7 +1491,7 @@ quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info
 			
 			if (level_b - level_a > 1)
 			{
-				m_vara_a->IntCData[idAllowCoarsening] = p4est_data_t::CoarseningEnum::CoarsingNotAllowed;
+				m_vara_a->int_cell(idAllowCoarsening) = p4est_data_t::CoarseningEnum::CoarsingNotAllowed;
 			}
 		}
 	}
@@ -1504,7 +1509,8 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 	p4est_iter_face_side_t *side[2];
 	sc_array_t				*sides = &(info->sides);
 	int				which_face;
-	int				idCPara, idEPara;
+	DoubleCellVariableID idCPara;
+	DoubleEdgeVariableID idEPara;
 	int				m_which_corner[2], m_master_corner[2], 
 		m_unconstrained_master_corner[2], m_which_side[2];
 
@@ -1602,14 +1608,14 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 			int				children_face, parent_face;
 
 			
-			parent_para = m_parent_vara->DouCData[idCPara];
-			child1_para = m_child1_vara->DouCData[idCPara];
-			child2_para = m_child2_vara->DouCData[idCPara];
+			parent_para = m_parent_vara->cell(idCPara);
+			child1_para = m_child1_vara->cell(idCPara);
+			child2_para = m_child2_vara->cell(idCPara);
 
 			
-			parent_center = m_parent_vara->VecCData[idCentroidCoord_cur];
-			child1_center = m_child1_vara->VecCData[idCentroidCoord_cur];
-			child2_center = m_child2_vara->VecCData[idCentroidCoord_cur];
+			parent_center = m_parent_vara->cell_vector(idCentroidCoord_cur);
+			child1_center = m_child1_vara->cell_vector(idCentroidCoord_cur);
+			child2_center = m_child2_vara->cell_vector(idCentroidCoord_cur);
 
 			
 			dist1 = GeometryAlg::GetPointToPointDistance(parent_center, child1_center);
@@ -1624,9 +1630,9 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 			children_face = side[i]->face;
 			parent_face = side[1 - i]->face;
 
-			m_child1_vara->DouEData[idEPara][children_face] = child1_gradient;
-			m_child2_vara->DouEData[idEPara][children_face] = child2_gradient;
-			m_parent_vara->DouEData[idEPara][parent_face] = parent_gradient;
+			m_child1_vara->edge(idEPara, children_face) = child1_gradient;
+			m_child2_vara->edge(idEPara, children_face) = child2_gradient;
+			m_parent_vara->edge(idEPara, parent_face) = parent_gradient;
 		}
 	}
 
@@ -1661,7 +1667,7 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 		if (side[1]->is.full.quad == NULL || info->sides.elem_count <2 ||
 			side[1]->is.full.quadid>info->p4est->global_num_quadrants)
 		{
-			brother1_data->m_vara.DouEData[idEPara][face_index[0]] = 0.;
+			brother1_data->m_vara.edge(idEPara, face_index[0]) = 0.;
 			return;
 		}
 
@@ -1672,7 +1678,7 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 		}
 		else if (!(side[1]->is.full.quad))
 		{
-			brother1_data->m_vara.DouEData[idEPara][face_index[0]] = 0.;
+			brother1_data->m_vara.edge(idEPara, face_index[0]) = 0.;
 			return;
 		}
 		else
@@ -1680,16 +1686,16 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 			brother2_data = (quad_data_t  *)side[1]->is.full.quad->p.user_data;
 		}
 
-		m_para[0] = brother1_data->m_vara.DouCData[idCPara];
-		m_para[1] = brother2_data->m_vara.DouCData[idCPara];
-		m_center[0] = brother1_data->m_vara.VecCData[idCentroidCoord_cur];
-		m_center[1] = brother2_data->m_vara.VecCData[idCentroidCoord_cur];
+		m_para[0] = brother1_data->m_vara.cell(idCPara);
+		m_para[1] = brother2_data->m_vara.cell(idCPara);
+		m_center[0] = brother1_data->m_vara.cell_vector(idCentroidCoord_cur);
+		m_center[1] = brother2_data->m_vara.cell_vector(idCentroidCoord_cur);
 
 		double dist = GeometryAlg::GetPointToPointDistance(m_center[0], m_center[1]);
 		m_gradient = abs(m_para[0] - m_para[1]) / dist;
 
-		brother1_data->m_vara.DouEData[idEPara][face_index[0]] = m_gradient;
-		brother2_data->m_vara.DouEData[idEPara][face_index[1]] = m_gradient;
+		brother1_data->m_vara.edge(idEPara, face_index[0]) = m_gradient;
+		brother2_data->m_vara.edge(idEPara, face_index[1]) = m_gradient;
 	}
 }
 
@@ -1783,42 +1789,42 @@ static void quadrant_update_after_coarsening_callback(p4est_iter_face_info_t *in
 			switch (parent_face_index)
 			{
 			case quad_data_t::EnumEdge::LEFT:
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTUP];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTUP);
 
-				master_velo[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_velo[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTUP];
+				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
 				break;
 			case quad_data_t::EnumEdge::RIGHT:
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTBOTTOM];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTUP];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTBOTTOM);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTUP);
 
-				master_velo[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTBOTTOM];
-				master_velo[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTUP];
+				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
+				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
 				break;
 			case quad_data_t::EnumEdge::BOTTOM:
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTBOTTOM];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTBOTTOM);
 
-				master_velo[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_velo[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTBOTTOM];
+				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
 				break;
 			case quad_data_t::EnumEdge::UP:
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTUP];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTUP];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTUP);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTUP);
 
-				master_velo[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTUP];
-				master_velo[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTUP];
+				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
+				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
 				break;
 			}
 			middle_coord = 0.5*(master_coord[0] + master_coord[1]);
 			middle_velo = 0.5*(master_velo[0] + master_velo[1]);
 
-			child1_cn_coord = m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]];
-			child2_cn_coord = m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]];
+			child1_cn_coord = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
+			child2_cn_coord = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
 
-			child1_cn_velo = m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]];
-			child2_cn_velo = m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]];
+			child1_cn_velo = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
+			child2_cn_velo = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
 
 			double dist1, dist2, delta_velo1, delta_velo2;
 			dist1 = GeometryAlg::GetPointToPointDistance(middle_coord, child1_cn_coord);
@@ -1832,36 +1838,36 @@ static void quadrant_update_after_coarsening_callback(p4est_iter_face_info_t *in
 				CDoubleVector  m_cell_coord[CNDIM];
 
 				
-				m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]] = middle_coord;
-				m_child1_vara->VecCnData[idcnCoords_lag][m_which_corner[0]] = m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]];
+				m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]) = middle_coord;
+				m_child1_vara->corner_vector(idcnCoords_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
 				
-				m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]] = middle_velo;
-				m_child1_vara->VecCnData[idcnVelocity_lag][m_which_corner[0]] = m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]];
+				m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]) = middle_velo;
+				m_child1_vara->corner_vector(idcnVelocity_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
 
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->VecCnData[idcnCoords_cur][i]; }
-				m_child1_vara->DouCData[idVolume] = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child1_vara->DouCData[idDensity_cur] = m_child1_vara->DouCData[idMass] / m_child1_vara->DouCData[idVolume];
+				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->corner_vector(idcnCoords_cur, i); }
+				m_child1_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+				m_child1_vara->cell(idDensity_cur) = m_child1_vara->cell(idMass) / m_child1_vara->cell(idVolume);
 
-				m_child1_vara->DouCData[idPressure_cur] = PhysicalAlg::EquationOfState(
-					m_child1_vara->DouCData[idGamma],
-					m_child1_vara->DouCData[idDensity_cur],
-					m_child1_vara->DouCData[idInternalEnergy_cur]);
+				m_child1_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
+					m_child1_vara->cell(idGamma),
+					m_child1_vara->cell(idDensity_cur),
+					m_child1_vara->cell(idInternalEnergy_cur));
 
 																   
-				m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]] = middle_coord;
-				m_child2_vara->VecCnData[idcnCoords_lag][m_which_corner[1]] = m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]];
+				m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]) = middle_coord;
+				m_child2_vara->corner_vector(idcnCoords_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
 
-				m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]] = middle_velo;
-				m_child2_vara->VecCnData[idcnVelocity_lag][m_which_corner[1]] = m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]];
+				m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]) = middle_velo;
+				m_child2_vara->corner_vector(idcnVelocity_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
 
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->VecCnData[idcnCoords_cur][i]; }
-				m_child2_vara->DouCData[idVolume] = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child2_vara->DouCData[idDensity_cur] = m_child2_vara->DouCData[idMass] / m_child2_vara->DouCData[idVolume];
+				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->corner_vector(idcnCoords_cur, i); }
+				m_child2_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+				m_child2_vara->cell(idDensity_cur) = m_child2_vara->cell(idMass) / m_child2_vara->cell(idVolume);
 
-				m_child2_vara->DouCData[idPressure_cur] = PhysicalAlg::EquationOfState(
-					m_child2_vara->DouCData[idGamma],
-					m_child2_vara->DouCData[idDensity_cur],
-					m_child2_vara->DouCData[idInternalEnergy_cur]);
+				m_child2_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
+					m_child2_vara->cell(idGamma),
+					m_child2_vara->cell(idDensity_cur),
+					m_child2_vara->cell(idInternalEnergy_cur));
 			}
 		}
 	}
@@ -1919,7 +1925,7 @@ static void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_f
 			if ((childlevel - parentlevel) > 1)
 			{
 				
-				m_parent_vara->IntCData[idAllowCoarsening] = p4est_data_t::CoarseningEnum::CoarsingNotAllowed;
+				m_parent_vara->int_cell(idAllowCoarsening) = p4est_data_t::CoarseningEnum::CoarsingNotAllowed;
 			}
 		}
 	}
@@ -2015,42 +2021,42 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 			switch (parent_face_index)
 			{
 			case quad_data_t::EnumEdge::LEFT:
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTUP];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTUP);
 
-				master_velo[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_velo[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTUP];
+				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
 				break;
 			case quad_data_t::EnumEdge::RIGHT:
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTBOTTOM];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTUP];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTBOTTOM);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTUP);
 
-				master_velo[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTBOTTOM];
-				master_velo[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTUP];
+				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
+				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
 				break;
 			case quad_data_t::EnumEdge::BOTTOM:
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTBOTTOM];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTBOTTOM);
 
-				master_velo[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_velo[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTBOTTOM];
+				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
 				break;
 			case quad_data_t::EnumEdge::UP:
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTUP];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTUP];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTUP);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTUP);
 
-				master_velo[0] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::LEFTUP];
-				master_velo[1] = m_parent_data->m_vara.VecCnData[idcnVelocity_lag][quad_data_t::EnumCorner::RIGHTUP];
+				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
+				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
 				break;
 			}
 			middle_coord = 0.5*(master_coord[0] + master_coord[1]);
 			middle_velo = 0.5*(master_velo[0] + master_velo[1]);
 
-			child1_cn_coord = m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]];
-			child2_cn_coord = m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]];
+			child1_cn_coord = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
+			child2_cn_coord = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
 
-			child1_cn_velo = m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]];
-			child2_cn_velo = m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]];
+			child1_cn_velo = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
+			child2_cn_velo = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
 
 			double dist1, dist2, delta_velo1, delta_velo2;
 			dist1 = GeometryAlg::GetPointToPointDistance(middle_coord, child1_cn_coord);
@@ -2064,36 +2070,36 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 				CDoubleVector  m_cell_coord[CNDIM];
 
 				
-				m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]] = middle_coord;
-				m_child1_vara->VecCnData[idcnCoords_lag][m_which_corner[0]] = m_child1_vara->VecCnData[idcnCoords_cur][m_which_corner[0]];
+				m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]) = middle_coord;
+				m_child1_vara->corner_vector(idcnCoords_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
 
-				m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]] = middle_velo;
-				m_child1_vara->VecCnData[idcnVelocity_lag][m_which_corner[0]] = m_child1_vara->VecCnData[idcnVelocity_cur][m_which_corner[0]];
+				m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]) = middle_velo;
+				m_child1_vara->corner_vector(idcnVelocity_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
 
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->VecCnData[idcnCoords_cur][i]; }
-				m_child1_vara->DouCData[idVolume] = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child1_vara->DouCData[idDensity_cur] = m_child1_vara->DouCData[idMass] / m_child1_vara->DouCData[idVolume];
+				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->corner_vector(idcnCoords_cur, i); }
+				m_child1_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+				m_child1_vara->cell(idDensity_cur) = m_child1_vara->cell(idMass) / m_child1_vara->cell(idVolume);
 
-				m_child1_vara->DouCData[idPressure_cur] = PhysicalAlg::EquationOfState(
-					m_child1_vara->DouCData[idGamma],
-					m_child1_vara->DouCData[idDensity_cur],
-					m_child1_vara->DouCData[idInternalEnergy_cur]);
+				m_child1_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
+					m_child1_vara->cell(idGamma),
+					m_child1_vara->cell(idDensity_cur),
+					m_child1_vara->cell(idInternalEnergy_cur));
 
 																   
-				m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]] = middle_coord;
-				m_child2_vara->VecCnData[idcnCoords_lag][m_which_corner[1]] = m_child2_vara->VecCnData[idcnCoords_cur][m_which_corner[1]];
+				m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]) = middle_coord;
+				m_child2_vara->corner_vector(idcnCoords_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
 
-				m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]] = middle_velo;
-				m_child2_vara->VecCnData[idcnVelocity_lag][m_which_corner[1]] = m_child2_vara->VecCnData[idcnVelocity_cur][m_which_corner[1]];
+				m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]) = middle_velo;
+				m_child2_vara->corner_vector(idcnVelocity_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
 
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->VecCnData[idcnCoords_cur][i]; }
-				m_child2_vara->DouCData[idVolume] = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child2_vara->DouCData[idDensity_cur] = m_child2_vara->DouCData[idMass] / m_child2_vara->DouCData[idVolume];
+				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->corner_vector(idcnCoords_cur, i); }
+				m_child2_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+				m_child2_vara->cell(idDensity_cur) = m_child2_vara->cell(idMass) / m_child2_vara->cell(idVolume);
 
-				m_child2_vara->DouCData[idPressure_cur] = PhysicalAlg::EquationOfState(
-					m_child2_vara->DouCData[idGamma],
-					m_child2_vara->DouCData[idDensity_cur],
-					m_child2_vara->DouCData[idInternalEnergy_cur]);
+				m_child2_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
+					m_child2_vara->cell(idGamma),
+					m_child2_vara->cell(idDensity_cur),
+					m_child2_vara->cell(idInternalEnergy_cur));
 			}
 		}
 	}
@@ -2106,7 +2112,9 @@ static void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *inf
 	CVariable		*m_vara=(CVariable		*)&data->m_vara;
 	p4est_t			*p4est = info->p4est;
 
-	int				idCPara, idEPara, idCNPara;
+	DoubleCellVariableID idCPara;
+	DoubleEdgeVariableID idEPara;
+	DoubleCornerVariableID idCNPara;
 	
 	switch (p4est_data->refine_coarsen_enum)
 	{
@@ -2126,12 +2134,12 @@ static void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *inf
 		break;
 	}
 
-	m_vara->DouCData[idCPara] = 0.;
+	m_vara->cell(idCPara) = 0.;
 
 	
 	for (int i = 0; i < CNDIM; i++)
 	{
-		m_vara->DouCData[idCPara] = SC_MAX(m_vara->DouCData[idCPara], m_vara->DouEData[idEPara][i]);
+		m_vara->cell(idCPara) = SC_MAX(m_vara->cell(idCPara), m_vara->edge(idEPara, i));
 	}
 
 
@@ -2161,22 +2169,22 @@ static void quadrant_compute_halftime_variable_callback(p4est_iter_volume_info_t
 	CVariable		*m_vara = (CVariable		*)&data->m_vara;
 	p4est_qcoord_t	qx = info->quad->x;
 	p4est_qcoord_t	qy = info->quad->y;
-	m_vara->VecCData[idCentroidVelo_half] = (m_vara->VecCData[idCentroidVelo_cur] + m_vara->VecCData[idCentroidVelo_lag]) / 2.;
-	m_vara->VecCData[idCentroidCoord_half] = (m_vara->VecCData[idCentroidCoord_cur] + m_vara->VecCData[idCentroidCoord_lag]) / 2.;
+	m_vara->cell_vector(idCentroidVelo_half) = (m_vara->cell_vector(idCentroidVelo_cur) + m_vara->cell_vector(idCentroidVelo_lag)) / 2.;
+	m_vara->cell_vector(idCentroidCoord_half) = (m_vara->cell_vector(idCentroidCoord_cur) + m_vara->cell_vector(idCentroidCoord_lag)) / 2.;
 
 	
 	for (int i = 0; i < CNDIM; i++)
 	{
 
-		m_vara->VecCnData[idcnCoords_half][i] = GeometryAlg::GetPointPointMiddle(m_vara->VecCnData[idcnCoords_cur][i], m_vara->VecCnData[idcnCoords_lag][i]);
+		m_vara->corner_vector(idcnCoords_half, i) = GeometryAlg::GetPointPointMiddle(m_vara->corner_vector(idcnCoords_cur, i), m_vara->corner_vector(idcnCoords_lag, i));
 	}
 	
-	m_vara->DouCData[idDensity_half] = 2.*m_vara->DouCData[idDensity_cur] * m_vara->DouCData[idDensity_lag] /
-		(m_vara->DouCData[idDensity_cur] + m_vara->DouCData[idDensity_lag]);
+	m_vara->cell(idDensity_half) = 2.*m_vara->cell(idDensity_cur) * m_vara->cell(idDensity_lag) /
+		(m_vara->cell(idDensity_cur) + m_vara->cell(idDensity_lag));
 	
-	m_vara->DouCData[idTotalEnergy_half] = (m_vara->DouCData[idTotalEnergy_cur]+ m_vara->DouCData[idTotalEnergy_lag]) / 2.;
-	m_vara->DouCData[idInternalEnergy_half] = (m_vara->DouCData[idInternalEnergy_cur] + m_vara->DouCData[idInternalEnergy_lag]) / 2.;
-	if (m_vara->DouCData[idInternalEnergy_half] > m_eps)
+	m_vara->cell(idTotalEnergy_half) = (m_vara->cell(idTotalEnergy_cur)+ m_vara->cell(idTotalEnergy_lag)) / 2.;
+	m_vara->cell(idInternalEnergy_half) = (m_vara->cell(idInternalEnergy_cur) + m_vara->cell(idInternalEnergy_lag)) / 2.;
+	if (m_vara->cell(idInternalEnergy_half) > m_eps)
 	{
 	}
 	else
@@ -2184,8 +2192,8 @@ static void quadrant_compute_halftime_variable_callback(p4est_iter_volume_info_t
 		P4EST_GLOBAL_PRODUCTIONF("The half time idinternalenergy is illegal\n", P4EST_DIM);
 		abort();
 	}
-	m_vara->DouCData[idPressure_half] = PhysicalAlg::EquationOfState(m_vara->DouCData[idGamma], m_vara->DouCData[idDensity_half], m_vara->DouCData[idInternalEnergy_half]);
-	if (m_vara->DouCData[idPressure_half] > m_eps)
+	m_vara->cell(idPressure_half) = PhysicalAlg::EquationOfState(m_vara->cell(idGamma), m_vara->cell(idDensity_half), m_vara->cell(idInternalEnergy_half));
+	if (m_vara->cell(idPressure_half) > m_eps)
 	{
 	}
 	else
@@ -2246,23 +2254,23 @@ static void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info,
 			}
 			double Divergence = 0.;
 			CDoubleVector	LcpNcpPc, LcpNcp;
-			m_vara->DouCnData[idReconstructDensity][k] = m_vara->DouCData[idDensity_cur];
-			m_vara->DouCnData[idReconstructPressure][k] = m_vara->DouCData[idPressure_cur];
-			m_vara->VecCnData[idReconstructVelocity][k] = m_vara->VecCData[idCentroidVelo_cur];
+			m_vara->corner(idReconstructDensity, k) = m_vara->cell(idDensity_cur);
+			m_vara->corner(idReconstructPressure, k) = m_vara->cell(idPressure_cur);
+			m_vara->corner_vector(idReconstructVelocity, k) = m_vara->cell_vector(idCentroidVelo_cur);
 			double Tc = 0.;
-			DeltaU[k] = PCInfo[k].Hanging_velocity - m_vara->VecCnData[idReconstructVelocity][k];
+			DeltaU[k] = PCInfo[k].Hanging_velocity - m_vara->corner_vector(idReconstructVelocity, k);
 			LcpNcp = PCInfo[k].Lcp[0] * PCInfo[k].Ncp[0] + PCInfo[k].Lcp[1] * PCInfo[k].Ncp[1];
-			LcpNcpPc = LcpNcp * m_vara->DouCnData[idReconstructPressure][k];
+			LcpNcpPc = LcpNcp * m_vara->corner(idReconstructPressure, k);
 			Divergence = LcpNcpPc ^ DeltaU[k];
 			if (Divergence < -1e-10) { Tc = 1.44; }
-			PCInfo[k].Zcp = m_vara->DouCnData[idReconstructDensity][k] * m_vara->DouCData[idSoundSpeed];
+			PCInfo[k].Zcp = m_vara->corner(idReconstructDensity, k) * m_vara->cell(idSoundSpeed);
 			NcpPlusMatrix = GeometryAlg::DyadicProduct(PCInfo[k].Ncp[0], PCInfo[k].Ncp[0]);
 			NcpMinusMatrix = GeometryAlg::DyadicProduct(PCInfo[k].Ncp[1], PCInfo[k].Ncp[1]);
 			m_vara->MarCnData[ideMcp][k] = PCInfo[k].Zcp * PCInfo[k].Lcp[0] * NcpPlusMatrix
 				+ PCInfo[k].Zcp * PCInfo[k].Lcp[1] * NcpMinusMatrix;
-			m_vara->VecCnData[ideMcpUc][k] = GeometryAlg::MatrixDotVector(m_vara->MarCnData[ideMcp][k],
-				m_vara->VecCnData[idReconstructVelocity][k]);
-			m_vara->VecCnData[ideRHS][k] = LcpNcpPc + m_vara->VecCnData[ideMcpUc][k];
+			m_vara->corner_vector(ideMcpUc, k) = GeometryAlg::MatrixDotVector(m_vara->MarCnData[ideMcp][k],
+				m_vara->corner_vector(idReconstructVelocity, k));
+			m_vara->corner_vector(ideRHS, k) = LcpNcpPc + m_vara->corner_vector(ideMcpUc, k);
 			if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_parent(info->quad)) {
 				FILE *f = open_corner2_trace(info->p4est);
 				if (f) {
@@ -2274,7 +2282,7 @@ static void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info,
 					fprintf(f, " Z=%.17e", PCInfo[k].Zcp);
 					trace_vector(f, "delta_u", DeltaU[k]);
 					trace_matrix(f, "ideMcp", m_vara->MarCnData[ideMcp][k]);
-					trace_vector(f, "ideRHS", m_vara->VecCnData[ideRHS][k]);
+					trace_vector(f, "ideRHS", m_vara->corner_vector(ideRHS, k));
 					fprintf(f, "\n");
 					fclose(f);
 				}
@@ -2304,14 +2312,14 @@ static void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *i
 		double Divergence = 0.;
 		CDoubleVector	LcpNcpPc, LcpNcp;
 
-		m_vara->DouCnData[idReconstructDensity][k] = m_vara->DouCData[idDensity_cur];
-		m_vara->DouCnData[idReconstructPressure][k] = m_vara->DouCData[idPressure_cur];
+		m_vara->corner(idReconstructDensity, k) = m_vara->cell(idDensity_cur);
+		m_vara->corner(idReconstructPressure, k) = m_vara->cell(idPressure_cur);
 		double Tc = 0.;
-		m_vara->VecCnData[idReconstructVelocity][k] = m_vara->VecCData[idCentroidVelo_cur];
-		DeltaU[k] = m_vara->VecCnData[idcnVelocity_lag][k] - m_vara->VecCnData[idReconstructVelocity][k];
+		m_vara->corner_vector(idReconstructVelocity, k) = m_vara->cell_vector(idCentroidVelo_cur);
+		DeltaU[k] = m_vara->corner_vector(idcnVelocity_lag, k) - m_vara->corner_vector(idReconstructVelocity, k);
 		abs_deltau = sqrt(pow(DeltaU[k].x, 2) + pow(DeltaU[k].y, 2));
 		LcpNcp = m_plus->Lcp * m_plus->Ncp + m_minus->Lcp*m_minus->Ncp;
-		LcpNcpPc = LcpNcp * m_vara->DouCnData[idReconstructPressure][k];
+		LcpNcpPc = LcpNcp * m_vara->corner(idReconstructPressure, k);
 		Divergence = LcpNcpPc ^ DeltaU[k];
 
 		if (CoordType == p4est_data_t::MyCoordType::plane)
@@ -2324,14 +2332,14 @@ static void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *i
 
 		}
 
-		m_plus->Zcp = m_vara->DouCnData[idReconstructDensity][k] * m_vara->DouCData[idSoundSpeed];
-		m_minus->Zcp = m_vara->DouCnData[idReconstructDensity][k] * m_vara->DouCData[idSoundSpeed];
-		m_plus->delta_u_cp = m_vara->VecCnData[idcnVelocity_lag][k] - m_vara->VecCnData[idReconstructVelocity][k];
-		m_minus->delta_u_cp = m_vara->VecCnData[idcnVelocity_lag][k] - m_vara->VecCnData[idReconstructVelocity][k];
-		m_plus->Uc_cur = m_vara->VecCnData[idReconstructVelocity][k];
-		m_minus->Uc_cur = m_vara->VecCnData[idReconstructVelocity][k];
-		m_plus->pi = m_vara->DouCnData[idReconstructPressure][k] - m_plus->Zcp * (m_plus->delta_u_cp^ m_plus->Ncp);
-		m_minus->pi = m_vara->DouCnData[idReconstructPressure][k] - m_minus->Zcp * (m_minus->delta_u_cp^ m_minus->Ncp);
+		m_plus->Zcp = m_vara->corner(idReconstructDensity, k) * m_vara->cell(idSoundSpeed);
+		m_minus->Zcp = m_vara->corner(idReconstructDensity, k) * m_vara->cell(idSoundSpeed);
+		m_plus->delta_u_cp = m_vara->corner_vector(idcnVelocity_lag, k) - m_vara->corner_vector(idReconstructVelocity, k);
+		m_minus->delta_u_cp = m_vara->corner_vector(idcnVelocity_lag, k) - m_vara->corner_vector(idReconstructVelocity, k);
+		m_plus->Uc_cur = m_vara->corner_vector(idReconstructVelocity, k);
+		m_minus->Uc_cur = m_vara->corner_vector(idReconstructVelocity, k);
+		m_plus->pi = m_vara->corner(idReconstructPressure, k) - m_plus->Zcp * (m_plus->delta_u_cp^ m_plus->Ncp);
+		m_minus->pi = m_vara->corner(idReconstructPressure, k) - m_minus->Zcp * (m_minus->delta_u_cp^ m_minus->Ncp);
 
 		NcpPlusMatrix = GeometryAlg::DyadicProduct(m_plus->Ncp, m_plus->Ncp);
 		NcpMinusMatrix = GeometryAlg::DyadicProduct(m_minus->Ncp, m_minus->Ncp);
@@ -2356,16 +2364,16 @@ static void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *i
 		}
 
 
-		m_vara->VecCnData[idcnMcpUc][k] = GeometryAlg::MatrixDotVector(m_vara->MarCnData[idcnMcp][k],
-			m_vara->VecCnData[idReconstructVelocity][k]);
-		m_vara->VecCnData[idcnRHS][k] = LcpNcpPc + m_vara->VecCnData[idcnMcpUc][k];
+		m_vara->corner_vector(idcnMcpUc, k) = GeometryAlg::MatrixDotVector(m_vara->MarCnData[idcnMcp][k],
+			m_vara->corner_vector(idReconstructVelocity, k));
+		m_vara->corner_vector(idcnRHS, k) = LcpNcpPc + m_vara->corner_vector(idcnMcpUc, k);
 		if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_parent(info->quad) && (k == 0 || k == 3)) {
 			FILE *f = open_corner2_trace(info->p4est);
 			if (f) {
 				fprintf(f, "TRACE stage=LOCAL_CORNER iter=%d corner=%d", g_trace_riemann_iter, k);
 				trace_matrix(f, "idcnMcp", m_vara->MarCnData[idcnMcp][k]);
-				trace_vector(f, "idcnRHS", m_vara->VecCnData[idcnRHS][k]);
-				trace_vector(f, "velocity_in", m_vara->VecCnData[idcnVelocity_lag][k]);
+				trace_vector(f, "idcnRHS", m_vara->corner_vector(idcnRHS, k));
+				trace_vector(f, "velocity_in", m_vara->corner_vector(idcnVelocity_lag, k));
 				fprintf(f, "\n");
 				fclose(f);
 			}
@@ -2417,7 +2425,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 
 		
 		MatrixP += m_vara->MarCnData[idcnMcp][cnid];
-		RHS += m_vara->VecCnData[idcnRHS][cnid];
+		RHS += m_vara->corner_vector(idcnRHS, cnid);
 	}
 
 	for (int i = 0; i < m_size; i++)
@@ -2851,20 +2859,20 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			switch (parent_face_index)
 			{
 			case quad_data_t::EnumEdge::LEFT:
-				master_coord[0] = m_quad_data_full->m_vara.VecCnData[idcnCoords_relaxed][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_coord[1] = m_quad_data_full->m_vara.VecCnData[idcnCoords_relaxed][quad_data_t::EnumCorner::LEFTUP];
+				master_coord[0] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::LEFTUP);
 				break;
 			case quad_data_t::EnumEdge::RIGHT:
-				master_coord[0] = m_quad_data_full->m_vara.VecCnData[idcnCoords_relaxed][quad_data_t::EnumCorner::RIGHTBOTTOM];
-				master_coord[1] = m_quad_data_full->m_vara.VecCnData[idcnCoords_relaxed][quad_data_t::EnumCorner::RIGHTUP];
+				master_coord[0] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::RIGHTBOTTOM);
+				master_coord[1] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::RIGHTUP);
 				break;
 			case quad_data_t::EnumEdge::BOTTOM:
-				master_coord[0] = m_quad_data_full->m_vara.VecCnData[idcnCoords_relaxed][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_coord[1] = m_quad_data_full->m_vara.VecCnData[idcnCoords_relaxed][quad_data_t::EnumCorner::RIGHTBOTTOM];
+				master_coord[0] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::RIGHTBOTTOM);
 				break;
 			case quad_data_t::EnumEdge::UP:
-				master_coord[0] = m_quad_data_full->m_vara.VecCnData[idcnCoords_relaxed][quad_data_t::EnumCorner::LEFTUP];
-				master_coord[1] = m_quad_data_full->m_vara.VecCnData[idcnCoords_relaxed][quad_data_t::EnumCorner::RIGHTUP];
+				master_coord[0] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::LEFTUP);
+				master_coord[1] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::RIGHTUP);
 				break;
 			}
 
@@ -2872,9 +2880,9 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			MatrixP = m_quad_data->m_vara.MarCnData[idcnMcp][m_which_corner[0]] +
 				m_quad_data_aside->m_vara.MarCnData[idcnMcp][m_which_corner[1]] +
 				m_quad_data_full->m_vara.MarCnData[ideMcp][parent_face_index];
-			RHS = m_quad_data->m_vara.VecCnData[idcnRHS][m_which_corner[0]] +
-				m_quad_data_aside->m_vara.VecCnData[idcnRHS][m_which_corner[1]] +
-				m_quad_data_full->m_vara.VecCnData[ideRHS][parent_face_index];
+			RHS = m_quad_data->m_vara.corner_vector(idcnRHS, m_which_corner[0]) +
+				m_quad_data_aside->m_vara.corner_vector(idcnRHS, m_which_corner[1]) +
+				m_quad_data_full->m_vara.corner_vector(ideRHS, parent_face_index);
 			if (target_trace_enabled() && p4est_data->current_step == 3 &&
 				((is_trace_fine(quad) && is_trace_sibling(quad_aside)) ||
 				 (is_trace_sibling(quad) && is_trace_fine(quad_aside)))) {
@@ -2885,11 +2893,11 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 						quad_aside->x, quad_aside->y, quad_aside->level, m_which_corner[1], side[i]->is.hanging.is_ghost[1] ? 1 : 0,
 						quad_full->x, quad_full->y, quad_full->level, parent_face_index, side[full_index]->is.full.is_ghost ? 1 : 0);
 					trace_matrix(f, "fine0_M", m_quad_data->m_vara.MarCnData[idcnMcp][m_which_corner[0]]);
-					trace_vector(f, "fine0_R", m_quad_data->m_vara.VecCnData[idcnRHS][m_which_corner[0]]);
+					trace_vector(f, "fine0_R", m_quad_data->m_vara.corner_vector(idcnRHS, m_which_corner[0]));
 					trace_matrix(f, "fine1_M", m_quad_data_aside->m_vara.MarCnData[idcnMcp][m_which_corner[1]]);
-					trace_vector(f, "fine1_R", m_quad_data_aside->m_vara.VecCnData[idcnRHS][m_which_corner[1]]);
+					trace_vector(f, "fine1_R", m_quad_data_aside->m_vara.corner_vector(idcnRHS, m_which_corner[1]));
 					trace_matrix(f, "parent_M", m_quad_data_full->m_vara.MarCnData[ideMcp][parent_face_index]);
-					trace_vector(f, "parent_R", m_quad_data_full->m_vara.VecCnData[ideRHS][parent_face_index]);
+					trace_vector(f, "parent_R", m_quad_data_full->m_vara.corner_vector(ideRHS, parent_face_index));
 					trace_matrix(f, "sum_M", MatrixP);
 					trace_vector(f, "sum_R", RHS);
 					fprintf(f, "\n");
@@ -2902,7 +2910,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			m_quad_data_aside->points[m_which_corner[1]].RHS = RHS;
 
 			CDoubleVector		hanging_coord;
-			hanging_coord = m_quad_data->m_vara.VecCnData[idcnCoords_half][m_which_corner[0]];
+			hanging_coord = m_quad_data->m_vara.corner_vector(idcnCoords_half, m_which_corner[0]);
 
 			OneBounPlus.Ncp = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Ncp;
 			OneBounPlus.Lcp = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Lcp;
@@ -2918,7 +2926,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			OneBounMinus.enumType = WallBoundary;
 			BounParent.Ncp = --OneBounPlus.Ncp;
 			BounParent.Lcp = OneBounPlus.Lcp + OneBounMinus.Lcp;
-			BounParent.Uc_cur = m_quad_data_full->m_vara.VecCnData[idReconstructVelocity][0];
+			BounParent.Uc_cur = m_quad_data_full->m_vara.corner_vector(idReconstructVelocity, 0);
 			BounParent.delta_u_cp = OneBounPlus.delta_u_cp + OneBounPlus.Uc_cur - BounParent.Uc_cur;
 			BounParent.Zc = m_quad_data_full->m_cndata[quad_data_t::EnumCorner::LEFTUP].hdata[CHalf_edge_data::cside::plus].Zcp;
 
@@ -2982,7 +2990,7 @@ static void quadrant_copy_velocity_from_lag_to_relax_callback(p4est_iter_volume_
 	
 	for (int k = 0; k < CNDIM; k++)
 	{
-		m_vara->VecCnData[idcnVelocity_relaxed][k] = m_vara->VecCnData[idcnVelocity_lag][k];
+		m_vara->corner_vector(idcnVelocity_relaxed, k) = m_vara->corner_vector(idcnVelocity_lag, k);
 	}
 }
 
@@ -3057,7 +3065,7 @@ static void quadrant_update_parent_velo_press_callback(p4est_iter_face_info_t *i
 				m_quad_data_full = (quad_data_t *)quad_full->p.user_data;
 			}
 			ParentBounInfo	*PCInfo = (ParentBounInfo	*)&m_quad_data_full->m_pc_edge_data;
-			PCInfo[parent_face_index].Hanging_velocity = m_quad_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[0]];
+			PCInfo[parent_face_index].Hanging_velocity = m_quad_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]);
 
 			if (m_quad_data->points[m_which_corner[0]].IsHanging == true &&
 				m_quad_data->points[m_which_corner[0]].add_dissipation_parent == true)
@@ -3209,7 +3217,7 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 		if (fabs(m_data->points[cnid].velo_lag.y) < m_eps) { m_data->points[cnid].velo_lag.y = 0.; }
 
 		
-		m_vara->VecCnData[idcnVelocity_lag][cnid] = m_data->points[cnid].velo_lag;
+		m_vara->corner_vector(idcnVelocity_lag, cnid) = m_data->points[cnid].velo_lag;
 		p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 		if (target_trace_enabled() && p4est_data->current_step == 3 && !is_ghost &&
 			((is_trace_fine(side[i]->quad) && cnid == 2) ||
@@ -3267,19 +3275,19 @@ static void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t 
 	double				delta_time = p4est_data->dt_iter;
 	for (int k = 0; k < CNDIM; k++)  
 	{
-		m_vara->VecCnData[idcnCoords_lag][k] = m_vara->VecCnData[idcnCoords_half][k] +
-			CDoubleVector(m_vara->VecCnData[idcnVelocity_lag][k].x * delta_time, m_vara->VecCnData[idcnVelocity_lag][k].y * delta_time);
+		m_vara->corner_vector(idcnCoords_lag, k) = m_vara->corner_vector(idcnCoords_half, k) +
+			CDoubleVector(m_vara->corner_vector(idcnVelocity_lag, k).x * delta_time, m_vara->corner_vector(idcnVelocity_lag, k).y * delta_time);
 	}
 	CDoubleVector m_cell_coord[CNDIM];
-	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->VecCnData[idcnCoords_lag][i]; }
+	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_lag, i); }
 
 	CDoubleVector center_point;
 	center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
-	m_vara->VecCData[idCentroidCoord_lag] = center_point;
+	m_vara->cell_vector(idCentroidCoord_lag) = center_point;
 
 	for (int idIndex = idEChildrenCoordinate_lag; idIndex < idVectorEdgeVariableNum; idIndex++)
 	{
-		int idcnVara;
+		VectorCornerVariableID idcnVara;
 		switch (idIndex)
 		{
 		case idEChildrenCoordinate_lag:
@@ -3291,18 +3299,18 @@ static void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t 
 		default:
 			break;
 		}
-		m_vara->VecEdata[idIndex][quad_data_t::EnumEdge::LEFT] = 0.5 *
-			(m_vara->VecCnData[idcnVara][quad_data_t::EnumCorner::LEFTUP] +
-				m_vara->VecCnData[idcnVara][quad_data_t::EnumCorner::LEFTBOTTOM]);
-		m_vara->VecEdata[idIndex][quad_data_t::EnumEdge::RIGHT] = 0.5 *
-			(m_vara->VecCnData[idcnVara][quad_data_t::EnumCorner::RIGHTUP] +
-				m_vara->VecCnData[idcnVara][quad_data_t::EnumCorner::RIGHTBOTTOM]);
-		m_vara->VecEdata[idIndex][quad_data_t::EnumEdge::BOTTOM] = 0.5 *
-			(m_vara->VecCnData[idcnVara][quad_data_t::EnumCorner::LEFTBOTTOM] +
-				m_vara->VecCnData[idcnVara][quad_data_t::EnumCorner::RIGHTBOTTOM]);
-		m_vara->VecEdata[idIndex][quad_data_t::EnumEdge::UP] = 0.5 *
-			(m_vara->VecCnData[idcnVara][quad_data_t::EnumCorner::LEFTUP] +
-				m_vara->VecCnData[idcnVara][quad_data_t::EnumCorner::RIGHTUP]);
+		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::LEFT) = 0.5 *
+			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTUP) +
+				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTBOTTOM));
+		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::RIGHT) = 0.5 *
+			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTUP) +
+				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTBOTTOM));
+		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::BOTTOM) = 0.5 *
+			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTBOTTOM) +
+				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTBOTTOM));
+		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::UP) = 0.5 *
+			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTUP) +
+				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTUP));
 	}
 }
 
@@ -3331,10 +3339,10 @@ static void quadrant_update_density_callback(p4est_iter_volume_info_t *info, voi
 	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	int					coordinate_type = p4est_data->coord_type;
 	CDoubleVector		m_cell_coord[CNDIM];
-	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->VecCnData[idcnCoords_lag][i]; }
+	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_lag, i); }
 
-	m_vara->DouCData[idVolume] = GeometryAlg::CalculateCellVolume(coordinate_type, m_cell_coord);
-	m_vara->DouCData[idDensity_lag] = m_vara->DouCData[idMass] / m_vara->DouCData[idVolume];
+	m_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(coordinate_type, m_cell_coord);
+	m_vara->cell(idDensity_lag) = m_vara->cell(idMass) / m_vara->cell(idVolume);
 
 
 }
@@ -3376,7 +3384,7 @@ static void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, vo
 	{
 		if (scheme_type == p4est_data_t::MySchemeType::ControlVolume) 
 		{
-			SumFcp += m_vara->VecCnData[idcnFcp][cnid] + m_vara->VecCnData[idcnFluxRelaxed][cnid];
+			SumFcp += m_vara->corner_vector(idcnFcp, cnid) + m_vara->corner_vector(idcnFluxRelaxed, cnid);
 		}
 	}
 
@@ -3386,23 +3394,23 @@ static void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, vo
 		{
 			if (PCInfo[eind].IsParentChildBoun==true)
 			{
-				SumFcp += m_vara->VecCnData[ideFcp][eind] + PCInfo[eind].FluxRelaxed;
+				SumFcp += m_vara->corner_vector(ideFcp, eind) + PCInfo[eind].FluxRelaxed;
 			}
 		}
 	}
 
 	if (scheme_type == p4est_data_t::MySchemeType::ControlVolume)
 	{
-		m_vara->VecCData[idCentroidVelo_lag] = m_vara->VecCData[idCentroidVelo_half] -
-			p4est_data->dt_iter * SumFcp / m_vara->DouCData[idMass];
+		m_vara->cell_vector(idCentroidVelo_lag) = m_vara->cell_vector(idCentroidVelo_half) -
+			p4est_data->dt_iter * SumFcp / m_vara->cell(idMass);
 	}
 	else if (scheme_type == p4est_data_t::MySchemeType::AreaWeighted)
 	{
 		CDoubleVector m_cell_coord[CNDIM];
-		for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->VecCnData[idcnCoords_cur][i]; }
+		for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_cur, i); }
 		center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
-		m_vara->VecCData[idCentroidVelo_lag] = m_vara->VecCData[idCentroidVelo_half] -
-			p4est_data->dt_iter * SumFcp / m_vara->DouCData[idMass] / center_point.x;
+		m_vara->cell_vector(idCentroidVelo_lag) = m_vara->cell_vector(idCentroidVelo_half) -
+			p4est_data->dt_iter * SumFcp / m_vara->cell(idMass) / center_point.x;
 	}
 }
 
@@ -3434,34 +3442,34 @@ static void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void 
 	double				m_beta = 1.;
 
 	
-	m_vara->DouCData[idKineticVariation] = 0.;
-	m_vara->DouCData[idTotalWork] = 0.;
+	m_vara->cell(idKineticVariation) = 0.;
+	m_vara->cell(idTotalWork) = 0.;
 
 	if (coordinate_type == p4est_data_t::MyCoordType::cylinder)
 	{
 		m_alpha = 2.* M_PI;
-		m_beta = 2. * M_PI * m_vara->VecCData[idCentroidCoord_cur].y;
+		m_beta = 2. * M_PI * m_vara->cell_vector(idCentroidCoord_cur).y;
 	}
-	CDoubleVector Velo = 0.5 * (m_vara->VecCData[idCentroidVelo_half] + m_vara->VecCData[idCentroidVelo_lag]);
+	CDoubleVector Velo = 0.5 * (m_vara->cell_vector(idCentroidVelo_half) + m_vara->cell_vector(idCentroidVelo_lag));
 	for (int cnid = 0; cnid < CNDIM; cnid++)
 	{
 		
 		if (coordinate_type == p4est_data_t::MyCoordType::plane)
 		{
 			
-			m_vara->DouCData[idKineticVariation] += m_beta * 
-				Velo^ (m_vara->VecCnData[idcnFcp][cnid]+ m_vara->VecCnData[idcnFluxRelaxed][cnid]);
+			m_vara->cell(idKineticVariation) += m_beta * 
+				Velo^ (m_vara->corner_vector(idcnFcp, cnid)+ m_vara->corner_vector(idcnFluxRelaxed, cnid));
 		}
 		if (coordinate_type == p4est_data_t::MyCoordType::cylinder)
 		{
 			
-			m_vara->DouCData[idKineticVariation] += m_beta * Velo^ m_vara->VecCnData[idAWFcp][cnid];
+			m_vara->cell(idKineticVariation) += m_beta * Velo^ m_vara->corner_vector(idAWFcp, cnid);
 		}
 
 		
-		m_vara->DouCData[idTotalWork] += m_alpha*
-			m_vara->VecCnData[idcnVelocity_lag][cnid] ^ 
-			(m_vara->VecCnData[idcnFcp][cnid]+ m_vara->VecCnData[idcnFluxRelaxed][cnid]); 
+		m_vara->cell(idTotalWork) += m_alpha*
+			m_vara->corner_vector(idcnVelocity_lag, cnid) ^ 
+			(m_vara->corner_vector(idcnFcp, cnid)+ m_vara->corner_vector(idcnFluxRelaxed, cnid)); 
 	}
 
 	for (int eind = 0; eind < CNDIM; eind++)
@@ -3471,11 +3479,11 @@ static void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void 
 		{
 			if (coordinate_type == p4est_data_t::MyCoordType::plane)
 			{
-				m_vara->DouCData[idKineticVariation] += m_beta * Velo ^
-					(m_vara->VecCnData[ideFcp][eind] + PCInfo[eind].FluxRelaxed);
+				m_vara->cell(idKineticVariation) += m_beta * Velo ^
+					(m_vara->corner_vector(ideFcp, eind) + PCInfo[eind].FluxRelaxed);
 			}
-			m_vara->DouCData[idTotalWork] += m_alpha* PCInfo[eind].Hanging_velocity ^
-				(m_vara->VecCnData[ideFcp][eind] + PCInfo[eind].FluxRelaxed);
+			m_vara->cell(idTotalWork) += m_alpha* PCInfo[eind].Hanging_velocity ^
+				(m_vara->corner_vector(ideFcp, eind) + PCInfo[eind].FluxRelaxed);
 		}
 	}
 }
@@ -3504,18 +3512,18 @@ static void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void
 	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 
 	
-	m_vara->DouCData[idTotalEnergy_lag] = m_vara->DouCData[idTotalEnergy_half] - p4est_data->dt_iter * m_vara->DouCData[idTotalWork] / m_vara->DouCData[idMass];
+	m_vara->cell(idTotalEnergy_lag) = m_vara->cell(idTotalEnergy_half) - p4est_data->dt_iter * m_vara->cell(idTotalWork) / m_vara->cell(idMass);
 
 
 	double source = 0.;
 	if (p4est_data->which_case == ProblemNo::TaylorGreen)
 	{
-		source = p4est_data->dt_iter * 5.*M_PI / 8.*m_vara->DouCData[idVolume] *
-			(cos(3.*M_PI*m_vara->VecCData[idCentroidCoord_lag].x)*cos(M_PI * m_vara->VecCData[idCentroidCoord_lag].y) -
-				cos(M_PI*m_vara->VecCData[idCentroidCoord_lag].x)*cos(3.*M_PI*m_vara->VecCData[idCentroidCoord_lag].y)) / m_vara->DouCData[idMass];
+		source = p4est_data->dt_iter * 5.*M_PI / 8.*m_vara->cell(idVolume) *
+			(cos(3.*M_PI*m_vara->cell_vector(idCentroidCoord_lag).x)*cos(M_PI * m_vara->cell_vector(idCentroidCoord_lag).y) -
+				cos(M_PI*m_vara->cell_vector(idCentroidCoord_lag).x)*cos(3.*M_PI*m_vara->cell_vector(idCentroidCoord_lag).y)) / m_vara->cell(idMass);
 	}
 
-	if (m_vara->DouCData[idTotalEnergy_lag] > m_eps)
+	if (m_vara->cell(idTotalEnergy_lag) > m_eps)
 	{
 	}
 	else
@@ -3526,10 +3534,10 @@ static void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void
 	}
 
 	
-	m_vara->DouCData[idInternalEnergy_lag] = m_vara->DouCData[idInternalEnergy_half] - p4est_data->dt_iter
-		* (m_vara->DouCData[idTotalWork] - m_vara->DouCData[idKineticVariation]) / m_vara->DouCData[idMass];
-	m_vara->DouCData[idInternalEnergy_lag] += source;
-	if (m_vara->DouCData[idInternalEnergy_lag] > m_eps)
+	m_vara->cell(idInternalEnergy_lag) = m_vara->cell(idInternalEnergy_half) - p4est_data->dt_iter
+		* (m_vara->cell(idTotalWork) - m_vara->cell(idKineticVariation)) / m_vara->cell(idMass);
+	m_vara->cell(idInternalEnergy_lag) += source;
+	if (m_vara->cell(idInternalEnergy_lag) > m_eps)
 	{
 	}
 	else
@@ -3561,8 +3569,8 @@ static void quadrant_update_EOS_callback(p4est_iter_volume_info_t *info, void *u
 {
 	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
 	CVariable				*m_vara = (CVariable *)&data->m_vara;
-	m_vara->DouCData[idPressure_lag] = PhysicalAlg::EquationOfState(m_vara->DouCData[idGamma], m_vara->DouCData[idDensity_lag], m_vara->DouCData[idInternalEnergy_lag]);
-	if (m_vara->DouCData[idPressure_lag] > m_eps)
+	m_vara->cell(idPressure_lag) = PhysicalAlg::EquationOfState(m_vara->cell(idGamma), m_vara->cell(idDensity_lag), m_vara->cell(idInternalEnergy_lag));
+	if (m_vara->cell(idPressure_lag) > m_eps)
 	{
 	}
 	else
@@ -3593,13 +3601,13 @@ static void quadrant_accept_center_solution_callback(p4est_iter_volume_info_t *i
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable				*m_vara = (CVariable *)&data->m_vara;
 	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	m_vara->VecCData[idCentroidCoord_cur] = m_vara->VecCData[idCentroidCoord_lag];
-	m_vara->VecCData[idCentroidVelo_cur] = m_vara->VecCData[idCentroidVelo_lag];
-	m_vara->DouCData[idDensity_cur] = m_vara->DouCData[idDensity_lag];
-	m_vara->DouCData[idTotalEnergy_cur] = m_vara->DouCData[idTotalEnergy_lag];
-	m_vara->DouCData[idInternalEnergy_cur] = m_vara->DouCData[idInternalEnergy_lag];
+	m_vara->cell_vector(idCentroidCoord_cur) = m_vara->cell_vector(idCentroidCoord_lag);
+	m_vara->cell_vector(idCentroidVelo_cur) = m_vara->cell_vector(idCentroidVelo_lag);
+	m_vara->cell(idDensity_cur) = m_vara->cell(idDensity_lag);
+	m_vara->cell(idTotalEnergy_cur) = m_vara->cell(idTotalEnergy_lag);
+	m_vara->cell(idInternalEnergy_cur) = m_vara->cell(idInternalEnergy_lag);
 
-	if (m_vara->DouCData[idInternalEnergy_cur] > m_eps)
+	if (m_vara->cell(idInternalEnergy_cur) > m_eps)
 	{
 	}
 	else
@@ -3608,12 +3616,12 @@ static void quadrant_accept_center_solution_callback(p4est_iter_volume_info_t *i
 		std::abort();
 	}
 
-	m_vara->DouCData[idPressure_cur] = m_vara->DouCData[idPressure_lag];
+	m_vara->cell(idPressure_cur) = m_vara->cell(idPressure_lag);
 
 	for (int cnid = 0; cnid < CNDIM; cnid++)
 	{
-		m_vara->VecCnData[idcnCoords_cur][cnid] = m_vara->VecCnData[idcnCoords_lag][cnid];
-		m_vara->VecCnData[idcnVelocity_cur][cnid] = m_vara->VecCnData[idcnVelocity_lag][cnid];
+		m_vara->corner_vector(idcnCoords_cur, cnid) = m_vara->corner_vector(idcnCoords_lag, cnid);
+		m_vara->corner_vector(idcnVelocity_cur, cnid) = m_vara->corner_vector(idcnVelocity_lag, cnid);
 	}
 
 	generate_children_info_from_parent(p4est_data, m_vara);
@@ -3626,8 +3634,8 @@ static void quadrant_total_energy_error_callback(p4est_iter_volume_info_t *info,
 	CVariable				*m_vara = (CVariable *)&data->m_vara;
 	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 
-	p4est_data->total_energy_lag += m_vara->DouCData[idMass] * m_vara->DouCData[idTotalEnergy_lag];
-	p4est_data->total_energy_cur += m_vara->DouCData[idMass] * m_vara->DouCData[idTotalEnergy_cur];
+	p4est_data->total_energy_lag += m_vara->cell(idMass) * m_vara->cell(idTotalEnergy_lag);
+	p4est_data->total_energy_cur += m_vara->cell(idMass) * m_vara->cell(idTotalEnergy_cur);
 
 
 }
@@ -3737,7 +3745,7 @@ static void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info,
 				m_child1_data->points[m_which_corner[0]].pi_constrained_parent;
 
 			PCInfo[parent_face_index].Hanging_velocity =
-				m_child1_data->m_vara.VecCnData[idcnVelocity_lag][m_which_corner[0]];
+				m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]);
 
 			PCInfo[parent_face_index].Lcp[0] =
 				m_child1_data->points[m_which_corner[0]].TwoBouns[0].Lcp;
@@ -3749,39 +3757,39 @@ static void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info,
 			PCInfo[parent_face_index].Ncp[1] = --m_child2_data->points[m_which_corner[1]].TwoBouns[0].Ncp;
 
 			CDoubleVector	master_coord[2], hanging_coord;
-			hanging_coord = m_child1_data->m_vara.VecCnData[idcnCoords_cur][m_which_corner[0]];
+			hanging_coord = m_child1_data->m_vara.corner_vector(idcnCoords_cur, m_which_corner[0]);
 
 			switch (parent_face_index)
 			{
 			case quad_data_t::EnumEdge::LEFT:
 				m_plus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::LEFTBOTTOM].hdata[CHalf_edge_data::cside::plus];
 				m_minus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::LEFTUP].hdata[CHalf_edge_data::cside::minus];
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTUP];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTUP);
 				m_plus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[0], hanging_coord) / 2.;
 				m_minus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[1], hanging_coord) / 2.;
 				break;
 			case quad_data_t::EnumEdge::RIGHT:
 				m_plus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::RIGHTUP].hdata[CHalf_edge_data::cside::plus];
 				m_minus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::RIGHTBOTTOM].hdata[CHalf_edge_data::cside::minus];
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTBOTTOM];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTUP];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTBOTTOM);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTUP);
 				m_plus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[1], hanging_coord) / 2.;
 				m_minus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[0], hanging_coord) / 2.;
 				break;
 			case quad_data_t::EnumEdge::BOTTOM:
 				m_plus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::RIGHTBOTTOM].hdata[CHalf_edge_data::cside::plus];
 				m_minus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::LEFTBOTTOM].hdata[CHalf_edge_data::cside::minus];
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTBOTTOM];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTBOTTOM];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTBOTTOM);
 				m_plus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[1], hanging_coord) / 2.;
 				m_minus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[0], hanging_coord) / 2.;
 				break;
 			case quad_data_t::EnumEdge::UP:
 				m_plus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::LEFTUP].hdata[CHalf_edge_data::cside::plus];
 				m_minus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::RIGHTUP].hdata[CHalf_edge_data::cside::minus];
-				master_coord[0] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::RIGHTUP];
-				master_coord[1] = m_parent_data->m_vara.VecCnData[idcnCoords_cur][quad_data_t::EnumCorner::LEFTUP];
+				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTUP);
+				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTUP);
 				m_plus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[1], hanging_coord) / 2.;
 				m_minus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[0], hanging_coord) / 2.;
 				break;
@@ -3990,22 +3998,22 @@ static void quadrant_compute_corner_force_callback(p4est_iter_volume_info_t *inf
 		CDoubleVector DeltaU[CNDIM], McpDeltaUc, AWMcpDeltaUc, LcpNcpPc;
 		m_plus = (CHalf_edge_data *)&cndata[k].hdata[CHalf_edge_data::cside::plus];
 		m_minus = (CHalf_edge_data *)&cndata[k].hdata[CHalf_edge_data::cside::minus];
-		m_vara->VecCnData[idReconstructVelocity][k] = m_vara->VecCData[idCentroidVelo_cur];
-		m_vara->DouCnData[idReconstructDensity][k] = m_vara->DouCData[idDensity_cur];
-		m_vara->DouCnData[idReconstructPressure][k] = m_vara->DouCData[idPressure_cur];
-		DeltaU[k] = m_vara->VecCnData[idcnVelocity_lag][k] - m_vara->VecCnData[idReconstructVelocity][k];
+		m_vara->corner_vector(idReconstructVelocity, k) = m_vara->cell_vector(idCentroidVelo_cur);
+		m_vara->corner(idReconstructDensity, k) = m_vara->cell(idDensity_cur);
+		m_vara->corner(idReconstructPressure, k) = m_vara->cell(idPressure_cur);
+		DeltaU[k] = m_vara->corner_vector(idcnVelocity_lag, k) - m_vara->corner_vector(idReconstructVelocity, k);
 		LcpNcpPc = (m_plus->Rcp * m_plus->Lcp * m_plus->Ncp +
-			m_minus->Rcp * m_minus->Lcp * m_minus->Ncp)*m_vara->DouCnData[idReconstructPressure][k];
+			m_minus->Rcp * m_minus->Lcp * m_minus->Ncp)*m_vara->corner(idReconstructPressure, k);
 		McpDeltaUc = GeometryAlg::MatrixDotVector(m_vara->MarCnData[idcnMcp][k],DeltaU[k]);
-		m_vara->VecCnData[idcnFcp][k] = (m_plus->Rcp * m_plus->Lcp * m_plus->Ncp +
+		m_vara->corner_vector(idcnFcp, k) = (m_plus->Rcp * m_plus->Lcp * m_plus->Ncp +
 			m_minus->Rcp * m_minus->Lcp * m_minus->Ncp)*
-			m_vara->DouCnData[idReconstructPressure][k] - McpDeltaUc;
+			m_vara->corner(idReconstructPressure, k) - McpDeltaUc;
 		if (Scheme_type == p4est_data_t::MySchemeType::AreaWeighted)
 		{
 			AWMcpDeltaUc = GeometryAlg::MatrixDotVector(m_vara->MarCnData[idcnAWMcp][k],
 				DeltaU[k]);
-			m_vara->VecCnData[idAWFcp][k] = (m_plus->Lcp * m_plus->Ncp + m_minus->Lcp * m_minus->Ncp)*
-				m_vara->DouCnData[idReconstructPressure][k] - AWMcpDeltaUc;
+			m_vara->corner_vector(idAWFcp, k) = (m_plus->Lcp * m_plus->Ncp + m_minus->Lcp * m_minus->Ncp)*
+				m_vara->corner(idReconstructPressure, k) - AWMcpDeltaUc;
 		}
 	}
 
@@ -4014,12 +4022,12 @@ static void quadrant_compute_corner_force_callback(p4est_iter_volume_info_t *inf
 	{
 		CDoubleVector DeltaU, McpDeltaUc, LcpNcpPc;
 		DeltaU = PCInfo[eind].Hanging_velocity
-			- m_vara->VecCnData[idReconstructVelocity][eind];
+			- m_vara->corner_vector(idReconstructVelocity, eind);
 		LcpNcpPc = (PCInfo[eind].Lcp[0] * PCInfo[eind].Ncp[0] + PCInfo[eind].Lcp[1] * PCInfo[eind].Ncp[1])*
-			m_vara->DouCnData[idReconstructPressure][eind];
+			m_vara->corner(idReconstructPressure, eind);
 		McpDeltaUc = GeometryAlg::MatrixDotVector(m_vara->MarCnData[ideMcp][eind], DeltaU);
-		m_vara->VecCnData[ideFcp][eind] = (PCInfo[eind].Lcp[0] * PCInfo[eind].Ncp[0] + PCInfo[eind].Lcp[1] * PCInfo[eind].Ncp[1])*
-			m_vara->DouCnData[idReconstructPressure][eind] - McpDeltaUc;
+		m_vara->corner_vector(ideFcp, eind) = (PCInfo[eind].Lcp[0] * PCInfo[eind].Ncp[0] + PCInfo[eind].Lcp[1] * PCInfo[eind].Ncp[1])*
+			m_vara->corner(idReconstructPressure, eind) - McpDeltaUc;
 	}
 }
 
@@ -4048,7 +4056,7 @@ static void quadrant_flux_relaxed_reset_callback(p4est_iter_volume_info_t *info,
 
 	for (int k = 0; k < CNDIM; k++)
 	{
-		m_vara->VecCnData[idcnFluxRelaxed][k] = CDoubleVector(0.,0.);
+		m_vara->corner_vector(idcnFluxRelaxed, k) = CDoubleVector(0.,0.);
 	}
 }
 
@@ -4119,11 +4127,11 @@ static void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
             quad_data_t *data = (quad_data_t *)quad->p.user_data;
             
             double vals[5] = {
-                data->m_vara.DouCData[idMass],
-                data->m_vara.DouCData[idTotalEnergy_lag],
-                data->m_vara.DouCData[idDensity_lag],
-                data->m_vara.VecCData[idCentroidVelo_lag].x + data->m_vara.VecCData[idCentroidVelo_lag].y,
-                data->m_vara.DouCData[idTotalWork]
+                data->m_vara.cell(idMass),
+                data->m_vara.cell(idTotalEnergy_lag),
+                data->m_vara.cell(idDensity_lag),
+                data->m_vara.cell_vector(idCentroidVelo_lag).x + data->m_vara.cell_vector(idCentroidVelo_lag).y,
+                data->m_vara.cell(idTotalWork)
             };
             
             for(int k=0; k<5; ++k) {
@@ -4190,8 +4198,8 @@ static void advance_single_stage(p4est_t * p4est, p4est_ghost_t * ghost, void *g
 						fprintf(f, "SERIAL 397 (x=%d, y=%d) corner velocities:\n", info->quad->x, info->quad->y);
 						for (int j = 0; j < P4EST_CHILDREN; j++) {
 							fprintf(f, "  Corner %d: vx=%f, vy=%f\n", j, 
-								m_vara->VecCnData[idcnVelocity_cur][j].x, 
-								m_vara->VecCnData[idcnVelocity_cur][j].y);
+								m_vara->corner_vector(idcnVelocity_cur, j).x, 
+								m_vara->corner_vector(idcnVelocity_cur, j).y);
 						}
 						fclose(f);
 					}
@@ -4205,8 +4213,8 @@ static void advance_single_stage(p4est_t * p4est, p4est_ghost_t * ghost, void *g
 						fprintf(f, "PARALLEL MATCH (x=%d, y=%d) corner velocities:\n", info->quad->x, info->quad->y);
 						for (int j = 0; j < P4EST_CHILDREN; j++) {
 							fprintf(f, "  Corner %d: vx=%f, vy=%f\n", j, 
-								m_vara->VecCnData[idcnVelocity_cur][j].x, 
-								m_vara->VecCnData[idcnVelocity_cur][j].y);
+								m_vara->corner_vector(idcnVelocity_cur, j).x, 
+								m_vara->corner_vector(idcnVelocity_cur, j).y);
 						}
 						fclose(f);
 					}
@@ -4271,7 +4279,7 @@ static void quadrant_copy_coordx_to_array_callback(p4est_iter_volume_info_t *inf
 	for (int i = 0; i < P4EST_CHILDREN; i++) {
 		int index0 = convert_user_define_index_to_which_corner(i);
 		double  *this_ptr = (double *)sc_array_index(array_data, arrayoffset + index0);
-		this_ptr[0] = m_vara->VecCnData[idcnCoords_lag][i].x;
+		this_ptr[0] = m_vara->corner_vector(idcnCoords_lag, i).x;
 	}
 }
 
@@ -4330,16 +4338,16 @@ static void quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *i
 	for (int i = 0; i < CNDIM; i++) {
 		int index0 = convert_user_define_index_to_which_corner(i);
 		double *coordx_val = (double *)sc_array_index(m_cell_data->coordx, corner_arrayoffset + index0);
-		coordx_val[0] = m_vara->VecCnData[idcnCoords_lag][i].x;
+		coordx_val[0] = m_vara->corner_vector(idcnCoords_lag, i).x;
 
 		double *coordy_val = (double *)sc_array_index(m_cell_data->coordy, corner_arrayoffset + index0);
-		coordy_val[0] = m_vara->VecCnData[idcnCoords_lag][i].y;
+		coordy_val[0] = m_vara->corner_vector(idcnCoords_lag, i).y;
 
 		double *velox_val = (double *)sc_array_index(m_cell_data->velox, corner_arrayoffset + index0);
-		velox_val[0] = m_vara->VecCnData[idcnVelocity_lag][i].x;
+		velox_val[0] = m_vara->corner_vector(idcnVelocity_lag, i).x;
 
 		double *veloy_val = (double *)sc_array_index(m_cell_data->veloy, corner_arrayoffset + index0);
-		veloy_val[0] = m_vara->VecCnData[idcnVelocity_lag][i].y;
+		veloy_val[0] = m_vara->corner_vector(idcnVelocity_lag, i).y;
 	}
 }
 
@@ -4426,26 +4434,28 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 		child_data4 = (quad_data_t *)outgoing[3]->p.user_data;
 
 		
-		parent_data->m_vara.IntCData[idCoarseningTag] = p4est_data_t::CoarseningEnum::CoarsenedJustNow;
+		parent_data->m_vara.int_cell(idCoarseningTag) = p4est_data_t::CoarseningEnum::CoarsenedJustNow;
 
 		
 		for (int idIndex = idcnCoords_cur; idIndex <= idcnVelocity_lag; idIndex++)
 		{
-			parent_data->m_vara.VecCnData[idIndex][quad_data_t::EnumCorner::LEFTBOTTOM] =
-				child_data1->m_vara.VecCnData[idIndex][quad_data_t::EnumCorner::LEFTBOTTOM];
-			parent_data->m_vara.VecCnData[idIndex][quad_data_t::EnumCorner::LEFTUP] =
-				child_data3->m_vara.VecCnData[idIndex][quad_data_t::EnumCorner::LEFTUP];
-			parent_data->m_vara.VecCnData[idIndex][quad_data_t::EnumCorner::RIGHTUP] =
-				child_data4->m_vara.VecCnData[idIndex][quad_data_t::EnumCorner::RIGHTUP];
-			parent_data->m_vara.VecCnData[idIndex][quad_data_t::EnumCorner::RIGHTBOTTOM] =
-				child_data2->m_vara.VecCnData[idIndex][quad_data_t::EnumCorner::RIGHTBOTTOM];
+			parent_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idIndex), quad_data_t::EnumCorner::LEFTBOTTOM) =
+				child_data1->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idIndex), quad_data_t::EnumCorner::LEFTBOTTOM);
+			parent_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idIndex), quad_data_t::EnumCorner::LEFTUP) =
+				child_data3->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idIndex), quad_data_t::EnumCorner::LEFTUP);
+			parent_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idIndex), quad_data_t::EnumCorner::RIGHTUP) =
+				child_data4->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idIndex), quad_data_t::EnumCorner::RIGHTUP);
+			parent_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idIndex), quad_data_t::EnumCorner::RIGHTBOTTOM) =
+				child_data2->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idIndex), quad_data_t::EnumCorner::RIGHTBOTTOM);
 		}
 
-		int idChildIndex;
+		// idChildIndex is typed per-loop scope below: VectorCornerVariableID
+		// in the geometry loop, DoubleCellVariableID in the physics loop.
 
 		
 		for (int idIndex = m_geometry_id::m_coord; idIndex <= m_geometry_id::m_velo; idIndex++)
 		{
+			VectorCornerVariableID idChildIndex;
 			switch (idIndex)
 			{
 			case m_geometry_id::m_coord:
@@ -4461,28 +4471,29 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			for (int cnid = 0; cnid < CNDIM; cnid++)
 			{
 				parent_data->m_vara.ChildrenCnGeomVara[idIndex][m_which_child::child1][cnid] =
-					child_data1->m_vara.VecCnData[idChildIndex][cnid];
+					child_data1->m_vara.corner_vector(idChildIndex, cnid);
 			}
 			for (int cnid = 0; cnid < CNDIM; cnid++)
 			{
 				parent_data->m_vara.ChildrenCnGeomVara[idIndex][m_which_child::child2][cnid] =
-					child_data2->m_vara.VecCnData[idChildIndex][cnid];
+					child_data2->m_vara.corner_vector(idChildIndex, cnid);
 			}
 			for (int cnid = 0; cnid < CNDIM; cnid++)
 			{
 				parent_data->m_vara.ChildrenCnGeomVara[idIndex][m_which_child::child3][cnid] =
-					child_data3->m_vara.VecCnData[idChildIndex][cnid];
+					child_data3->m_vara.corner_vector(idChildIndex, cnid);
 			}
 			for (int cnid = 0; cnid < CNDIM; cnid++)
 			{
 				parent_data->m_vara.ChildrenCnGeomVara[idIndex][m_which_child::child4][cnid] =
-					child_data4->m_vara.VecCnData[idChildIndex][cnid];
+					child_data4->m_vara.corner_vector(idChildIndex, cnid);
 			}
 		}
 
 		
 		for (int idIndex = m_physical_id::m_density; idIndex <= m_physical_id::m_internal_energy; idIndex++)
 		{
+			DoubleCellVariableID idChildIndex;
 			switch (idIndex)
 			{
 			case m_physical_id::m_density:
@@ -4496,13 +4507,13 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			}
 
 			parent_data->m_vara.ChildrenPhysicalVara[idIndex][m_which_child::child1] =
-				child_data1->m_vara.DouCData[idChildIndex];
+				child_data1->m_vara.cell(idChildIndex);
 			parent_data->m_vara.ChildrenPhysicalVara[idIndex][m_which_child::child2] =
-				child_data2->m_vara.DouCData[idChildIndex];
+				child_data2->m_vara.cell(idChildIndex);
 			parent_data->m_vara.ChildrenPhysicalVara[idIndex][m_which_child::child3] =
-				child_data3->m_vara.DouCData[idChildIndex];
+				child_data3->m_vara.cell(idChildIndex);
 			parent_data->m_vara.ChildrenPhysicalVara[idIndex][m_which_child::child4] =
-				child_data4->m_vara.DouCData[idChildIndex];
+				child_data4->m_vara.cell(idChildIndex);
 			if (parent_data->m_vara.ChildrenPhysicalVara[idIndex][m_which_child::child1] > m_eps &&
 				parent_data->m_vara.ChildrenPhysicalVara[idIndex][m_which_child::child2] > m_eps &&
 				parent_data->m_vara.ChildrenPhysicalVara[idIndex][m_which_child::child3] > m_eps &&
@@ -4516,48 +4527,48 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			}
 		}
 
-		parent_data->m_vara.DouCData[idMass] = child_data1->m_vara.DouCData[idMass] +
-			child_data2->m_vara.DouCData[idMass] +
-			child_data3->m_vara.DouCData[idMass] +
-			child_data4->m_vara.DouCData[idMass]; 
+		parent_data->m_vara.cell(idMass) = child_data1->m_vara.cell(idMass) +
+			child_data2->m_vara.cell(idMass) +
+			child_data3->m_vara.cell(idMass) +
+			child_data4->m_vara.cell(idMass); 
 
 		
 		CDoubleVector m_cell_coord[CNDIM];
-		for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = parent_data->m_vara.VecCnData[idcnCoords_cur][i]; }
-		parent_data->m_vara.DouCData[idVolume] = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-		parent_data->m_vara.DouCData[idDensity_cur] = parent_data->m_vara.DouCData[idMass] / parent_data->m_vara.DouCData[idVolume];
-		parent_data->m_vara.DouCData[idDensity_lag] = parent_data->m_vara.DouCData[idDensity_cur];
+		for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = parent_data->m_vara.corner_vector(idcnCoords_cur, i); }
+		parent_data->m_vara.cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+		parent_data->m_vara.cell(idDensity_cur) = parent_data->m_vara.cell(idMass) / parent_data->m_vara.cell(idVolume);
+		parent_data->m_vara.cell(idDensity_lag) = parent_data->m_vara.cell(idDensity_cur);
 		CDoubleVector center_point;
 		center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
-		parent_data->m_vara.VecCData[idCentroidCoord_cur] = center_point;
+		parent_data->m_vara.cell_vector(idCentroidCoord_cur) = center_point;
 
 		
-		parent_data->m_vara.VecCData[idCentroidVelo_cur] = (child_data1->m_vara.DouCData[idMass] * child_data1->m_vara.VecCData[idCentroidVelo_cur] +
-			child_data2->m_vara.DouCData[idMass] * child_data2->m_vara.VecCData[idCentroidVelo_cur] +
-			child_data3->m_vara.DouCData[idMass] * child_data3->m_vara.VecCData[idCentroidVelo_cur] +
-			child_data4->m_vara.DouCData[idMass] * child_data4->m_vara.VecCData[idCentroidVelo_cur])
-			/ parent_data->m_vara.DouCData[idMass];
-		parent_data->m_vara.VecCData[idCentroidVelo_lag] = parent_data->m_vara.VecCData[idCentroidVelo_cur];
+		parent_data->m_vara.cell_vector(idCentroidVelo_cur) = (child_data1->m_vara.cell(idMass) * child_data1->m_vara.cell_vector(idCentroidVelo_cur) +
+			child_data2->m_vara.cell(idMass) * child_data2->m_vara.cell_vector(idCentroidVelo_cur) +
+			child_data3->m_vara.cell(idMass) * child_data3->m_vara.cell_vector(idCentroidVelo_cur) +
+			child_data4->m_vara.cell(idMass) * child_data4->m_vara.cell_vector(idCentroidVelo_cur))
+			/ parent_data->m_vara.cell(idMass);
+		parent_data->m_vara.cell_vector(idCentroidVelo_lag) = parent_data->m_vara.cell_vector(idCentroidVelo_cur);
 
-		parent_data->m_vara.DouCData[idGamma] = (
-			child_data1->m_vara.DouCData[idGamma] +
-			child_data2->m_vara.DouCData[idGamma] +
-			child_data3->m_vara.DouCData[idGamma] +
-			child_data4->m_vara.DouCData[idGamma]) / P4EST_CHILDREN;
-
-		
-		parent_data->m_vara.DouCData[idTotalEnergy_cur] = (
-			child_data1->m_vara.DouCData[idMass] * child_data1->m_vara.DouCData[idTotalEnergy_cur] +
-			child_data2->m_vara.DouCData[idMass] * child_data2->m_vara.DouCData[idTotalEnergy_cur] +
-			child_data3->m_vara.DouCData[idMass] * child_data3->m_vara.DouCData[idTotalEnergy_cur] +
-			child_data4->m_vara.DouCData[idMass] * child_data4->m_vara.DouCData[idTotalEnergy_cur])
-			/ parent_data->m_vara.DouCData[idMass];
-		parent_data->m_vara.DouCData[idTotalEnergy_lag] = parent_data->m_vara.DouCData[idTotalEnergy_cur];
+		parent_data->m_vara.cell(idGamma) = (
+			child_data1->m_vara.cell(idGamma) +
+			child_data2->m_vara.cell(idGamma) +
+			child_data3->m_vara.cell(idGamma) +
+			child_data4->m_vara.cell(idGamma)) / P4EST_CHILDREN;
 
 		
-		parent_data->m_vara.DouCData[idInternalEnergy_cur] = parent_data->m_vara.DouCData[idTotalEnergy_cur] -
-			0.5 * (pow(parent_data->m_vara.VecCData[idCentroidVelo_cur].x, 2) + pow(parent_data->m_vara.VecCData[idCentroidVelo_cur].y, 2));
-		if (parent_data->m_vara.DouCData[idInternalEnergy_cur] > m_eps)
+		parent_data->m_vara.cell(idTotalEnergy_cur) = (
+			child_data1->m_vara.cell(idMass) * child_data1->m_vara.cell(idTotalEnergy_cur) +
+			child_data2->m_vara.cell(idMass) * child_data2->m_vara.cell(idTotalEnergy_cur) +
+			child_data3->m_vara.cell(idMass) * child_data3->m_vara.cell(idTotalEnergy_cur) +
+			child_data4->m_vara.cell(idMass) * child_data4->m_vara.cell(idTotalEnergy_cur))
+			/ parent_data->m_vara.cell(idMass);
+		parent_data->m_vara.cell(idTotalEnergy_lag) = parent_data->m_vara.cell(idTotalEnergy_cur);
+
+		
+		parent_data->m_vara.cell(idInternalEnergy_cur) = parent_data->m_vara.cell(idTotalEnergy_cur) -
+			0.5 * (pow(parent_data->m_vara.cell_vector(idCentroidVelo_cur).x, 2) + pow(parent_data->m_vara.cell_vector(idCentroidVelo_cur).y, 2));
+		if (parent_data->m_vara.cell(idInternalEnergy_cur) > m_eps)
 		{
 
 		}
@@ -4566,20 +4577,20 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			P4EST_GLOBAL_PRODUCTIONF("The value of internal energy is illegal in refining!\n");
 			abort();
 		}
-		parent_data->m_vara.DouCData[idInternalEnergy_lag] = parent_data->m_vara.DouCData[idTotalEnergy_lag] -
-			0.5 * (pow(parent_data->m_vara.VecCData[idCentroidVelo_lag].x, 2) + pow(parent_data->m_vara.VecCData[idCentroidVelo_lag].y, 2));
-		parent_data->m_vara.DouCData[idInternalEnergy_lag] = parent_data->m_vara.DouCData[idInternalEnergy_cur];
+		parent_data->m_vara.cell(idInternalEnergy_lag) = parent_data->m_vara.cell(idTotalEnergy_lag) -
+			0.5 * (pow(parent_data->m_vara.cell_vector(idCentroidVelo_lag).x, 2) + pow(parent_data->m_vara.cell_vector(idCentroidVelo_lag).y, 2));
+		parent_data->m_vara.cell(idInternalEnergy_lag) = parent_data->m_vara.cell(idInternalEnergy_cur);
 
 		
-		parent_data->m_vara.DouCData[idPressure_lag] = PhysicalAlg::EquationOfState(
-			parent_data->m_vara.DouCData[idGamma],
-			parent_data->m_vara.DouCData[idDensity_lag],
-			parent_data->m_vara.DouCData[idInternalEnergy_lag]);
-		parent_data->m_vara.DouCData[idPressure_cur] = parent_data->m_vara.DouCData[idPressure_lag];
-		parent_data->m_vara.DouCData[idSoundSpeed] = PhysicalAlg::CalculateSoundSpeed(
-			parent_data->m_vara.DouCData[idGamma],
-			parent_data->m_vara.DouCData[idPressure_cur],
-			parent_data->m_vara.DouCData[idDensity_cur]);
+		parent_data->m_vara.cell(idPressure_lag) = PhysicalAlg::EquationOfState(
+			parent_data->m_vara.cell(idGamma),
+			parent_data->m_vara.cell(idDensity_lag),
+			parent_data->m_vara.cell(idInternalEnergy_lag));
+		parent_data->m_vara.cell(idPressure_cur) = parent_data->m_vara.cell(idPressure_lag);
+		parent_data->m_vara.cell(idSoundSpeed) = PhysicalAlg::CalculateSoundSpeed(
+			parent_data->m_vara.cell(idGamma),
+			parent_data->m_vara.cell(idPressure_cur),
+			parent_data->m_vara.cell(idDensity_cur));
 	}
 	else
 	{
@@ -4606,12 +4617,12 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 						outgoing[0]->x, outgoing[0]->y, outgoing[0]->level, incoming[i]->x, incoming[i]->y, incoming[i]->level);
 					for (int c = 0; c < CNDIM; ++c) {
 						char name[64];
-						sprintf(name, "parent_lag%d", c); trace_vector(f, name, parent_data->m_vara.VecCnData[idcnVelocity_lag][c]);
+						sprintf(name, "parent_lag%d", c); trace_vector(f, name, parent_data->m_vara.corner_vector(idcnVelocity_lag, c));
 						sprintf(name, "buffer_lag%d", c); trace_vector(f, name, parent_data->m_vara.ChildrenCnGeomVara[m_geometry_id::m_velo][i][c]);
 					}
 					fprintf(f, " parent_rho=%.17e buffer_rho=%.17e parent_ie=%.17e buffer_ie=%.17e\n",
-						parent_data->m_vara.DouCData[idDensity_lag], parent_data->m_vara.ChildrenPhysicalVara[m_physical_id::m_density][i],
-						parent_data->m_vara.DouCData[idInternalEnergy_lag], parent_data->m_vara.ChildrenPhysicalVara[m_physical_id::m_internal_energy][i]);
+						parent_data->m_vara.cell(idDensity_lag), parent_data->m_vara.ChildrenPhysicalVara[m_physical_id::m_density][i],
+						parent_data->m_vara.cell(idInternalEnergy_lag), parent_data->m_vara.ChildrenPhysicalVara[m_physical_id::m_internal_energy][i]);
 					fclose(f);
 				}
 			}
@@ -4620,26 +4631,26 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			double px = 0.;
 			double py = 0.;
 			if (refine_trace_enabled()) {
-				px = parent_data->m_vara.VecCData[idCentroidCoord_cur].x;
-				py = parent_data->m_vara.VecCData[idCentroidCoord_cur].y;
+				px = parent_data->m_vara.cell_vector(idCentroidCoord_cur).x;
+				py = parent_data->m_vara.cell_vector(idCentroidCoord_cur).y;
 				char fname[256];
 				sprintf(fname, "refine_dbg_%d_%d.txt", p4est->mpisize, p4est->mpirank);
 				f_dbg = fopen(fname, "a");
 				if (f_dbg) {
 					fprintf(f_dbg, "REFINE_STEP_%d_PARENT at (%.6f, %.6f): parent SoundSpeed=%e, mass=%e, vol=%e\n",
-						p4est_data->current_step, px, py, parent_data->m_vara.DouCData[idSoundSpeed], parent_data->m_vara.DouCData[idMass], parent_data->m_vara.DouCData[idVolume]);
+						p4est_data->current_step, px, py, parent_data->m_vara.cell(idSoundSpeed), parent_data->m_vara.cell(idMass), parent_data->m_vara.cell(idVolume));
 				}
 			}
 			
 			for (int j = 0; j < idDoubleCellVariableNum; j++)
 			{
 				
-				child_data->m_vara.DouCData[j] = parent_data->m_vara.DouCData[j];
+				child_data->m_vara.cell(static_cast<DoubleCellVariableID>(j)) = parent_data->m_vara.cell(static_cast<DoubleCellVariableID>(j));
 				if (j == idSoundSpeed && f_dbg) {
 					fprintf(f_dbg, "REFINE_STEP_%d_CHILD at (%.6f, %.6f): child SoundSpeed=%e\n",
-						p4est_data->current_step, px, py, child_data->m_vara.DouCData[idSoundSpeed]);
+						p4est_data->current_step, px, py, child_data->m_vara.cell(idSoundSpeed));
 				}
-				if (parent_data->m_vara.DouCData[idInternalEnergy_cur] > m_eps)
+				if (parent_data->m_vara.cell(idInternalEnergy_cur) > m_eps)
 				{
 				}
 				else
@@ -4656,24 +4667,24 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 				for (int k = 0; k < CNDIM; k++)
 				{
 					
-					child_data->m_vara.DouCnData[j][k] = parent_data->m_vara.DouCnData[j][k];
+					child_data->m_vara.corner(static_cast<DoubleCornerVariableID>(j), k) = parent_data->m_vara.corner(static_cast<DoubleCornerVariableID>(j), k);
 				}
 			}
 			for (int j = 0; j < idIntCellVariableNum; j++)
 			{
-				child_data->m_vara.IntCData[j] = parent_data->m_vara.IntCData[j];
+				child_data->m_vara.int_cell(static_cast<IntCellVariableID>(j)) = parent_data->m_vara.int_cell(static_cast<IntCellVariableID>(j));
 			}
 			for (int j = 0; j < idVectorCellVariableNum; j++)
 			{
 				
-				child_data->m_vara.VecCData[j] = parent_data->m_vara.VecCData[j];
+				child_data->m_vara.cell_vector(static_cast<VectorCellVariableID>(j)) = parent_data->m_vara.cell_vector(static_cast<VectorCellVariableID>(j));
 			}
 			for (int j = 0; j < idVectorCornerVariableNum; j++)
 			{
 				for (int k = 0; k < CNDIM; k++)
 				{
 					
-					child_data->m_vara.VecCnData[j][k] = parent_data->m_vara.VecCnData[j][k];
+					child_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(j), k) = parent_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(j), k);
 				}
 			}
 
@@ -4692,7 +4703,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 
 				for (int cnid = 0; cnid < CNDIM; cnid++)
 				{
-					child_data->m_vara.VecCnData[idChildrenIndex][cnid] =
+					child_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idChildrenIndex), cnid) =
 						parent_data->m_vara.ChildrenCnGeomVara[idParentGeometry][i][cnid];
 
 					if (idChildrenIndex == idcnCoords_lag)
@@ -4715,10 +4726,10 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 					idParentPhysical = m_physical_id::m_internal_energy;
 				}
 
-				child_data->m_vara.DouCData[idChildrenIndex] =
+				child_data->m_vara.cell(static_cast<DoubleCellVariableID>(idChildrenIndex)) =
 					parent_data->m_vara.ChildrenPhysicalVara[idParentPhysical][i];
 				double m_value = parent_data->m_vara.ChildrenPhysicalVara[idParentPhysical][i];
-				if (child_data->m_vara.DouCData[idChildrenIndex] > m_eps)
+				if (child_data->m_vara.cell(static_cast<DoubleCellVariableID>(idChildrenIndex)) > m_eps)
 				{
 				}
 				else
@@ -4730,7 +4741,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			
 			for (int idVCn = idcnCoords_cur; idVCn <= idcnCoords_lag; idVCn++)
 			{
-				int idVC;
+				VectorCellVariableID idVC;
 				switch (idVCn)
 				{
 				case idcnCoords_cur:
@@ -4746,29 +4757,29 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 					break;
 				}
 				CDoubleVector m_cell_coord[CNDIM];
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = child_data->m_vara.VecCnData[idVCn][i]; }
+				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = child_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idVCn), i); }
 				CDoubleVector center_point;
 				center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
-				child_data->m_vara.VecCData[idVC] = center_point;
+				child_data->m_vara.cell_vector(idVC) = center_point;
 
 				if (idVCn == idcnCoords_cur)
 				{
-					child_data->m_vara.DouCData[idVolume] = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-					child_data->m_vara.DouCData[idMass] = PhysicalAlg::CalculateCellMass(
-						child_data->m_vara.DouCData[idVolume], child_data->m_vara.DouCData[idDensity_cur]);
+					child_data->m_vara.cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+					child_data->m_vara.cell(idMass) = PhysicalAlg::CalculateCellMass(
+						child_data->m_vara.cell(idVolume), child_data->m_vara.cell(idDensity_cur));
 				}
 			}
-			children_total_energy += child_data->m_vara.DouCData[idMass] * child_data->m_vara.DouCData[idTotalEnergy_lag];
-			children_total_mass += child_data->m_vara.DouCData[idMass];
-			children_energy_per_mass += child_data->m_vara.DouCData[idTotalEnergy_lag];
+			children_total_energy += child_data->m_vara.cell(idMass) * child_data->m_vara.cell(idTotalEnergy_lag);
+			children_total_mass += child_data->m_vara.cell(idMass);
+			children_energy_per_mass += child_data->m_vara.cell(idTotalEnergy_lag);
 
 			child_vara = (CVariable *)&child_data->m_vara;
 			generate_children_info_from_parent(p4est_data, child_vara);
 		}
 
-		double parent_total_energy = parent_data->m_vara.DouCData[idMass] * parent_data->m_vara.DouCData[idTotalEnergy_lag];
-		double parent_energy_per_mass = parent_data->m_vara.DouCData[idTotalEnergy_lag];
-		double parent_total_mass = parent_data->m_vara.DouCData[idMass];
+		double parent_total_energy = parent_data->m_vara.cell(idMass) * parent_data->m_vara.cell(idTotalEnergy_lag);
+		double parent_energy_per_mass = parent_data->m_vara.cell(idTotalEnergy_lag);
+		double parent_total_mass = parent_data->m_vara.cell(idMass);
 		if (abs((parent_total_energy - children_total_energy)/ parent_total_energy) > 1e-10)
 		{
 			P4EST_GLOBAL_PRODUCTIONF("The total energy is not conservative during refining!\n");
@@ -4815,7 +4826,7 @@ static void quadrant_copy_coordy_to_array_callback(p4est_iter_volume_info_t *inf
 	for (int i = 0; i < P4EST_CHILDREN; i++) {
 		int index0 = convert_user_define_index_to_which_corner(i);
 		double  *this_ptr = (double *)sc_array_index(array_data, arrayoffset + index0);
-		this_ptr[0] = m_vara->VecCnData[idcnCoords_lag][i].y;
+		this_ptr[0] = m_vara->corner_vector(idcnCoords_lag, i).y;
 	}
 }
 
@@ -4827,10 +4838,10 @@ quadrant_set_default_coarsening_tag_callback(p4est_iter_volume_info_t *info, voi
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	
 	
-	data->m_vara.IntCData[idCoarseningTag] = p4est_data_t::CoarseningEnum::NotCoarsenedJustNow;
+	data->m_vara.int_cell(idCoarseningTag) = p4est_data_t::CoarseningEnum::NotCoarsenedJustNow;
 
 	
-	data->m_vara.IntCData[idAllowCoarsening] = p4est_data_t::CoarseningEnum::CoarsingAllowed;
+	data->m_vara.int_cell(idAllowCoarsening) = p4est_data_t::CoarseningEnum::CoarsingAllowed;
 }
 
 static void set_default_coarsening_tag(p4est_t *p4est)
@@ -4859,16 +4870,16 @@ quadrant_set_default_refining_tag_callback(p4est_iter_volume_info_t *info, void 
 	
 	for (int cnid = 0; cnid < CNDIM; cnid++)
 	{
-		m_coord[cnid] = m_vara->VecCnData[idcnCoords_lag][CNDIM - 1 - cnid];
+		m_coord[cnid] = m_vara->corner_vector(idcnCoords_lag, CNDIM - 1 - cnid);
 
 	}
 	int IsConcaveQuad = GeometryAlg::is_concave_quad(m_coord);
-	m_vara->IntCData[idAllowRefining] = IsConcaveQuad;
+	m_vara->int_cell(idAllowRefining) = IsConcaveQuad;
 
 	if (IsConcaveQuad < 0)
 	{
 		
-		data->m_vara.IntCData[idAllowRefining] = p4est_data_t::RefiningEnum::RefiningAllowed;
+		data->m_vara.int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::RefiningAllowed;
 	}
 	else
 	{
@@ -4884,7 +4895,7 @@ quadrant_predict_refining_quads_callback(p4est_iter_volume_info_t *info, void *u
 	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	int idCPara;
+	DoubleCellVariableID idCPara;
 	p4est_qcoord_t		qx = info->quad->x;
 	p4est_qcoord_t		qy = info->quad->y;
 	int					level = info->quad->level;
@@ -4906,20 +4917,20 @@ quadrant_predict_refining_quads_callback(p4est_iter_volume_info_t *info, void *u
 
 	if (level < p4est_data->minus_level)
 	{
-		m_vara->IntCData[idAllowRefining] = p4est_data_t::RefiningEnum::MustRefing;
+		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::MustRefing;
 	}
 	if (level >= p4est_data->max_level)
 	{
-		m_vara->IntCData[idAllowRefining] = p4est_data_t::RefiningEnum::RefiningNotAllowed;
+		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::RefiningNotAllowed;
 	}
 
-	if (m_vara->DouCData[idCPara] > p4est_data->refine_err)
+	if (m_vara->cell(idCPara) > p4est_data->refine_err)
 	{
-		m_vara->IntCData[idAllowRefining] = p4est_data_t::RefiningEnum::MustRefing;
+		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::MustRefing;
 	}
 	else
 	{
-		m_vara->IntCData[idAllowRefining] = p4est_data_t::RefiningEnum::RefiningNotAllowed;
+		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::RefiningNotAllowed;
 	}
 }
 
@@ -5008,7 +5019,9 @@ quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, voi
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 	p4est_t			*p4est = info->p4est;
 
-	int idCPara, idEPara, idCNPara;
+	DoubleCellVariableID idCPara;
+	DoubleEdgeVariableID idEPara;
+	DoubleCornerVariableID idCNPara;
 
 	switch (p4est_data->refine_coarsen_enum)
 	{
@@ -5029,16 +5042,16 @@ quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, voi
 	}
 
 	
-	m_vara->DouCData[idCPara] = 0.;
+	m_vara->cell(idCPara) = 0.;
 
 	for (int i = 0; i < CNDIM; i++)
 	{
-		m_vara->DouEData[idEPara][i] = 0.;
+		m_vara->edge(idEPara, i) = 0.;
 	}
 
 	for (int i = 0; i < CNDIM; i++)
 	{
-		m_vara->DouCnData[idCNPara][i] = 0.;
+		m_vara->corner(idCNPara, i) = 0.;
 	}
 }
 
@@ -5327,7 +5340,7 @@ static void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 
 	CDoubleVector m_cell_coord[CNDIM];
-	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->VecCnData[idcnCoords_lag][i]; }
+	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_lag, i); }
 
 	CDoubleVector center_point;
 	center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
@@ -5346,10 +5359,10 @@ static void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *
 		distance = fabs(center_point.y);
 	}
 	p4est_data->DistanceFile << blank << blank << distance <<
-		blank << blank << m_vara->DouCData[idDensity_lag] <<
-		blank << blank << m_vara->DouCData[idPressure_lag] <<
-		blank << blank << m_vara->DouCData[idInternalEnergy_lag] <<
-		blank << blank << m_vara->DouCData[idTotalEnergy_lag] << endl;
+		blank << blank << m_vara->cell(idDensity_lag) <<
+		blank << blank << m_vara->cell(idPressure_lag) <<
+		blank << blank << m_vara->cell(idInternalEnergy_lag) <<
+		blank << blank << m_vara->cell(idTotalEnergy_lag) << endl;
 }
 
 static void write_distance_profiles(p4est_t *p4est)
@@ -5716,15 +5729,15 @@ static void debug_quadrant_copy_variable_to_array_callback(p4est_iter_volume_inf
 	*(double *)sc_array_index(m_cell_data->pressure_c3_array, local_id) = quad_data->m_cndata[3].hdata[0].pi;
 
 	// Corner velocities
-	*(double *)sc_array_index(m_cell_data->velou_c0_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][0].x;
-	*(double *)sc_array_index(m_cell_data->velou_c1_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][1].x;
-	*(double *)sc_array_index(m_cell_data->velou_c2_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][2].x;
-	*(double *)sc_array_index(m_cell_data->velou_c3_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][3].x;
+	*(double *)sc_array_index(m_cell_data->velou_c0_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 0).x;
+	*(double *)sc_array_index(m_cell_data->velou_c1_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 1).x;
+	*(double *)sc_array_index(m_cell_data->velou_c2_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 2).x;
+	*(double *)sc_array_index(m_cell_data->velou_c3_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 3).x;
 
-	*(double *)sc_array_index(m_cell_data->velov_c0_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][0].y;
-	*(double *)sc_array_index(m_cell_data->velov_c1_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][1].y;
-	*(double *)sc_array_index(m_cell_data->velov_c2_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][2].y;
-	*(double *)sc_array_index(m_cell_data->velov_c3_array, local_id) = m_vara->VecCnData[idcnVelocity_lag][3].y;
+	*(double *)sc_array_index(m_cell_data->velov_c0_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 0).y;
+	*(double *)sc_array_index(m_cell_data->velov_c1_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 1).y;
+	*(double *)sc_array_index(m_cell_data->velov_c2_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 2).y;
+	*(double *)sc_array_index(m_cell_data->velov_c3_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 3).y;
 }
 
 void p4est_debug_output_vtu(p4est_t *p4est, const char *prefix, int step, int location_id)

@@ -924,6 +924,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 - 建立 accessor 只读一致性测试（`python/test_variable_accessors.py`）：同一内存索引经 accessor 读写与旧裸数组逐字段一致；
 - **专项验收**：每批 G0，子里程碑结束 G1。
 
+**完成记录（2026-08-04）**：起点提交 `5c93613`（第一批：`cell/corner/edge/corner_vector` accessor + 热力学 `cell()` 批次）。本子里程碑继续补齐 `cell_vector/edge_vector/int_cell/int_edge` 四个 accessor 与一致性测试，并完成 `main.cpp` + `src/amr/amr_criteria.h` 的全量机械迁移（588 处 `数组[索引]`→accessor，覆盖热力学/几何/角点/边）。迁移后修复 typed accessor 暴露的 88 处动态 `int` 索引调用点（编译器 `invalid conversion from 'int' to <枚举>`）：① 字段选择器变量改类型化声明——`idCPara`→`DoubleCellVariableID`、`idEPara`→`DoubleEdgeVariableID`、`idCNPara`→`DoubleCornerVariableID`、`idCnIndex`→`VectorCornerVariableID`、`idCIndex`→`DoubleCellVariableID`；② `idChildIndex`（转移回调）按几何循环取 `VectorCornerVariableID`、物理循环取 `DoubleCellVariableID` 两个独立作用域分别声明；③ 循环计数器保留 `int`（C++14 枚举不支持 `++` 与 `0` 初始化），访问器调用处显式 `static_cast<枚举类型>`。另删除两处死代码赋值（`idCPara = idCentroidCoord_cur`：`Lagrangian_refine_fixed_estimate` 与 `RefineErrorEstimate`），该赋值将 `VectorCellVariableID` 混入 `DoubleCellVariableID` 但变量从未被读取（Distance 分支提前返回）。收口门禁：G0（`python/test_variable_accessors.py` PASS + 编译通过）；G1 的 Noh Uniform（4112）、Sod AMR（3046）、Sedov AMR（3933）全部 PASS 且 `param.ini` 恢复；G3 四核 Sod AMR（34.5s）与四核 Sedov AMR（27.3s）均对并行黄金参考 PASS。状态：**完成**。下一子里程碑为 M2.3 状态不变量检查。
+
 #### M2.3 状态不变量检查
 
 - 增加可开关的体积、质量、EOS、声速、质心和总能量检查；

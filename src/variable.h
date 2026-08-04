@@ -241,6 +241,50 @@ public:
 		return VecCnData[id][corner_id];
 	}
 
+	inline CDoubleVector &cell_vector(VectorCellVariableID id) noexcept
+	{
+		return VecCData[id];
+	}
+
+	inline const CDoubleVector &cell_vector(
+		VectorCellVariableID id) const noexcept
+	{
+		return VecCData[id];
+	}
+
+	inline CDoubleVector &edge_vector(
+		VectorEdgeVariableID id, int edge_id) noexcept
+	{
+		return VecEdata[id][edge_id];
+	}
+
+	inline const CDoubleVector &edge_vector(
+		VectorEdgeVariableID id, int edge_id) const noexcept
+	{
+		return VecEdata[id][edge_id];
+	}
+
+	inline int &int_cell(IntCellVariableID id) noexcept
+	{
+		return IntCData[id];
+	}
+
+	inline const int &int_cell(IntCellVariableID id) const noexcept
+	{
+		return IntCData[id];
+	}
+
+	inline int &int_edge(IntEdgeVariableID id, int edge_id) noexcept
+	{
+		return IntEData[id][edge_id];
+	}
+
+	inline const int &int_edge(
+		IntEdgeVariableID id, int edge_id) const noexcept
+	{
+		return IntEData[id][edge_id];
+	}
+
 	CVariable();
 	~CVariable();
 	void CVariableRisize();

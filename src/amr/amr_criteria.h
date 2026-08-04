@@ -15,7 +15,7 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 	quad_data_t  *data = (quad_data_t *)q->p.user_data;
 	CVariable    *m_vara = (CVariable *)&data->m_vara;
-	int           idCPara = idCDensityGradient;
+	DoubleCellVariableID idCPara = idCDensityGradient;
 	int           level = q->level;
 
 	switch (p4est_data->refine_coarsen_enum)
@@ -27,7 +27,9 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 		idCPara = idCDensityGradient;
 		break;
 	case RefineCriteria::Distance:
-		idCPara = idCentroidCoord_cur;
+		// idCentroidCoord_cur is a VectorCellVariableID, incompatible with the
+		// DoubleCellVariableID idCPara. The assignment was dead code: the
+		// Distance path returns early below before cell(idCPara) is read.
 		break;
 	default:
 		break;
@@ -41,8 +43,8 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 	}
 
 	if (p4est_data->refine_coarsen_enum == RefineCriteria::Distance) {
-		double dist = std::sqrt(std::pow(m_vara->VecCData[idCentroidCoord_cur].x, 2) +
-			                    std::pow(m_vara->VecCData[idCentroidCoord_cur].y, 2));
+		double dist = std::sqrt(std::pow(m_vara->cell_vector(idCentroidCoord_cur).x, 2) +
+			                    std::pow(m_vara->cell_vector(idCentroidCoord_cur).y, 2));
 		if (std::fabs(dist - p4est_data->shock_velocity * p4est_data->current_time) < p4est_data->refine_err) {
 			return 1;
 		} else {
@@ -50,7 +52,7 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 		}
 	}
 
-	if (m_vara->DouCData[idCPara] > p4est_data->refine_err) {
+	if (m_vara->cell(idCPara) > p4est_data->refine_err) {
 		return 1;
 	} else {
 		return 0;
@@ -61,7 +63,7 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 inline int CoarsenErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *children[])
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	int idCPara = idCDensityGradient;
+	DoubleCellVariableID idCPara = idCDensityGradient;
 	AMRCoarsenPolicy::IndicatorMode mode = AMRCoarsenPolicy::IndicatorMode::Gradient;
 
 	switch (p4est_data->refine_coarsen_enum)
@@ -82,17 +84,17 @@ inline int CoarsenErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est
 	std::array<AMRCoarsenPolicy::ChildIndicator, P4EST_CHILDREN> family;
 	for (int i = 0; i < P4EST_CHILDREN; i++) {
 		quad_data_t *data = (quad_data_t *)children[i]->p.user_data;
-		double indicator = data->m_vara.DouCData[idCPara];
+		double indicator = data->m_vara.cell(idCPara);
 		if (mode == AMRCoarsenPolicy::IndicatorMode::DistanceFromShock) {
 			const double dist = std::sqrt(
-				std::pow(data->m_vara.VecCData[idCentroidCoord_cur].x, 2) +
-				std::pow(data->m_vara.VecCData[idCentroidCoord_cur].y, 2));
+				std::pow(data->m_vara.cell_vector(idCentroidCoord_cur).x, 2) +
+				std::pow(data->m_vara.cell_vector(idCentroidCoord_cur).y, 2));
 			indicator = std::fabs(
 				dist - p4est_data->shock_velocity * p4est_data->current_time);
 		}
 		family[i] = AMRCoarsenPolicy::ChildIndicator{
 			children[i]->level,
-			data->m_vara.IntCData[idAllowCoarsening] !=
+			data->m_vara.int_cell(idAllowCoarsening) !=
 				p4est_data_t::CoarseningEnum::CoarsingNotAllowed,
 			indicator
 		};

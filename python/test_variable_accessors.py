@@ -57,6 +57,35 @@ int main()
                 &value.VecCnData[id][corner]);
         }
     }
+    for (int id = 0; id < idVectorCellVariableNum; ++id) {
+        VectorCellVariableID typed = static_cast<VectorCellVariableID>(id);
+        assert(&value.cell_vector(typed) == &value.VecCData[id]);
+        assert(&constant.cell_vector(typed) == &value.VecCData[id]);
+        value.cell_vector(typed) = CDoubleVector(100.0 + id, 200.0 + id);
+        assert(value.VecCData[id].x == 100.0 + id);
+        assert(value.VecCData[id].y == 200.0 + id);
+    }
+    for (int id = 0; id < idVectorEdgeVariableNum; ++id) {
+        for (int edge = 0; edge < CNDIM; ++edge) {
+            VectorEdgeVariableID typed =
+                static_cast<VectorEdgeVariableID>(id);
+            assert(&value.edge_vector(typed, edge) ==
+                &value.VecEdata[id][edge]);
+        }
+    }
+    for (int id = 0; id < idIntCellVariableNum; ++id) {
+        IntCellVariableID typed = static_cast<IntCellVariableID>(id);
+        assert(&value.int_cell(typed) == &value.IntCData[id]);
+        assert(&constant.int_cell(typed) == &value.IntCData[id]);
+        value.int_cell(typed) = 7 + id;
+        assert(value.IntCData[id] == 7 + id);
+    }
+    for (int id = 0; id < idIntEdgeVariableNum; ++id) {
+        for (int edge = 0; edge < CNDIM; ++edge) {
+            IntEdgeVariableID typed = static_cast<IntEdgeVariableID>(id);
+            assert(&value.int_edge(typed, edge) == &value.IntEData[id][edge]);
+        }
+    }
 
     return 0;
 }
