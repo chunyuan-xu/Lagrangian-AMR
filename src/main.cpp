@@ -1213,22 +1213,22 @@ static void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree,
 	PhysicalAlg::InitCondition(p4est_data->which_case,
 		p4est_data->coord_type, int(qx), int(qy), index_i, index_j, width_num,
 		cnCoordCur, cnCoordLag, cnVeloCur, cnVeloLag,
-		m_vara->DouCData[idDensity_cur],
-		m_vara->DouCData[idDensity_lag],
-		m_vara->DouCData[idVolume],
-		m_vara->DouCData[idMass],
+		m_vara->cell(idDensity_cur),
+		m_vara->cell(idDensity_lag),
+		m_vara->cell(idVolume),
+		m_vara->cell(idMass),
 		m_vara->VecCData[idCentroidCoord_cur],
 		m_vara->VecCData[idCentroidCoord_lag],
 		m_vara->VecCData[idCentroidVelo_cur],
 		m_vara->VecCData[idCentroidVelo_lag],
-		m_vara->DouCData[idInternalEnergy_cur],
-		m_vara->DouCData[idInternalEnergy_lag],
-		m_vara->DouCData[idPressure_cur],
-		m_vara->DouCData[idPressure_lag],
-		m_vara->DouCData[idTotalEnergy_cur],
-		m_vara->DouCData[idTotalEnergy_lag],
-		m_vara->DouCData[idSoundSpeed],
-		m_vara->DouCData[idGamma],
+		m_vara->cell(idInternalEnergy_cur),
+		m_vara->cell(idInternalEnergy_lag),
+		m_vara->cell(idPressure_cur),
+		m_vara->cell(idPressure_lag),
+		m_vara->cell(idTotalEnergy_cur),
+		m_vara->cell(idTotalEnergy_lag),
+		m_vara->cell(idSoundSpeed),
+		m_vara->cell(idGamma),
 		p4est_data->TopBoun,
 		p4est_data->BottomBoun,
 		p4est_data->LeftBoun,
@@ -1262,17 +1262,19 @@ static void quadrant_predict_timestep_callback(p4est_iter_volume_info_t *info, v
 		corner_coords[cnid] = m_vara->VecCnData[idcnCoords_cur][cnid];
 	}
 
-	if (m_vara->DouCData[idSoundSpeed] < m_eps)
+	if (m_vara->cell(idSoundSpeed) < m_eps)
 	{
 
 	}
 	
 	
-	double quad_cfl_dt = PhysicalAlg::get_CourantTimeStep(corner_coords, m_vara->DouCData[idSoundSpeed]);
+	double quad_cfl_dt = PhysicalAlg::get_CourantTimeStep(
+		corner_coords, m_vara->cell(idSoundSpeed));
 
 	
-	double quad_vol_dt = PhysicalAlg::get_VolumeVarationTimeStep(p4est_data->volume_varation_torelarion,
-		m_vara->DouCData[idDivergence]);
+	double quad_vol_dt = PhysicalAlg::get_VolumeVarationTimeStep(
+		p4est_data->volume_varation_torelarion,
+		m_vara->cell(idDivergence));
 
 	
 	double quad_increased_dt = p4est_data->delta_time * p4est_data->dt_increase_percent;
@@ -1355,7 +1357,10 @@ static void quadrant_compute_soundspeed_callback(p4est_iter_volume_info_t *info,
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	m_vara->DouCData[idSoundSpeed] = PhysicalAlg::CalculateSoundSpeed(m_vara->DouCData[idGamma], m_vara->DouCData[idPressure_lag], m_vara->DouCData[idDensity_lag]);
+	m_vara->cell(idSoundSpeed) = PhysicalAlg::CalculateSoundSpeed(
+		m_vara->cell(idGamma),
+		m_vara->cell(idPressure_lag),
+		m_vara->cell(idDensity_lag));
 }
 
 
@@ -4291,10 +4296,10 @@ static void quadrant_copy_cell_variable_to_array_callback(p4est_iter_volume_info
 	double		*rho_val = (double *)sc_array_index(m_cell_data->density_array, arrayoffset);
 	double		*ie_val = (double *)sc_array_index(m_cell_data->internal_energy_array, arrayoffset);
 
-	*p_val = m_vara->DouCData[idPressure_lag];
+	*p_val = m_vara->cell(idPressure_lag);
 	*t_val = 0.0;
-	*rho_val = m_vara->DouCData[idDensity_lag];
-	*ie_val = m_vara->DouCData[idInternalEnergy_lag];
+	*rho_val = m_vara->cell(idDensity_lag);
+	*ie_val = m_vara->cell(idInternalEnergy_lag);
 }
 
 static void quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *info, void *user_data)
@@ -4318,10 +4323,10 @@ static void quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *i
 	double		*rho_val = (double *)sc_array_index(m_cell_data->density_array, arrayoffset);
 	double		*ie_val = (double *)sc_array_index(m_cell_data->internal_energy_array, arrayoffset);
 
-	*p_val = m_vara->DouCData[idPressure_lag];
+	*p_val = m_vara->cell(idPressure_lag);
 	*t_val = 0.0;
-	*rho_val = m_vara->DouCData[idDensity_lag];
-	*ie_val = m_vara->DouCData[idInternalEnergy_lag];
+	*rho_val = m_vara->cell(idDensity_lag);
+	*ie_val = m_vara->cell(idInternalEnergy_lag);
 	for (int i = 0; i < CNDIM; i++) {
 		int index0 = convert_user_define_index_to_which_corner(i);
 		double *coordx_val = (double *)sc_array_index(m_cell_data->coordx, corner_arrayoffset + index0);
@@ -5697,9 +5702,12 @@ static void debug_quadrant_copy_variable_to_array_callback(p4est_iter_volume_inf
 
 	CVariable *m_vara = (CVariable *)&quad_data->m_vara;
 
-	*(double *)sc_array_index(m_cell_data->density_array, local_id) = m_vara->DouCData[idDensity_lag];
-	*(double *)sc_array_index(m_cell_data->pressure_array, local_id) = m_vara->DouCData[idPressure_lag];
-	*(double *)sc_array_index(m_cell_data->internal_energy_array, local_id) = m_vara->DouCData[idInternalEnergy_lag];
+	*(double *)sc_array_index(m_cell_data->density_array, local_id) =
+		m_vara->cell(idDensity_lag);
+	*(double *)sc_array_index(m_cell_data->pressure_array, local_id) =
+		m_vara->cell(idPressure_lag);
+	*(double *)sc_array_index(m_cell_data->internal_energy_array, local_id) =
+		m_vara->cell(idInternalEnergy_lag);
 
 	// Corner pressures (using hdata[0].pi as proxy for half-edge pressure)
 	*(double *)sc_array_index(m_cell_data->pressure_c0_array, local_id) = quad_data->m_cndata[0].hdata[0].pi;

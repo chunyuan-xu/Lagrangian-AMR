@@ -197,6 +197,50 @@ public:
 
 
 public:
+	inline double &cell(DoubleCellVariableID id) noexcept
+	{
+		return DouCData[id];
+	}
+
+	inline const double &cell(DoubleCellVariableID id) const noexcept
+	{
+		return DouCData[id];
+	}
+
+	inline double &corner(DoubleCornerVariableID id, int corner_id) noexcept
+	{
+		return DouCnData[id][corner_id];
+	}
+
+	inline const double &corner(
+		DoubleCornerVariableID id, int corner_id) const noexcept
+	{
+		return DouCnData[id][corner_id];
+	}
+
+	inline double &edge(DoubleEdgeVariableID id, int edge_id) noexcept
+	{
+		return DouEData[id][edge_id];
+	}
+
+	inline const double &edge(
+		DoubleEdgeVariableID id, int edge_id) const noexcept
+	{
+		return DouEData[id][edge_id];
+	}
+
+	inline CDoubleVector &corner_vector(
+		VectorCornerVariableID id, int corner_id) noexcept
+	{
+		return VecCnData[id][corner_id];
+	}
+
+	inline const CDoubleVector &corner_vector(
+		VectorCornerVariableID id, int corner_id) const noexcept
+	{
+		return VecCnData[id][corner_id];
+	}
+
 	CVariable();
 	~CVariable();
 	void CVariableRisize();
