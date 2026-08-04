@@ -954,6 +954,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 - 标记 local、remote snapshot、scratch、owner commit；
 - **专项验收**：每个 `p4est_iterate` 均有条目，漏传 ghost 的接口为零；仅文档/诊断改动仍须 G1。
 
+**完成记录（2026-08-04）**：产出 `docs/communication_audit.md`，盘点全部 51 个 `p4est_iterate` 调用，为 12 个活跃 face/corner callback 建表（类型、行号、调用点、ghost 状态、核心 Reads/Writes、Exchange 供给时序）并标注 local/remote/scratch。审计结论：① **漏传 ghost 的活跃接口为零**——全部活跃 face/corner callback 均以非空 ghost + `ghost_data` 调用；唯一 `NULL ghost` 的 face 调用位于从未执行的 `postprocess_after_coarsening` 死代码内。② **发现 4 个死符号**（仓库内零调用）：`postprocess_after_coarsening`、`quadrant_update_after_coarsening_callback`（且以 `NULL ghost_data` 注册但函数体解引用之）、`quadrant_update_parent_velo_press_callback`、`quadrant_vtk_coord_update_callback`，留待 M3.5/独立清理里程碑删除。③ **跨 rank 隐患（M3.4 依据）**：callback 1/5/7/8/9/11/12 经可写 `quad_data_t*` 修改可能指向 `ghost_data` 的单元，`ghost_exchange_data` 仅 owner→ghost 单向拷贝，ghost mirror 写静默丢失——与 §5.2「禁止把 ghost mirror 当成权威状态写入」一致。④ 完整映射 ghost 生命周期（拓扑变化后重建 + 各 phase 前交换，见文档 §3）。⑤ 附加发现：#7 `quadrant_set_init_parent_edge_callback` 内同一 `user_data` 双强转（`p4est_data_t*`/`quad_data_t*`），误转 inert；#8 `quadrant_get_children_hanging_info_callback` 拷贝的 `delta_u_cp/Uc_cur/Zcp` 在本步尚未刷新，为潜在 stale 隐患。门禁：本子里程碑仅文档改动，未改代码；编译通过，M2.4 的 G1 三黄金基线（`c40e2f2`）继续成立。状态：**完成**。下一子里程碑为 M3.2 `GhostSession` 兼容包装。
+
 #### M3.2 引入 `GhostSession` 兼容包装
 
 - 包装 create/exchange/destroy/generation，旧调用暂时从包装内部转发；
