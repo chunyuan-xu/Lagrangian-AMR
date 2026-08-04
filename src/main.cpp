@@ -403,9 +403,11 @@ static void quadrant_compute_relaxed_info_callback(p4est_iter_volume_info_t *inf
 
 static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *info, void *user_data)
 {
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*ghost_data = (quad_data_t *)user_data;
+	quad_data_t		*ghost_data = context->session->data();
 	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
@@ -3160,9 +3162,10 @@ void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p
 		NULL);
 
 
+	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
 		session.get(),
-		(void*) session.data(),
+		&callback_context,
 		NULL,
 		quadrant_relaxed_hanging_solver_callback,
 #ifdef P4_TO_P8
