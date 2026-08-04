@@ -410,6 +410,7 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 	quad_data_t		*ghost_data = context->session->data();
 	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
+	const CVariable	*m_child1_read_vara, *m_child2_read_vara, *m_parent_read_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
 	p4est_iter_face_side_t *side[2];
 	sc_array_t				*sides = &(info->sides);
@@ -446,24 +447,28 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			{
 				m_child1_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[0]];
 				m_child1_vara = (CVariable *)&ghost_data[side[i]->is.hanging.quadid[0]].m_vara;
+				m_child1_read_vara = &ghost_data[side[i]->is.hanging.quadid[0]].m_vara;
 				m_child1_cndata = (CCorner_data *)&(ghost_data[side[i]->is.hanging.quadid[0]].m_cndata);
 			}
 			else
 			{
 				m_child1_data = (quad_data_t *)quad_child1->p.user_data;
 				m_child1_vara = (CVariable *)&m_child1_data->m_vara;
+				m_child1_read_vara = &m_child1_data->m_vara;
 				m_child1_cndata = (CCorner_data *)&(m_child1_data->m_cndata);
 			}
 			if (side[i]->is.hanging.is_ghost[1])
 			{
 				m_child2_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[1]];
 				m_child2_vara = (CVariable *)&ghost_data[side[i]->is.hanging.quadid[1]].m_vara;
+				m_child2_read_vara = &ghost_data[side[i]->is.hanging.quadid[1]].m_vara;
 				m_child2_cndata = (CCorner_data *)&(ghost_data[side[i]->is.hanging.quadid[1]].m_cndata);
 			}
 			else
 			{
 				m_child2_data = (quad_data_t *)quad_child2->p.user_data;
 				m_child2_vara = (CVariable *)&m_child2_data->m_vara;
+				m_child2_read_vara = &m_child2_data->m_vara;
 				m_child2_cndata = (CCorner_data *)&(m_child2_data->m_cndata);
 			}
 
@@ -475,12 +480,14 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			{
 				m_parent_data = (quad_data_t *)&ghost_data[side[full_index]->is.full.quadid];
 				m_parent_vara = (CVariable *)&ghost_data[side[full_index]->is.full.quadid].m_vara;
+				m_parent_read_vara = &ghost_data[side[full_index]->is.full.quadid].m_vara;
 				m_parent_cndata = (CCorner_data *)&ghost_data[side[full_index]->is.full.quadid].m_cndata;
 			}
 			else
 			{
 				m_parent_data = (quad_data_t *)quad_parent->p.user_data;
 				m_parent_vara = (CVariable *)&m_parent_data->m_vara;
+				m_parent_read_vara = &m_parent_data->m_vara;
 				m_parent_cndata = (CCorner_data *)&m_parent_data->m_cndata;
 			}
 
@@ -488,20 +495,20 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			switch (parent_face_index)
 			{
 				case quad_data_t::EnumEdge::LEFT:
-					master_velocity[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
-					master_velocity[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
+					master_velocity[0] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+					master_velocity[1] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
 					break;
 				case quad_data_t::EnumEdge::RIGHT:
-					master_velocity[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
-					master_velocity[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
+					master_velocity[0] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
+					master_velocity[1] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
 					break;
 				case quad_data_t::EnumEdge::BOTTOM:
-					master_velocity[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
-					master_velocity[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
+					master_velocity[0] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+					master_velocity[1] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
 					break;
 				case quad_data_t::EnumEdge::UP:
-					master_velocity[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
-					master_velocity[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
+					master_velocity[0] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
+					master_velocity[1] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
 					break;
 			}
 
@@ -535,9 +542,9 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			Flux_relaxed.x = MatrixP.xx * hanging_velo.x + MatrixP.xy * hanging_velo.y - m_rhs.x;
 			Flux_relaxed.y = MatrixP.yx * hanging_velo.x + MatrixP.yy * hanging_velo.y - m_rhs.y;
 
-			double child1_total_energy = m_child1_vara->cell(idMass) * m_child1_vara->cell(idTotalEnergy_cur);
-			double child2_total_energy = m_child2_vara->cell(idMass) * m_child2_vara->cell(idTotalEnergy_cur);
-			double parent_total_energy = m_parent_vara->cell(idMass) * m_parent_vara->cell(idTotalEnergy_cur);
+			double child1_total_energy = m_child1_read_vara->cell(idMass) * m_child1_read_vara->cell(idTotalEnergy_cur);
+			double child2_total_energy = m_child2_read_vara->cell(idMass) * m_child2_read_vara->cell(idTotalEnergy_cur);
+			double parent_total_energy = m_parent_read_vara->cell(idMass) * m_parent_read_vara->cell(idTotalEnergy_cur);
 
 
 			m_child1_vara->corner_vector(idcnFluxRelaxed, m_which_corner[0]) = child1_total_energy /
