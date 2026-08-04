@@ -938,7 +938,9 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 - 每一批删除都列出符号清单；
 - **专项验收**：清理后 G1。
 
-**M2 完成条件**：业务代码不再直接使用已迁移的裸配置/状态索引，底层布局是否替换留到后续独立里程碑。
+**完成记录（2026-08-04）**：先审计 M2.1～M2.3 后的残留直接访问与死代码。审计结论：① 业务代码对 `CVariable` 裸数组（`DouCData/DouCnData/DouEData/IntCData/VecCData/VecCnData/VecEdata`）的直接下标访问已**清零**（0 处），全部经由类型化 accessor；② `p4est_data_t` 的 `initial_dt/max_dt` 虽未被计算路径读取，但被 `simulation_config()` 快照读入 `SolverConfig.initial_timestep/maximum_timestep` 参与配置合法性校验，属半迁移字段，**保留**；③ `m_grid_info/last_output_index/shock_velocity` 等均有调用，保留。唯一确认无调用的死代码是 `IntEdgeVariableID` 系列：删除 `enum IntEdgeVariableID{idEdgeType,idIntEdgeVariableNum}`、`int IntEData[idIntEdgeVariableNum][CNDIM]` 数组、`int_edge()` 两个 accessor（含 `test_variable_accessors.py` 对应测试块）——边类型实际存储于 `CEdge_data.EdgeType`，该数组是重复且零使用的冗余。清理后 G0（编译 + `python/test_variable_accessors.py`）PASS；G1 三黄金全部 PASS，`param.ini` 恢复。状态：**完成**。
+
+**M2 完成条件（2026-08-04 达成）**：业务代码不再直接使用已迁移的裸配置/状态索引——M2.2 后对状态裸数组的直接下标访问为 0；M2.1 已迁移的配置项（初始网格层级、时间循环起止）经 `SimulationConfig/SimulationClock` 读取，未迁移的动态项（时间步归约、AMR、时钟递增）按 M2.1 设计继续使用旧可变字段，底层布局替换留待后续独立里程碑。**M2 状态：完成**，下一里程碑为 M3 ghost 生命周期与通信契约。
 
 ### M3：显式化 ghost 生命周期和通信契约
 

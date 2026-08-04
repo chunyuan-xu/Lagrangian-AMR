@@ -80,13 +80,6 @@ int main()
         value.int_cell(typed) = 7 + id;
         assert(value.IntCData[id] == 7 + id);
     }
-    for (int id = 0; id < idIntEdgeVariableNum; ++id) {
-        for (int edge = 0; edge < CNDIM; ++edge) {
-            IntEdgeVariableID typed = static_cast<IntEdgeVariableID>(id);
-            assert(&value.int_edge(typed, edge) == &value.IntEData[id][edge]);
-        }
-    }
-
     return 0;
 }
 '''

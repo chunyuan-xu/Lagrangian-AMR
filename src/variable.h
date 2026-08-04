@@ -75,13 +75,6 @@ enum DoubleCellVariableID
 	idDoubleCellVariableNum,
 };
 
-enum IntEdgeVariableID
-{
-	idEdgeType, 
-
-	idIntEdgeVariableNum,
-};
-
 enum IntCellVariableID
 {
 	idCoarseningTag, 
@@ -186,7 +179,6 @@ public:
 	double DouCData[idDoubleCellVariableNum];
 	double DouCnData[idDoubleCornerVariableNum][CNDIM];
 	double DouEData[idDoubleEdgeVariableNum][CNDIM];
-	int    IntEData[idIntEdgeVariableNum][CNDIM];
 	int    IntCData[idIntCellVariableNum];
 	CDoubleVector  VecCData[idVectorCellVariableNum];
 	CDoubleVector  VecCnData[idVectorCornerVariableNum][CNDIM];
@@ -272,17 +264,6 @@ public:
 	inline const int &int_cell(IntCellVariableID id) const noexcept
 	{
 		return IntCData[id];
-	}
-
-	inline int &int_edge(IntEdgeVariableID id, int edge_id) noexcept
-	{
-		return IntEData[id][edge_id];
-	}
-
-	inline const int &int_edge(
-		IntEdgeVariableID id, int edge_id) const noexcept
-	{
-		return IntEData[id][edge_id];
 	}
 
 	CVariable();
