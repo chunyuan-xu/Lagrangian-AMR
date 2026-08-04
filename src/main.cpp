@@ -2970,10 +2970,16 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 					fclose(f);
 				}
 			}
-			m_quad_data->points[m_which_corner[0]].MatrixP = MatrixP;
-			m_quad_data->points[m_which_corner[0]].RHS = RHS;
-			m_quad_data_aside->points[m_which_corner[1]].MatrixP = MatrixP;
-			m_quad_data_aside->points[m_which_corner[1]].RHS = RHS;
+			if (!side[i]->is.hanging.is_ghost[0])
+			{
+				m_quad_data->points[m_which_corner[0]].MatrixP = MatrixP;
+				m_quad_data->points[m_which_corner[0]].RHS = RHS;
+			}
+			if (!side[i]->is.hanging.is_ghost[1])
+			{
+				m_quad_data_aside->points[m_which_corner[1]].MatrixP = MatrixP;
+				m_quad_data_aside->points[m_which_corner[1]].RHS = RHS;
+			}
 
 			CDoubleVector		hanging_coord;
 			hanging_coord = m_quad_data->m_vara.corner_vector(idcnCoords_half, m_which_corner[0]);
