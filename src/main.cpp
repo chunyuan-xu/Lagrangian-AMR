@@ -7,6 +7,7 @@
 #include "io/output_stamp.h"
 #include "physics/timestep_reduction.h"
 #include "physics/stage_policy.h"
+#include "diagnostics/state_invariant_checker.h"
 #include <cstdlib>
 #include <cstring>
 #include <vector>
@@ -54,6 +55,13 @@ static bool refresh_idempotence_check_enabled()
 {
 	static const bool enabled =
 		debug_flag_enabled("LAGRANGIAN_CHECK_REFRESH_IDEMPOTENCE");
+	return enabled;
+}
+
+static bool state_invariant_check_enabled()
+{
+	static const bool enabled =
+		debug_flag_enabled("LAGRANGIAN_CHECK_STATE_INVARIANTS");
 	return enabled;
 }
 
@@ -5534,6 +5542,62 @@ static void write_solution(p4est_t *p4est, const IOAlgorithm::OutputStamp &stamp
 }
 
 
+struct InvariantContext
+{
+	int phase_id;
+	int violations;
+	p4est_topidx_t first_tree;
+	int first_level;
+	p4est_qcoord_t first_x;
+	p4est_qcoord_t first_y;
+	const char *first_name;
+};
+
+static void invariant_volume_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	InvariantContext *ctx = (InvariantContext *)user_data;
+	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
+	const CVariable &vara = data->m_vara;
+	std::vector<Diagnostics::InvariantViolation> v =
+		Diagnostics::check_cell_invariants(vara);
+	if (v.empty()) {
+		return;
+	}
+	if (ctx->violations == 0) {
+		ctx->first_tree = info->treeid;
+		ctx->first_level = info->quad->level;
+		ctx->first_x = info->quad->x;
+		ctx->first_y = info->quad->y;
+		ctx->first_name = v[0].name;
+	}
+	ctx->violations += (int)v.size();
+	P4EST_GLOBAL_PRODUCTIONF(
+		"  [phase %d] (tree=%lld, level=%d, x=%lld, y=%lld) %s: "
+		"expected %.17e, got %.17e\n",
+		ctx->phase_id, (long long)info->treeid, info->quad->level,
+		(long long)info->quad->x, (long long)info->quad->y,
+		v[0].name, v[0].expected, v[0].actual);
+}
+
+static void check_state_invariants(p4est_t *p4est, int phase_id)
+{
+	InvariantContext ctx = {phase_id, 0, -1, -1, -1, -1, NULL};
+	p4est_iterate(p4est, NULL, &ctx, invariant_volume_callback, NULL,
+#ifdef P4_TO_P8
+		NULL,
+#endif
+		NULL);
+	if (ctx.violations > 0) {
+		P4EST_GLOBAL_PRODUCTIONF(
+			"STATE INVARIANT VIOLATION (phase=%d): %d violation(s); "
+			"first at (tree=%lld, level=%d, x=%lld, y=%lld) [%s]\n",
+			ctx.phase_id, ctx.violations, (long long)ctx.first_tree,
+			ctx.first_level, (long long)ctx.first_x, (long long)ctx.first_y,
+			ctx.first_name ? ctx.first_name : "");
+		std::abort();
+	}
+}
+
 static void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 {
 	double              t = start_time;
@@ -5686,6 +5750,10 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 
 		
 		AcceptNumericalSolution(p4est);
+
+		if (state_invariant_check_enabled()) {
+			check_state_invariants(p4est, 1);
+		}
 
 		p4est_data->current_time = p4est_data->current_time + p4est_data->delta_time;
 
@@ -5868,6 +5936,12 @@ int main(int argc, char **argv)
 	
 	p4est_balance(p4est, P4EST_CONNECT_CORNER, Lagrangian_init_condition);
 	p4est_partition(p4est, partforcoarsen, NULL);
+
+	if (state_invariant_check_enabled()) {
+		P4EST_GLOBAL_PRODUCTIONF(
+			"[invariant-checker] enabled; checking post-init and post-accept states\n");
+		check_state_invariants(p4est, 0);
+	}
 
 	// Test call to the debug VTU output
 	//IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug_checkpoint", 0, 0);

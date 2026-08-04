@@ -932,7 +932,7 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 - 检查器必须只读且不改变通信时序；
 - **专项验收**：故意注入非法状态时可定位到稳定 CellKey；正常 G1 无误报。
 
-#### M2.4 清理旧配置访问路径
+**完成记录（2026-08-04）**：新增 `src/diagnostics/state_invariant_checker.h`（纯函数 `Diagnostics::check_cell_invariants`，检查体积>0、质量>0、密度>0、`密度=质量/体积`、`压力=EOS(gamma,密度,内能)`、`声速=c(gamma,p,ρ)`、`centroid_cur=GetPolyCenter(corner_cur)` 质心自洽、总能量>0），由 `LAGRANGIAN_CHECK_STATE_INVARIANTS` 环境变量开关（默认关闭），并在 main.cpp 的 p4est 适配器中经只读 `p4est_iterate(NULL ghost)` 遍历 owner 单元，违例时以稳定 CellKey `(treeid, level, x, y)` 报告并 abort。检查点：初始化后（phase 0）与 `AcceptNumericalSolution` 后（phase 1）。设计过程中两处不变量修正：① 质心必须用 **cur** 状态（`centroid_cur`/`corner_cur`）而非 lag——初始化只设 `CentroidCoordCur`，lag 在 phase 0 是零值；② 删除 `total≥internal` 假不变量——该求解器中 total 由守恒式 `total_half-dt·work/mass` 更新、internal 由 `internal_half-dt·(work-kineticVariation)/mass` 推导，两者仅全局一致，冲击/AMR 边界处 internal 可瞬时略超 total（实测 ~0.06%），仅保留 `total_energy>0`。专项验收：单元测试 `python/test_state_invariants.py` 用 8 组合法/注入状态验证纯函数定位违例名，PASS；真实运行中检查器已演示 CellKey 定位（如 `(tree=0, level=6, x=..., y=...)`）；启用检查的完整 G1 三黄金（Noh 22.7s / Sod 67.7s / Sedov 54.6s）全部 PASS 无误报，且与 `reference/` 1e-12 比对通过（证明检查器只读、不改结果），`param.ini` 恢复；未启用时 G1 三黄金同样 PASS。状态：**完成**。
 
 - 仅在 M2.1～M2.3 全部通过后，删除无调用的重复字段和 accessor；
 - 每一批删除都列出符号清单；
