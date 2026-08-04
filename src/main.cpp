@@ -1455,7 +1455,9 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 		}
 		m_vara = (CVariable  *)&m_data->m_vara;
 
-		m_vara->corner(idCNPara, cnid) = 0.;
+		if (!is_ghost) {
+			m_vara->corner(idCNPara, cnid) = 0.;
+		}
 		for (int j = 0; j < m_size; j++)
 		{
 			if (j == i) { continue; }
@@ -1475,7 +1477,9 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 			double m_dist = GeometryAlg::GetPointToPointDistance(
 				m_vara->cell_vector(idCentroidCoord_cur), m_vara_aside->cell_vector(idCentroidCoord_cur));
 			ParaGradient = abs(m_vara->cell(idCPara) - m_vara_aside->cell(idCPara)) / m_dist;
-			m_vara->corner(idCNPara, cnid) = SC_MAX(m_vara->corner(idCNPara, cnid), ParaGradient);
+			if (!is_ghost) {
+				m_vara->corner(idCNPara, cnid) = SC_MAX(m_vara->corner(idCNPara, cnid), ParaGradient);
+			}
 		}
 	}
 }
