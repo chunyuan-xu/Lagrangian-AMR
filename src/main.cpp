@@ -2960,36 +2960,36 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 	}
 }
 
-void MatrixAssemble(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
+void MatrixAssemble(p4est_t *p4est, GhostSession &session)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 
-	
+
 	p4est_iterate(p4est,
 		NULL,
 		NULL,
-		quadrant_corner_matrix_assemble_callback, 
+		quadrant_corner_matrix_assemble_callback,
 		NULL,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		NULL);         
+		NULL);
 
-	if (ghost) {
-		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+	if (!session.empty()) {
+		session.exchange();
 	}
 
 	p4est_iterate(p4est,
-		ghost,
-		(void*)ghost_data,
+		session.get(),
+		(void*)session.data(),
 		NULL,
-		NULL,  
+		NULL,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		quadrant_corner_to_point_matrix_assemble_callback);        
+		quadrant_corner_to_point_matrix_assemble_callback);
 }
 
 static void quadrant_copy_velocity_from_lag_to_relax_callback(p4est_iter_volume_info_t *info, void *user_data)
@@ -3087,60 +3087,60 @@ static void quadrant_update_parent_velo_press_callback(p4est_iter_face_info_t *i
 }
 
 
-void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
+void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p4est, GhostSession &session)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 
-	
+
 	p4est_iterate(p4est,
-		NULL,          
-		NULL,   
-		quadrant_compute_relaxed_info_callback, 
+		NULL,
+		NULL,
+		quadrant_compute_relaxed_info_callback,
 		NULL,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		NULL);         
+		NULL);
 
-	
+
 	p4est_iterate(p4est,
-		NULL,          
-		NULL,   
-		quadrant_parent_edge_matrix_callback, 
+		NULL,
+		NULL,
+		quadrant_parent_edge_matrix_callback,
 		NULL,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		NULL);         
+		NULL);
 
-	if (ghost) {
-		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+	if (!session.empty()) {
+		session.exchange();
 	}
 
 	p4est_iterate(p4est,
-		ghost,          
-		(void*) ghost_data,   
-		NULL, 
+		session.get(),
+		(void*) session.data(),
+		NULL,
 		quadrant_hanging_point_matrix_assemble_callback,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		NULL);         
+		NULL);
 
-	
+
 	p4est_iterate(p4est,
-		ghost,          
-		(void*) ghost_data,  
-		NULL, 
+		session.get(),
+		(void*) session.data(),
+		NULL,
 		quadrant_relaxed_hanging_solver_callback,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		NULL);         
+		NULL);
 }
 
 
@@ -3248,31 +3248,31 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 }
 
 
-static void ComputeCornerNodeVelocity(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
+static void ComputeCornerNodeVelocity(p4est_t * p4est, GhostSession &session)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 
 	p4est_iterate(p4est,
-		ghost,          
-		(void*)ghost_data,   
-		NULL, 
+		session.get(),
+		(void*)session.data(),
+		NULL,
 		NULL,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		quadrant_corner_velocity_callback);   
+		quadrant_corner_velocity_callback);
 
 	p4est_iterate(p4est,
-		NULL,          
-		NULL,   
-		quadrant_copy_velocity_from_lag_to_relax_callback, 
+		NULL,
+		NULL,
+		quadrant_copy_velocity_from_lag_to_relax_callback,
 		NULL,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		NULL);         
+		NULL);
 }
 
 
@@ -3893,42 +3893,42 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 
 }
 
-static void Get_AMR_BDY_info(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
+static void Get_AMR_BDY_info(p4est_t *p4est, GhostSession &session)
 {
 	p4est_iterate(p4est,
-		ghost,          
-		(void*)ghost_data,   
-		NULL, 
+		session.get(),
+		(void*)session.data(),
+		NULL,
 		quadrant_get_children_hanging_info_callback,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		NULL);         
+		NULL);
 
-	
+
 	p4est_iterate(p4est,
-		NULL,          
-		NULL,   
-		quadrant_reset_parent_edge_callback, 
+		NULL,
+		NULL,
+		quadrant_reset_parent_edge_callback,
 		NULL,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		NULL);         
+		NULL);
 
-	
+
 	p4est_iterate(p4est,
-		ghost,          
-		(void*)ghost_data,   
-		NULL, 
+		session.get(),
+		(void*)session.data(),
+		NULL,
 		quadrant_set_init_parent_edge_callback,
 #ifdef P4_TO_P8
-		NULL,                  
+		NULL,
 
 #endif
-		NULL);         
+		NULL);
 }
 
 
@@ -4087,25 +4087,25 @@ void FluxRelaxedResetZero(p4est_t *p4est)
 }
 
 
-static void RiemannSolver(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
+static void RiemannSolver(p4est_t * p4est, GhostSession &session)
 {
-	
+
 	FluxRelaxedResetZero(p4est);
-	
+
 	for (int iter_num = 0; iter_num < fixed_iter_num; iter_num++)
 	{
 		g_trace_riemann_iter = iter_num;
-		
-		MatrixAssemble(p4est, ghost, ghost_data);
+
+		MatrixAssemble(p4est, session);
 		trace_target_snapshot(p4est, "AFTER_MATRIX");
-		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+		session.exchange();
 
-		
-		ComputeCornerNodeVelocity(p4est, ghost, ghost_data);
+
+		ComputeCornerNodeVelocity(p4est, session);
 		trace_target_snapshot(p4est, "AFTER_CORNER_SOLVE");
-		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+		session.exchange();
 
-		ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est, ghost, ghost_data);
+		ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est, session);
 		trace_target_snapshot(p4est, "AFTER_HANGING");
 
 		p4est_data_t * p4est_data = (p4est_data_t *)p4est->user_pointer;
@@ -4113,7 +4113,7 @@ static void RiemannSolver(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_da
 			//IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug_checkpoint", 0, iter_num);
 		}
 
-		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+		session.exchange();
 	}
 
 	
@@ -4161,11 +4161,11 @@ static void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
     }
 }
 
-static void advance_single_stage(p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data)
+static void advance_single_stage(p4est_t * p4est, GhostSession &session)
 {
 	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
 
-	
+
 	get_boundary_from_p4est(p4est);
 	p4est_data->dt_iter =
 		StagePolicy::timestep_scale(0) * p4est_data->delta_time;
@@ -4174,24 +4174,24 @@ static void advance_single_stage(p4est_t * p4est, p4est_ghost_t * ghost, void *g
 		trace_target_snapshot(p4est, "AFTER_HALF");
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 3: Predict");
 
-		
+
 		CalculateCornerRcpLcpNcp(p4est);
 		trace_target_snapshot(p4est, "AFTER_RCP");
-		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+		session.exchange();
 
-		
-		Get_AMR_BDY_info(p4est,ghost,ghost_data);
+
+		Get_AMR_BDY_info(p4est, session);
 		trace_target_snapshot(p4est, "AFTER_AMR_BDY");
-		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+		session.exchange();
 
-		
+
 		const SolverGate::CoordinateType coordinate_type =
 			SolverGate::coordinate_type_from_legacy(p4est_data->coord_type);
 		const SolverGate::SolverType solver_type =
 			SolverGate::solver_type_from_legacy(p4est_data->solver_type);
 		if (SolverGate::should_run_riemann(coordinate_type, solver_type))
 		{
-			RiemannSolver(p4est, ghost, ghost_data);
+			RiemannSolver(p4est, session);
 		}
 		
 		// Debug step 3 after RiemannSolver
@@ -4229,7 +4229,7 @@ static void advance_single_stage(p4est_t * p4est, p4est_ghost_t * ghost, void *g
 					}
 				}
 			};
-			p4est_iterate(p4est, ghost, ghost_data, dbg_cb, NULL, NULL);
+			p4est_iterate(p4est, session.get(), session.data(), dbg_cb, NULL, NULL);
 		}
 		
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 4: RiemannSolver");
@@ -4958,12 +4958,12 @@ set_default_refining_tag(p4est_t *p4est)
 		NULL);
 }
 
-static void 
-set_allowing_coarsening_tag(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
+static void
+set_allowing_coarsening_tag(p4est_t *p4est, GhostSession &session)
 {
 	p4est_iterate(p4est,
-		ghost,
-		ghost_data,
+		session.get(),
+		session.data(),
 		NULL,
 		quadrant_whether_allowing_coarsening_from_edge_callback,
 #ifdef  P4_TO_P8
@@ -4973,8 +4973,8 @@ set_allowing_coarsening_tag(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_da
 		NULL);
 
 	p4est_iterate(p4est,
-		ghost,
-		ghost_data,
+		session.get(),
+		session.data(),
 		NULL,
 		NULL,
 #ifdef  P4_TO_P8
@@ -4984,10 +4984,10 @@ set_allowing_coarsening_tag(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_da
 		quadrant_whether_allowing_coarsening_from_corner_callback);
 }
 
-static void 
-Predict_refining_Quads(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
+static void
+Predict_refining_Quads(p4est_t *p4est, GhostSession &session)
 {
-	
+	(void)session;
 	p4est_iterate(p4est,
 		NULL,
 		NULL,
@@ -5066,11 +5066,11 @@ quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, voi
 
 static void append_refresh_snapshot(
 	p4est_t *p4est,
-	p4est_ghost_t *ghost,
-	void *ghost_data,
+	GhostSession &session,
 	std::vector<unsigned char> &snapshot)
 {
-	const size_t ghost_count = ghost == NULL ? 0 : ghost->ghosts.elem_count;
+	const size_t ghost_count =
+		session.empty() ? 0 : session.get()->ghosts.elem_count;
 	const size_t snapshot_size =
 		(static_cast<size_t>(p4est->local_num_quadrants) + ghost_count) *
 		sizeof(quad_data_t);
@@ -5089,9 +5089,12 @@ static void append_refresh_snapshot(
 		}
 	}
 
-	const unsigned char *ghost_bytes =
-		static_cast<const unsigned char *>(ghost_data);
-	const size_t ghost_size = ghost_count * sizeof(quad_data_t);
+	const unsigned char *ghost_bytes = NULL;
+	size_t ghost_size = 0;
+	if (!session.empty()) {
+		ghost_bytes = reinterpret_cast<const unsigned char *>(session.data());
+		ghost_size = ghost_count * sizeof(quad_data_t);
+	}
 	if (ghost_size > 0) {
 		snapshot.insert(
 			snapshot.end(), ghost_bytes, ghost_bytes + ghost_size);
@@ -5099,11 +5102,11 @@ static void append_refresh_snapshot(
 }
 
 static void
-refresh_after_balance(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
+refresh_after_balance(p4est_t *p4est, GhostSession &session)
 {
 	p4est_iterate(p4est,
-		ghost,
-		(void *)ghost_data,
+		session.get(),
+		(void *)session.data(),
 		NULL,
 		quadrant_update_after_balance_callback,
 #ifdef  P4_TO_P8
@@ -5140,14 +5143,14 @@ postprocess_after_coarsening(p4est_t *p4est)
 		NULL);
 }
 
-static void 
-Gradient_estimate(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
+static void
+Gradient_estimate(p4est_t *p4est, GhostSession &session)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 
 	p4est_iterate(p4est,
-		ghost,
-		(void *)ghost_data,
+		session.get(),
+		(void *)session.data(),
 		quadrant_set_gradient_zero_estimate_callback,
 		NULL,
 #ifdef  P4_TO_P8
@@ -5156,10 +5159,10 @@ Gradient_estimate(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 #endif
 		NULL);
 
-	
+
 	p4est_iterate(p4est,
-		ghost,
-		(void *)ghost_data,
+		session.get(),
+		(void *)session.data(),
 		NULL,
 		quadrant_edge_minmod_estimate_callback,
 #ifdef  P4_TO_P8
@@ -5169,8 +5172,8 @@ Gradient_estimate(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 		NULL);
 
 	p4est_iterate(p4est,
-		ghost,
-		(void *)ghost_data,
+		session.get(),
+		(void *)session.data(),
 		NULL,
 		NULL,
 #ifdef  P4_TO_P8
@@ -5179,7 +5182,7 @@ Gradient_estimate(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 #endif
 		quadrant_corner_minmod_estimate_callback);
 
-	
+
 	p4est_iterate(p4est,
 		NULL,
 		(void *)p4est_data,
@@ -5192,14 +5195,14 @@ Gradient_estimate(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
 		NULL);
 }
 
-static void PreProcess(p4est_t *p4est, p4est_ghost_t *ghost, void *ghost_data)
+static void PreProcess(p4est_t *p4est, GhostSession &session)
 {
-	
-	Gradient_estimate(p4est, ghost, ghost_data);
-	
+
+	Gradient_estimate(p4est, session);
+
 	set_default_coarsening_tag(p4est);
 
-	
+
 	set_default_refining_tag(p4est);
 }
 
@@ -5604,8 +5607,6 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 	double              t = start_time;
 	double              dt = 0.;
 	GhostSession ghost_session;
-	p4est_ghost_t		*ghost;
-	quad_data_t		*ghost_data;
 	p4est_data_t		*p4est_data = (p4est_data_t *)p4est->user_pointer;
 	int					recursive = 0;
 	int					allowed_level = p4est_data->max_level;
@@ -5614,8 +5615,6 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 
 	
 	ghost_session.initialize(p4est, P4EST_CONNECT_FULL);
-	ghost = ghost_session.get();
-	ghost_data = ghost_session.data();
 
 	for (t = start_time; t < end_time; t += p4est_data->delta_time)
 	{
@@ -5631,7 +5630,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		int current_output_index = (int)(p4est_data->current_time / p4est_data->write_interval_time);
 
 		
-		PreProcess(p4est, ghost, ghost_data);
+		PreProcess(p4est, ghost_session);
 		trace_target_snapshot(p4est, "AFTER_PREPROCESS");
 
 		
@@ -5648,12 +5647,10 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			ghost_session.invalidate_after_topology_change();
 			AMR_DEBUG_LOG("DEBUG: Entering GhostSession rebuild\n");
 			ghost_session.rebuild(p4est, P4EST_CONNECT_FULL);
-			ghost = ghost_session.get();
-			ghost_data = ghost_session.data();
 			AMR_DEBUG_LOG("DEBUG: Finished GhostSession rebuild\n");
 
 			AMR_DEBUG_LOG("DEBUG: Entering set_allowing_coarsening_tag\n");
-			set_allowing_coarsening_tag(p4est, ghost, ghost_data);
+			set_allowing_coarsening_tag(p4est, ghost_session);
 			AMR_DEBUG_LOG("DEBUG: Finished set_allowing_coarsening_tag\n");
 
 			AMR_DEBUG_LOG("DEBUG: Entering p4est_coarsen_ext\n");
@@ -5668,8 +5665,6 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 
 			ghost_session.invalidate_after_topology_change();
 			ghost_session.destroy();
-			ghost = NULL;
-			ghost_data = NULL;
 		}
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");
 
@@ -5681,26 +5676,22 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			p4est_partition(p4est, allowcoarsening, NULL);
 			ghost_session.invalidate_after_topology_change();
 			ghost_session.destroy();
-			ghost = NULL;
-			ghost_data = NULL;
 		}
 
 
 		if (ghost_session.empty())
 		{
 			ghost_session.initialize(p4est, P4EST_CONNECT_FULL);
-			ghost = ghost_session.get();
-			ghost_data = ghost_session.data();
 		}
 
-		
-		refresh_after_balance(p4est, ghost, ghost_data);
+
+		refresh_after_balance(p4est, ghost_session);
 		if (refresh_idempotence_check_enabled()) {
 			std::vector<unsigned char> first_refresh;
 			std::vector<unsigned char> second_refresh;
-			append_refresh_snapshot(p4est, ghost, ghost_data, first_refresh);
-			refresh_after_balance(p4est, ghost, ghost_data);
-			append_refresh_snapshot(p4est, ghost, ghost_data, second_refresh);
+			append_refresh_snapshot(p4est, ghost_session, first_refresh);
+			refresh_after_balance(p4est, ghost_session);
+			append_refresh_snapshot(p4est, ghost_session, second_refresh);
 			const int local_match = first_refresh == second_refresh ? 1 : 0;
 			int global_match = 0;
 			sc_MPI_Allreduce(&local_match, &global_match, 1, sc_MPI_INT,
@@ -5734,7 +5725,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		}
 
 		
-		advance_single_stage(p4est, ghost, (void *)ghost_data);
+		advance_single_stage(p4est, ghost_session);
 
 		
 		StatTotalEnergyError(p4est);

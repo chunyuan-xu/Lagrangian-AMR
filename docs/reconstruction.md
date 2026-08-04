@@ -968,7 +968,7 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 - 每批保留旧入口，使用新入口转发；
 - **专项验收**：每批 G0+相关短步，整体 G1。
 
-#### M3.4 remote 只读和 owner commit
+**完成记录（2026-08-04）**：完成 ghost 调用点的兼容迁移：Gradient/AMR（`Gradient_estimate`、`PreProcess`、`set_allowing_coarsening_tag`）、balance refresh（`refresh_after_balance` 与幂等快照）、Corner/Riemann（`MatrixAssemble`、`ComputeCornerNodeVelocity`、`ComputeHangingNodeVelocity...`、`RiemannSolver`）和 AMR boundary（`Get_AMR_BDY_info`）均改为接收 `GhostSession&`，不再在业务函数签名中传递裸 `p4est_ghost_t*` / `void* ghost_data`。所有内部 `p4est_ghost_exchange_data` 调用改为 `session.exchange()`；所有 iterate ghost 参数改为 `session.get()/session.data()`；不需要 ghost 的 volume callback 显式保持 NULL。`advance_time_step` 只保留一个 `GhostSession` 局部对象，不再维护原始 ghost/data 别名，拓扑变化调用 invalidate+destroy/rebuild。`Predict_refining_Quads` 只接受 session 但本身为零调用死函数，保留到 M3.5 清理。门禁：G0 编译 + `test_variable_accessors.py`、`test_state_invariants.py`、`test_ghost_session.py` 全部 PASS；G1 三黄金（Noh 4112 / Sod 3046 / Sedov 3933）全部 PASS 且 `param.ini` 恢复；G3 四核 Sod AMR（28.1s）与 Sedov AMR（23.5s）均对并行黄金参考。状态：**完成**。下一子里程碑为 M3.4 remote 只读和 owner commit。
 
 - 引入 `RemoteCellSnapshot` 与 scratch；
 - 逐 callback 消除对 ghost mirror 的权威写入；
