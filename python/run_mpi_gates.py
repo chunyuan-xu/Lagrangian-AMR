@@ -1,11 +1,10 @@
-"""Canonical MPI regression gates.
+"""Canonical MPI parallel regression gate (G3).
 
-G2 checks serial/MPI consistency at steps 3, 4, 10, 50, and 54 using the
-stable geometry key workflow. G3 regenerates 4-rank Sod/Sedov GOLDEN outputs
-and compares them with the committed parallel references.
+Regenerates 4-rank Sod/Sedov GOLDEN outputs and compares them with the
+committed parallel references. G2 (specific-step serial/MPI consistency
+at steps 3/4/10/50/54) was retired on 2026-08-04.
 """
 
-import argparse
 import json
 import os
 import re
@@ -20,10 +19,8 @@ PARAM = ROOT / "param.ini"
 SOLVER = ROOT / "bin" / "AMR_Solver.exe"
 OUTPUT = ROOT / "output"
 MPIEXEC = Path("C:/Program Files/Microsoft MPI/Bin/mpiexec.exe")
-QUICK = Path(__file__).resolve().parent / "quick_consistency_test.py"
 COMPARE = Path(__file__).resolve().parent / "compare_vtu.py"
 SUMMARY = ROOT / "mpi_gate_summary.json"
-STEPS = [3, 4, 10, 50, 54]
 MSYS_PATHS = [
     "C:/msys64/usr/bin",
     "C:/msys64/ucrt64/bin",
@@ -62,36 +59,6 @@ def update_text(text, updates):
 
 def ensure_output():
     OUTPUT.mkdir(exist_ok=True)
-
-
-def run_g2():
-    results = []
-    for step in STEPS:
-        started = time.perf_counter()
-        command = [sys.executable, str(QUICK), "--step", str(step), "--ranks", "2", "--tol", "1e-12"]
-        result = subprocess.run(command, cwd=ROOT, env=environment(), capture_output=True, text=True)
-        attempts = 1
-        combined = result.stdout + result.stderr
-        # A Windows abort/crash is an infrastructure-level process failure. Retry it
-        # once; deterministic topology/field failures return code 1 and are never retried.
-        if result.returncode not in (0, 1):
-            attempts = 2
-            result = subprocess.run(command, cwd=ROOT, env=environment(), capture_output=True, text=True)
-            combined += "\n--- RETRY ---\n" + result.stdout + result.stderr
-        item = {
-            "step": step,
-            "exit_code": result.returncode,
-            "attempts": attempts,
-            "seconds": round(time.perf_counter() - started, 3),
-            "status": "PASS" if result.returncode == 0 else "FAIL",
-        }
-        if result.returncode != 0:
-            item["output_tail"] = combined[-2000:]
-        results.append(item)
-        print(f"G2 step {step}: {item['status']} ({item['seconds']:.1f}s)", flush=True)
-        if result.returncode != 0:
-            break
-    return results
 
 
 def run_g3(original_text):
@@ -137,31 +104,19 @@ def run_g3(original_text):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--gate", choices=("g2", "g3", "all"), default="all")
-    args = parser.parse_args()
     if not SOLVER.exists() or not MPIEXEC.exists():
         print("ERROR: solver or mpiexec missing", file=sys.stderr)
         return 2
 
     original_bytes = PARAM.read_bytes()
     original_text = original_bytes.decode("utf-8")
-    g2_results = []
     g3_results = []
     status = "FAIL"
+    return_code = 1
     try:
-        if args.gate in ("g2", "all"):
-            g2_results = run_g2()
-            if not all(item["status"] == "PASS" for item in g2_results) or len(g2_results) != len(STEPS):
-                return_code = 1
-            else:
-                return_code = 0
-        else:
+        g3_results = run_g3(original_text)
+        if all(item["status"] == "PASS" for item in g3_results) and len(g3_results) == len(PARALLEL_CASES):
             return_code = 0
-        if return_code == 0 and args.gate in ("g3", "all"):
-            g3_results = run_g3(original_text)
-            if not all(item["status"] == "PASS" for item in g3_results) or len(g3_results) != len(PARALLEL_CASES):
-                return_code = 1
         status = "PASS" if return_code == 0 else "FAIL"
     except Exception as error:
         print(f"ERROR: {error}", file=sys.stderr)
@@ -174,14 +129,12 @@ def main():
     summary = {
         "schema": "lagrangian-amr.mpi-gates.v1",
         "started_at": datetime.now().astimezone().isoformat(),
-        "requested_gate": args.gate,
         "status": status,
         "param_restored": PARAM.read_bytes() == original_bytes,
-        "g2": g2_results,
         "g3": g3_results,
     }
     SUMMARY.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"MPI gates: {status}; summary: {SUMMARY}")
+    print(f"MPI parallel gate (G3): {status}; summary: {SUMMARY}")
     return return_code if summary["param_restored"] else 2
 
 

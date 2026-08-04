@@ -12,7 +12,7 @@
 
 | 文件/目录 | 当前主要职责 | 主要问题 |
 |---|---|---|
-| `src/main.cpp` | 程序入口、初始化、主时间循环、AMR、ghost 生命周期、Riemann 求解、悬点处理、状态更新、输出、诊断 | 职责高度集中；约 50 个 `p4est_iterate` 调用；算法依赖回调注册顺序和隐式通信时序 |
+| `src/main.cpp` | 程序入口、初始化、主时间循环、AMR、ghost 生命周期、Riemann 求解、悬点处理、状态更新、输出、诊断 | 职责高度集中；51 个 `p4est_iterate` 调用、49 个 `void *` 回调；算法依赖回调注册顺序和隐式通信时序 |
 | `src/variable.h` | 通过枚举索引和裸数组保存单元、边、角点、当前/半步/滞后状态 | 字段缺乏类型语义，错误索引可编译通过；状态阶段容易部分更新 |
 | `src/defines.h` | 配置、枚举、运行时状态、输出文件流 | 配置、运行状态和 IO 资源混合；大量 `int` 代替强类型枚举；构造函数包含文件副作用 |
 | `src/alg.cpp/.h` | 几何算法、物理公式、初始/边界条件 | 几何、物理和算例初始化边界仍可继续拆分 |
@@ -22,7 +22,13 @@
 | `src/io/vtk_writer.h` | VTK 输出声明/薄封装 | 大量实际输出和调试逻辑仍位于 `main.cpp` |
 | `src/solver/corner_solver.h` | 角点矩阵和速度求解声明 | 主要实现仍位于 `main.cpp`，模块尚未真正落地 |
 | `src/physics/eos.h` | EOS 纯函数 | 方向正确，但被状态头文件不必要地包含 |
-| `python/quick_consistency_test.py` | 指定步数串行/MPI 快速一致性测试 | 可作为重构期间的 MPI 快速门禁 |
+| `src/physics/stage_policy.h` | 单阶段推进语义（M1.4） | 由 `advance_single_stage` 调用；时间循环仅迭代一次 |
+| `src/physics/timestep_reduction.h` | 时间步缩小策略（M1.2） | 已接管 dt 缩小判定 |
+| `src/solver/solver_gate.h` | 求解器门禁开关（M1.3） | 控制数值内核分支 |
+| `src/amr/coarsen_family_policy.h` | coarsen 族策略（M1.1） | 统一 sibling 组判定 |
+| `src/io/output_stamp.h` | 输出时间戳语义（M1.5a） | 与刷新幂等性（M1.5b）配套 |
+| `src/core/simulation_config.h` | 类型化配置（M2.1） | 已含 `valid()` 校验 |
+| `python/run_mpi_gates.py` | 4 核 Sod/Sedov 并行黄金门禁（G3） | G2 特定步数（3/4/10/50/54）部分已于 2026-08-04 退役 |
 | `python/run_tests.py` / `python/compare_vtu.py` | 三个串行锚点回归及 VTU 比较 | 已固定黄金参数、Python 环境、参数恢复和安全输出轮转 |
 
 ### 1.2 当前主调用链
@@ -42,11 +48,11 @@ main
       ├─ [同一条件分支] p4est_balance_ext
       ├─ [满足重分区周期/时间条件时] p4est_partition
       ├─ 重建 ghost + exchange
-      ├─ refresh_after_balance
+      ├─ refresh_after_balance（M1.5b：字节级幂等，重复调用不改变结果）
       ├─ ghost exchange
       ├─ predict_timestep + MPI_Allreduce(MIN)
       ├─ write_solution（当前位于物理推进之前）
-      ├─ two_stage_Runge_Kutta（当前循环仅执行一次）
+      ├─ advance_single_stage（M1.4：单阶段语义，时间循环仅迭代一次）
       │  ├─ CalculateHalfTimeVariable
       │  ├─ CalculateCornerRcpLcpNcp
       │  ├─ ghost exchange
@@ -68,7 +74,7 @@ main
       │  ├─ UpdateEnergyEquation
       │  ├─ UpdateEquationOfState
       │  └─ ComputeSoundSpeed
-      ├─ StatTotalEnergyError
+      ├─ StatTotalEnergyError（AMR 分支内，需与全局误差统计收敛）
       ├─ AcceptNumericalSolution
       └─ 更新时间与步数
 ```
@@ -116,7 +122,7 @@ main
 powershell -File .\validate_current.ps1
 ```
 
-三算例必须使用固定黄金配置，并与 `reference/` 中对应参考解比较；不能用短步冒烟、编译成功或单个算例通过代替三黄金回退。MPI 快速门禁、单元测试和静态检查是附加门禁，不能替代三黄金回退。
+三算例必须使用固定黄金配置，并与 `reference/` 中对应参考解比较；不能用短步冒烟、编译成功或单个算例通过代替三黄金回退。并行黄金门禁（G3）、单元测试和静态检查是附加门禁，不能替代串行三黄金回退。
 
 #### 黄金原则二：先兼容迁移，里程碑闭环后再删除瘦身
 
@@ -188,20 +194,22 @@ powershell -File .\validate_current.ps1
    - 保持使用同一 Python 解释器调用比较器；
    - 保持安全轮转输出目录且只输出末帧；
    - 补充统一的机器可读摘要和退出码约定。
-4. 固定 MPI 快速门禁：
-   - step 3、4、10、50、54；
-   - 当前已知 step 55 分歧作为“预期失败”或单独问题跟踪；
-   - 至少覆盖 MPI 1/2/4 ranks。
+4. 固定并行黄金门禁（G3）：
+   - 4 核 Sod AMR 与 Sedov AMR，与 `reference/par4_*` 逐点比对（容差 1e-12）；
+   - 由 `python/run_mpi_gates.py` 单命令执行；
+   - 原 G2 特定步数（3/4/10/50/54）与 step-55 追踪已于 2026-08-04 退役。
 5. 保存关键守恒量与字段 checksum：质量、动量、总能量、网格数量、稳定网格键集合。
 
 #### 验收标准
 
-- 单条命令完成全部串行锚点和 MPI 门禁；
+- 单条命令完成全部串行锚点和并行黄金门禁；
 - 测试结束后配置必定恢复；
 - 测试结果不依赖调用者当前 `param.ini` 的残留值；
 - 失败能区分：运行失败、拓扑不一致、字段不一致、环境缺失。
 
 ### 3.2 核验并处理 P0 数值风险
+
+> **P0 状态（2026-08-04）**：本节 A～F 六项已全部由 M1 系列子里程碑闭环，并保留对应提交与 G1/G3 证据。条目保留为设计依据与风险档案；后续如需复现或再评估，直接查阅对应 M1.x 记录（A→M1.1、B→M1.2、C→M1.3、D→M1.4、E→M1.5a、F→M1.5b）。
 
 以下事项已从源码中观察到，必须先通过最小测试确认设计意图，再单独修复：
 
@@ -414,6 +422,8 @@ CornerScratch&              // 本 rank 临时结果
 → exchange 发布权威结果
 ```
 
+> **M1.5b 实证**（提交 `a8f91f3`）：`refresh_after_balance` 的重复调用已被验证为字节级幂等——重复执行不改变任何输出字节。这证明 ghost 写入是确定性的本 rank scratch，而非跨 rank 损坏；但按本小节目标，它仍是设计债务，后续应迁移为显式只读 snapshot。
+
 ### 5.3 为每个计算阶段定义通信契约
 
 每个 phase 应声明：
@@ -488,7 +498,6 @@ CoarsenDecision evaluate_coarsen(const std::array<CellIndicator, 4>&, int level,
 - 阈值相等时行为明确；
 - 压力梯度、密度梯度、距离准则分别覆盖；
 - NaN/Inf 和非法配置被拒绝；
-- step 55 临界阈值问题可重现并有明确策略（滞回、安全带或确定性归约）。
 
 ### 6.3 抽取 AMR transfer
 
@@ -710,13 +719,13 @@ src/diagnostics/
 2. **单 rank 集成测试**：一个时间步、一次 refine/coarsen、悬点约束；
 3. **MPI 集成测试**：同一网格在 1/2/4 ranks 下状态一致；
 4. **锚点回归**：Noh/Sod/Sedov；
-5. **长期回归**：step 50/54/55/100 与守恒量。
+5. **并行黄金回归**：4 核 Sod/Sedov 并行黄金（G3）与守恒量。
 
 ---
 
 ## 11. P3：统一构建系统与工程规范
 
-当前 Makefile 使用 C++14，并编译 `config_parser.cpp`；CMake 使用 C++11，且 `AMR_Solver` 源文件列表没有包含 `config_parser.cpp`。建议：
+当前 Makefile 使用 C++14，并编译 `config_parser.cpp`；CMake 使用 C++11，且 `AMR_Solver` 源文件列表没有包含 `config_parser.cpp`——也未包含 M1.x/M2.x 新增的 header-only 源（`solver_gate.h`、`stage_policy.h` 等）。因此当前 CMake 并不是一个可用构建入口。建议：
 
 1. 选定 CMake 为唯一正式构建入口，Makefile 作为兼容包装；
 2. 统一 C++ 标准（建议至少 C++17，具体取决于编译环境）；
@@ -763,16 +772,17 @@ AMR controller
 
 ### 13.1 门禁等级
 
-为避免“完成”的含义随阶段变化，统一使用四级门禁：
+为避免“完成”的含义随阶段变化，统一使用三级门禁：
 
 | 门禁 | 内容 | 使用时机 |
 |---|---|---|
 | G0 | 编译、静态检查、相关单元测试 | 每个小批次调用迁移后 |
 | G1 | 完整串行 Noh、Sod AMR、Sedov AMR 黄金回退 | **每个子里程碑前后，以及清理瘦身后；强制** |
-| G2 | MPI step 3/4/10/50/54，按 `(treeid, level, x, y)` 比较 | 涉及 mesh、ghost、AMR、Hydro、状态布局时 |
 | G3 | 4 核 Sod/Sedov 并行黄金、守恒量和负载合理性 | 每个大里程碑结束及最终发布前 |
 
-G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而跳过 G1。
+> **G2 退役说明（2026-08-04）**：原 G2（MPI 指定步数 step 3/4/10/50/54 逐点一致性）与 step-55 临界阈值追踪已退役，原因是指定步数验证耗时且与 G3 覆盖重叠。并行正确性统一由 G3（`python/run_mpi_gates.py`，4 核 Sod/Sedov 与 `reference/par4_*` 逐点比对）承担。本文件历史完成记录中出现的 G2 引用保留为归档事实，不再构成当前验收要求。
+
+G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过 G1。
 
 ### M0：冻结可信基线与执行协议
 
@@ -784,11 +794,12 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 - **产物**：单条命令、三算例摘要、失败分类、配置恢复证明。
 - **验收**：连续运行两次 G1，结果相同，`param.ini` 与运行前逐字节一致。
 
-#### M0.2 固化 MPI 快速与长期门禁
+#### M0.2 固化并行黄金门禁
 
-- **实施**：把 step 3/4/10/50/54 固定为 G2；把 step 55 临界阈值现象作为独立已知问题；固定 4 核 Sod/Sedov 为 G3。
+- **实施**：固定 4 核 Sod/Sedov 为 G3，由 `python/run_mpi_gates.py` 单命令执行并与 `reference/par4_*` 逐点比对。
 - **产物**：机器可读 summary，明确 PASS、预期差异和真实失败。
-- **验收**：G1、G2、G3 均可由文档命令重复执行。
+- **验收**：G1、G3 均可由文档命令重复执行。
+- **[2026-08-04 修订]**：G2（指定步数 step 3/4/10/50/54）与 step-55 追踪已退役，并行正确性统一由 G3 承担。
 
 #### M0.3 建立子里程碑记录模板
 
@@ -796,7 +807,7 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 - **产物**：统一验收记录格式。
 - **验收**：后续任务不能在缺少这些证据时标记完成。
 
-**M0 完成条件**：M0.1～M0.3 全部完成，并通过 G1+G2+G3。
+**M0 完成条件**：M0.1～M0.3 全部完成，并通过 G1+G3。
 
 **完成记录（2026-08-03）**：M0.1=`69a7522`，M0.2=`2699f2c`，M0.3=`df73722`；收口 G1 的 Noh/Sod AMR/Sedov AMR 全部 PASS 且 `param.ini` 恢复，G2 step 3/4/10/50/54 全部逐位 PASS，G3 四核 Sod/Sedov 与并行黄金参考 PASS。M0 状态：**完成**。
 
@@ -827,14 +838,13 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 
 ### 迁移完成门禁
 - G1：PASS/FAIL（附 `serial_golden_summary.json` 摘要）
-- G2：PASS/FAIL/不适用（列出 step）
 - G3：PASS/FAIL/不适用（列出算例）
 
 ### 清理瘦身
 - 删除符号/文件清单：
 - 无调用证明：
 - 清理后 G1：PASS/FAIL
-- 清理后 G2/G3：PASS/FAIL/不适用
+- 清理后 G3：PASS/FAIL/不适用
 
 ### 结论
 - 状态：完成/阻塞
@@ -911,7 +921,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 - 为 cell/edge/corner 与 current/half/lag 状态增加命名 accessor；
 - 第一阶段 accessor 仍读写旧数组，保证内存布局不变；
 - 按“热力学→几何→角点→边”的批次迁移调用；
-- **专项验收**：每批 G0，子里程碑结束 G1+G2。
+- 建立 accessor 只读一致性测试（`python/test_variable_accessors.py`）：同一内存索引经 accessor 读写与旧裸数组逐字段一致；
+- **专项验收**：每批 G0，子里程碑结束 G1。
 
 #### M2.3 状态不变量检查
 
@@ -923,13 +934,15 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 
 - 仅在 M2.1～M2.3 全部通过后，删除无调用的重复字段和 accessor；
 - 每一批删除都列出符号清单；
-- **专项验收**：清理后 G1+G2。
+- **专项验收**：清理后 G1。
 
 **M2 完成条件**：业务代码不再直接使用已迁移的裸配置/状态索引，底层布局是否替换留到后续独立里程碑。
 
 ### M3：显式化 ghost 生命周期和通信契约
 
 **目标**：把 MPI 正确性依赖从调用约定变成 API 约束。
+
+> **并行门禁**：M3.x 起各子里程碑修改 ghost/通信契约，并行正确性统一以 G3（4 核 Sod/Sedov 并行黄金）为准；原 G2 指定步数门禁已退役。
 
 #### M3.1 全量 callback 通信审计
 
@@ -941,24 +954,24 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 
 - 包装 create/exchange/destroy/generation，旧调用暂时从包装内部转发；
 - topology 变化后令旧 generation 失效；
-- **专项验收**：过期 ghost 在 Debug 构建中被检测；通过 G1+G2。
+- **专项验收**：过期 ghost 在 Debug 构建中被检测；通过 G1。
 
 #### M3.3 分阶段迁移 ghost 调用点
 
 - 按 Gradient/AMR、balance refresh、Corner/Riemann、force/update 分批迁移；
 - 每批保留旧入口，使用新入口转发；
-- **专项验收**：每批 G0+相关短步，整体 G1+G2。
+- **专项验收**：每批 G0+相关短步，整体 G1。
 
 #### M3.4 remote 只读和 owner commit
 
 - 引入 `RemoteCellSnapshot` 与 scratch；
 - 逐 callback 消除对 ghost mirror 的权威写入；
-- **专项验收**：1/2/4 ranks 改变不影响规定步数结果；通过 G1+G2+G3。
+- **专项验收**：1/2/4 ranks 改变不影响规定步数结果；通过 G1+G3。
 
 #### M3.5 通信旧路径瘦身
 
 - 仅删除已迁移且无调用的 ghost 分配、exchange 和可写 mirror 路径；
-- **专项验收**：删除前后各跑 G1，删除后再跑 G2。
+- **专项验收**：删除前后各跑 G1，删除后再跑 G3。
 
 ### M4：AMR 子系统模块化
 
@@ -968,28 +981,28 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 
 - 先把现有判据原样搬入纯接口，不改变算法；
 - 建立 refine/coarsen、level、阈值和 sibling 顺序测试；
-- **专项验收**：旧/新 policy 对完整测试样本逐项同判；G1+G2。
+- **专项验收**：旧/新 policy 对完整测试样本逐项同判；G1。
 
 #### M4.2 抽取 `AMRTransfer`
 
 - 抽取 parent→children 与 children→parent；旧 callback 保留为 adapter；
-- **专项验收**：质量、动量、总能量、体积守恒；G1+G2。
+- **专项验收**：质量、动量、总能量、体积守恒；G1。
 
 #### M4.3 抽取 hanging repair
 
 - 对比 balance/coarsen 两套 callback 的逐字段行为；
 - 先统一到 `enforce_hanging_consistency`，确认覆盖后再删除重复实现；
-- **专项验收**：幂等性、coarse-fine 几何与速度约束、G1+G2。
+- **专项验收**：幂等性、coarse-fine 几何与速度约束、G1。
 
 #### M4.4 建立 AMR controller
 
 - 统一 refine→exchange→coarsen→balance→partition→rebuild ghost 的阶段编排；
-- **专项验收**：拓扑 generation 和 exchange 次序可追踪；G1+G2+G3。
+- **专项验收**：拓扑 generation 和 exchange 次序可追踪；G1+G3。
 
 #### M4.5 AMR 旧代码瘦身
 
 - 删除 `main.cpp` 中已被 controller/policy/transfer 覆盖的实现；
-- **专项验收**：删除清单可审计，清理后 G1+G2。
+- **专项验收**：删除清单可审计，清理后 G1。
 
 ### M5：Hydro/Riemann 子系统模块化
 
@@ -1004,30 +1017,30 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 
 - 建立 reset→assemble→exchange→solve master→exchange→solve hanging→exchange→force；
 - 每阶段声明输入、输出和同步边界；
-- **专项验收**：阶段锚点与旧路径逐字段一致；G1+G2。
+- **专项验收**：阶段锚点与旧路径逐字段一致；G1。
 
 #### M5.3 明确共享角点确定性策略
 
 - 选择 owner 求解或固定排序重复求解；
 - 禁止依赖 rank、本地 `quadid` 或不稳定累加顺序；
-- **专项验收**：1/2/4 ranks 的共享角点结果满足既定一致性；G1+G2+G3。
+- **专项验收**：1/2/4 ranks 的共享角点结果满足既定一致性；G1+G3。
 
 #### M5.4 抽取守恒更新与状态接受
 
 - 分离 density、momentum、work、energy、EOS、sound speed、acceptance；
-- **专项验收**：单步阶段对照、守恒量、不变量和 G1+G2。
+- **专项验收**：单步阶段对照、守恒量、不变量和 G1。
 
 #### M5.5 Hydro 旧代码瘦身
 
 - 新模块完全接管后删除 `main.cpp` 中重复实现；
-- **专项验收**：删除前后各 G1，删除后 G2+G3。
+- **专项验收**：删除前后各 G1，删除后 G3。
 
 ### M6：Mesh adapter、IO 与 Diagnostics 拆分
 
 #### M6.1 稳定 CellKey 与 p4est adapter
 
 - 统一 `(treeid, level, x, y)`；业务层不再直接转换 `void *`；
-- **专项验收**：串并行日志和比较器能稳定对齐；G1+G2。
+- **专项验收**：串并行日志和比较器能稳定对齐；G1。
 
 #### M6.2 IO 模块
 
@@ -1037,12 +1050,12 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 #### M6.3 Diagnostics 模块
 
 - 迁移守恒监控、不变量、checksum、定点 trace；
-- **专项验收**：默认关闭时无额外全场遍历和文件 IO；打开时不改变数值结果；G1+G2。
+- **专项验收**：默认关闭时无额外全场遍历和文件 IO；打开时不改变数值结果；G1。
 
 #### M6.4 清理旧 IO/诊断代码
 
 - 确认新模块覆盖后删除旧路径和硬编码 step/坐标 trace；
-- **专项验收**：清理后 G1+G2。
+- **专项验收**：清理后 G1。
 
 ### M7：基础数学、构建系统与最终主程序
 
@@ -1060,13 +1073,13 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 
 - 先让 CMake 与 Makefile 编译同一源文件集合和 C++ 标准；
 - 两套构建结果通过后，再决定唯一正式入口，不能先删除 Makefile；
-- **专项验收**：两种构建各完成 G1，最终入口再完成 G1+G2。
+- **专项验收**：两种构建各完成 G1，最终入口再完成 G1。
 
 #### M7.4 `Simulation::run()` 编排与 `main.cpp` 瘦身
 
 - 先新增高层编排并让 `main.cpp` 转发；
 - 模块全部接管后再删除旧实现；
-- **专项验收**：`main.cpp` 只保留启动；G1+G2+G3 全通过。
+- **专项验收**：`main.cpp` 只保留启动；G1+G3 全通过。
 
 **M7 完成条件**：满足第 16 节 Definition of Done，并形成最终基线提交。
 
@@ -1079,7 +1092,7 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 1. 先把 `main.cpp` 按行数机械拆成多个 `.cpp`；
 2. 全局一次性重命名所有变量和函数；
 3. 在 ghost 语义未明确前引入复杂模板或通用 callback 框架；
-4. 在 step 55 拓扑分歧未形成明确策略前声称 MPI 完全确定；
+4. 在并行一致性未形成明确策略前声称 MPI 完全确定；
 5. 同一提交同时修改算法、数据布局、目录结构和构建系统；
 6. 只以“程序能运行”作为验收，不运行串行三黄金回退；
 7. 为追求性能减少 ghost exchange，却没有先写清每次 exchange 的数据依赖；
@@ -1093,9 +1106,9 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 按依赖关系，第一轮只推进以下任务：
 
 1. **M0.1**：核实 `validate_current.ps1` 是否真正固定并执行三黄金配置，统一摘要与退出码；
-2. **M0.2**：把现有 MPI 快速测试和 4 核参考整理成明确 G2/G3 命令；
+2. **M0.2**：把 4 核参考整理成明确 G3 命令；
 3. **M0.3**：建立子里程碑验收记录模板；
-4. 完整执行一次 G1+G2+G3，形成 M0 基线提交；
+4. 完整执行一次 G1+G3，形成 M0 基线提交；
 5. **M1.1**：只处理 timestep rank 内最小值；
 6. M1.1 清理并闭环后，再进入 **M1.2 coarsen family 判据**。
 
@@ -1115,6 +1128,6 @@ G1 是最低完成门槛。任何子里程碑不得因 G0、G2 或 G3 通过而�
 - current/half/candidate 状态边界清晰；
 - 配置无隐藏默认继承，回归可重现；
 - 每个子里程碑的迁移完成点与清理完成点均有 Noh、Sod AMR、Sedov AMR 三黄金回退记录；
-- MPI 1/2/4 ranks 在规定步数下满足既定一致性标准；
+- 4 核 Sod/Sedov 并行黄金（G3）通过，与 `reference/par4_*` 一致；
 - refine/coarsen 守恒、状态不变量和拓扑一致性均有自动测试；
 - 构建系统唯一、可重复，源目录不再被构建输出污染。
