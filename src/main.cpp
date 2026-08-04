@@ -8,6 +8,7 @@
 #include "physics/timestep_reduction.h"
 #include "physics/stage_policy.h"
 #include "diagnostics/state_invariant_checker.h"
+#include "mesh/ghost_session.h"
 #include <cstdlib>
 #include <cstring>
 #include <vector>
@@ -5602,6 +5603,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 {
 	double              t = start_time;
 	double              dt = 0.;
+	GhostSession ghost_session;
 	p4est_ghost_t		*ghost;
 	quad_data_t		*ghost_data;
 	p4est_data_t		*p4est_data = (p4est_data_t *)p4est->user_pointer;
@@ -5611,11 +5613,9 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 	int					allowcoarsening = 1;
 
 	
-	ghost = p4est_ghost_new(p4est, P4EST_CONNECT_FULL);
-	
-	ghost_data = P4EST_ALLOC(quad_data_t, ghost->ghosts.elem_count);
-	
-	p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+	ghost_session.initialize(p4est, P4EST_CONNECT_FULL);
+	ghost = ghost_session.get();
+	ghost_data = ghost_session.data();
 
 	for (t = start_time; t < end_time; t += p4est_data->delta_time)
 	{
@@ -5645,19 +5645,12 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 				Lagrangian_replace_quads);
 			AMR_DEBUG_LOG("DEBUG: Finished p4est_refine_ext\n");
 
-			if (ghost) {
-				AMR_DEBUG_LOG("DEBUG: Entering p4est_ghost_destroy\n");
-				p4est_ghost_destroy(ghost);
-				AMR_DEBUG_LOG("DEBUG: Entering P4EST_FREE(ghost_data)\n");
-				P4EST_FREE(ghost_data);
-			}
-			AMR_DEBUG_LOG("DEBUG: Entering p4est_ghost_new\n");
-			ghost = p4est_ghost_new(p4est, P4EST_CONNECT_FULL);
-			AMR_DEBUG_LOG("DEBUG: Entering P4EST_ALLOC(ghost_data)\n");
-			ghost_data = P4EST_ALLOC(quad_data_t, ghost->ghosts.elem_count);
-			AMR_DEBUG_LOG("DEBUG: Entering p4est_ghost_exchange_data\n");
-			p4est_ghost_exchange_data(p4est, ghost, ghost_data);
-			AMR_DEBUG_LOG("DEBUG: Finished p4est_ghost_exchange_data\n");
+			ghost_session.invalidate_after_topology_change();
+			AMR_DEBUG_LOG("DEBUG: Entering GhostSession rebuild\n");
+			ghost_session.rebuild(p4est, P4EST_CONNECT_FULL);
+			ghost = ghost_session.get();
+			ghost_data = ghost_session.data();
+			AMR_DEBUG_LOG("DEBUG: Finished GhostSession rebuild\n");
 
 			AMR_DEBUG_LOG("DEBUG: Entering set_allowing_coarsening_tag\n");
 			set_allowing_coarsening_tag(p4est, ghost, ghost_data);
@@ -5673,33 +5666,31 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			p4est_balance_ext(p4est, P4EST_CONNECT_CORNER, NULL,
 				Lagrangian_replace_quads);
 
-			p4est_ghost_destroy(ghost);
-			P4EST_FREE(ghost_data);
+			ghost_session.invalidate_after_topology_change();
+			ghost_session.destroy();
 			ghost = NULL;
 			ghost_data = NULL;
 		}
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");
 
-		
+
 		if (p4est_data->current_step &&
 			!(p4est_data->current_step%p4est_data->repartition_period)
 			&& p4est_data->current_time>p4est_data->refine_coarsen_time)
 		{
 			p4est_partition(p4est, allowcoarsening, NULL);
-			if (ghost) {
-				p4est_ghost_destroy(ghost);
-				P4EST_FREE(ghost_data);
-				ghost = NULL;
-				ghost_data = NULL;
-			}
+			ghost_session.invalidate_after_topology_change();
+			ghost_session.destroy();
+			ghost = NULL;
+			ghost_data = NULL;
 		}
 
-		
-		if (!ghost)
+
+		if (ghost_session.empty())
 		{
-			ghost = p4est_ghost_new(p4est, P4EST_CONNECT_FULL);
-			ghost_data = P4EST_ALLOC(quad_data_t, ghost->ghosts.elem_count);
-			p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+			ghost_session.initialize(p4est, P4EST_CONNECT_FULL);
+			ghost = ghost_session.get();
+			ghost_data = ghost_session.data();
 		}
 
 		
@@ -5718,8 +5709,8 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 				"refresh_after_balance is not idempotent");
 		}
 		trace_target_snapshot(p4est, "AFTER_AMR_REFRESH");
-		
-		p4est_ghost_exchange_data(p4est, ghost, ghost_data);
+
+		ghost_session.exchange();
 
 		
 		if (p4est_data->equal_dt == false) { predict_timestep(p4est); }
@@ -5762,8 +5753,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			p4est_data->current_step, p4est_data->delta_time, p4est_data->current_time);
 	}
 	write_distance_profiles(p4est);
-	P4EST_FREE(ghost_data);
-	p4est_ghost_destroy(ghost);
+	ghost_session.destroy();
 }
 
 namespace IOAlgorithm {

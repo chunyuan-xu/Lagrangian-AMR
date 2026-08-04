@@ -962,7 +962,7 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 - topology 变化后令旧 generation 失效；
 - **专项验收**：过期 ghost 在 Debug 构建中被检测；通过 G1。
 
-#### M3.3 分阶段迁移 ghost 调用点
+**完成记录（2026-08-04）**：新增 `src/mesh/ghost_session.h`（`GhostSession` 类），包装 p4est ghost 生命周期：`initialize`（`p4est_ghost_new` + 用户数据缓冲 + 首次 `exchange`）、`destroy`（安全可空）、`rebuild`（destroy+initialize）、`invalidate_after_topology_change`、`exchange`、只读 `remote(ghost_id)`（M3.4 的 remote snapshot 接口）、以及 generation/topology_version 计数。**Debug 检测**：无 NDEBUG 构建（本项目 `-O2 -g`）下，对已失效 session 调用 `get/data/remote/exchange` 会触发 `assert` 中止。`advance_time_step` 的 ghost 生命周期（L5614 初始构建、AMR refine 后重建、coarsen+balance 后销毁、partition 后销毁、空时重建、步末交换、结束销毁）全部改由 `GhostSession` 管理，拓扑变化点显式调用 `invalidate_after_topology_change`；既有调用点（`PreProcess/set_allowing_coarsening_tag/refresh_after_balance/advance_single_stage` 及各 `p4est_iterate`）继续经 `get()/data()` 转发原始指针（兼容包装，调用点迁移留待 M3.3）。专项验收：单元测试 `python/test_ghost_session.py` 验证状态迁移（empty/valid/generation/topology_version）与**过期访问触发断言中止**（子进程非零退出），PASS。门禁：G1 三黄金（Noh 4112 / Sod 3046 / Sedov 3933）全部 PASS 且 `param.ini` 恢复；G3 四核 Sod AMR（29.6s）与四核 Sedov AMR（24.9s）均对并行黄金参考 PASS。状态：**完成**。下一子里程碑为 M3.3 分阶段迁移 ghost 调用点。
 
 - 按 Gradient/AMR、balance refresh、Corner/Riemann、force/update 分批迁移；
 - 每批保留旧入口，使用新入口转发；
