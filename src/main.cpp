@@ -2131,37 +2131,41 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 			{
 				CDoubleVector  m_cell_coord[CNDIM];
 
-				
-				m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]) = middle_coord;
-				m_child1_vara->corner_vector(idcnCoords_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
+				if (!side[i]->is.hanging.is_ghost[0])
+				{
+					m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]) = middle_coord;
+					m_child1_vara->corner_vector(idcnCoords_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
 
-				m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]) = middle_velo;
-				m_child1_vara->corner_vector(idcnVelocity_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
+					m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]) = middle_velo;
+					m_child1_vara->corner_vector(idcnVelocity_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
 
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->corner_vector(idcnCoords_cur, i); }
-				m_child1_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child1_vara->cell(idDensity_cur) = m_child1_vara->cell(idMass) / m_child1_vara->cell(idVolume);
+					for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->corner_vector(idcnCoords_cur, i); }
+					m_child1_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+					m_child1_vara->cell(idDensity_cur) = m_child1_vara->cell(idMass) / m_child1_vara->cell(idVolume);
 
-				m_child1_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
-					m_child1_vara->cell(idGamma),
-					m_child1_vara->cell(idDensity_cur),
-					m_child1_vara->cell(idInternalEnergy_cur));
+					m_child1_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
+						m_child1_vara->cell(idGamma),
+						m_child1_vara->cell(idDensity_cur),
+						m_child1_vara->cell(idInternalEnergy_cur));
+				}
 
-																   
-				m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]) = middle_coord;
-				m_child2_vara->corner_vector(idcnCoords_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
+				if (!side[i]->is.hanging.is_ghost[1])
+				{
+					m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]) = middle_coord;
+					m_child2_vara->corner_vector(idcnCoords_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
 
-				m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]) = middle_velo;
-				m_child2_vara->corner_vector(idcnVelocity_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
+					m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]) = middle_velo;
+					m_child2_vara->corner_vector(idcnVelocity_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
 
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->corner_vector(idcnCoords_cur, i); }
-				m_child2_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child2_vara->cell(idDensity_cur) = m_child2_vara->cell(idMass) / m_child2_vara->cell(idVolume);
+					for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->corner_vector(idcnCoords_cur, i); }
+					m_child2_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+					m_child2_vara->cell(idDensity_cur) = m_child2_vara->cell(idMass) / m_child2_vara->cell(idVolume);
 
-				m_child2_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
-					m_child2_vara->cell(idGamma),
-					m_child2_vara->cell(idDensity_cur),
-					m_child2_vara->cell(idInternalEnergy_cur));
+					m_child2_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
+						m_child2_vara->cell(idGamma),
+						m_child2_vara->cell(idDensity_cur),
+						m_child2_vara->cell(idInternalEnergy_cur));
+				}
 			}
 		}
 	}
