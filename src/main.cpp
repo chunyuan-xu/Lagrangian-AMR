@@ -533,8 +533,12 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 				}
 			}
 
-			m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]) = hanging_velo;
-			m_child2_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[1]) = hanging_velo;
+			if (!side[i]->is.hanging.is_ghost[0]) {
+				m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]) = hanging_velo;
+			}
+			if (!side[i]->is.hanging.is_ghost[1]) {
+				m_child2_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[1]) = hanging_velo;
+			}
 
 			CDoubleMatrix MatrixP = m_child1_data->points[m_which_corner[0]].MatrixP;
 			CDoubleVector m_rhs = m_child1_data->points[m_which_corner[0]].RHS;
@@ -547,16 +551,22 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			double parent_total_energy = m_parent_read_vara->cell(idMass) * m_parent_read_vara->cell(idTotalEnergy_cur);
 
 
-			m_child1_vara->corner_vector(idcnFluxRelaxed, m_which_corner[0]) = child1_total_energy /
-				(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
-			m_child2_vara->corner_vector(idcnFluxRelaxed, m_which_corner[1]) = child2_total_energy /
-				(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
-			ParentBounInfo  *PCInfo = (ParentBounInfo  *)&m_parent_data->m_pc_edge_data;
-			m_parent_data->m_pc_edge_data[parent_face_index].IsParentChildBoun = true;
-			PCInfo[parent_face_index].addDiss = true;
-			PCInfo[parent_face_index].Hanging_velocity = hanging_velo;
-			PCInfo[parent_face_index].FluxRelaxed = parent_total_energy /
-				(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			if (!side[i]->is.hanging.is_ghost[0]) {
+				m_child1_vara->corner_vector(idcnFluxRelaxed, m_which_corner[0]) = child1_total_energy /
+					(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			}
+			if (!side[i]->is.hanging.is_ghost[1]) {
+				m_child2_vara->corner_vector(idcnFluxRelaxed, m_which_corner[1]) = child2_total_energy /
+					(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			}
+			if (!side[full_index]->is.full.is_ghost) {
+				ParentBounInfo  *PCInfo = (ParentBounInfo  *)&m_parent_data->m_pc_edge_data;
+				m_parent_data->m_pc_edge_data[parent_face_index].IsParentChildBoun = true;
+				PCInfo[parent_face_index].addDiss = true;
+				PCInfo[parent_face_index].Hanging_velocity = hanging_velo;
+				PCInfo[parent_face_index].FluxRelaxed = parent_total_energy /
+					(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			}
 		}
 	}
 }
