@@ -105,6 +105,12 @@ public:
 	}
 
 	bool empty() const { return ghost_ == NULL; }
+	bool valid_remote_id(p4est_locidx_t ghost_id) const
+	{
+		assert(valid_ && "GhostSession::valid_remote_id after topology change without rebuild");
+		return ghost_id >= 0 && ghost_id < static_cast<p4est_locidx_t>(ghost_->ghosts.elem_count);
+	}
+
 	bool valid() const { return valid_; }
 	size_t generation() const { return generation_; }
 	size_t topology_version() const { return topology_version_; }

@@ -22,6 +22,11 @@ using namespace std;
 
 static int g_trace_riemann_iter = -1;
 
+struct GhostCallbackContext
+{
+	GhostSession *session;
+};
+
 static bool debug_flag_enabled(const char *name)
 {
 	const char *value = std::getenv(name);
@@ -1509,11 +1514,14 @@ quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info
 
 static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info, void *user_data)
 {
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*ghost_data = (quad_data_t *)user_data;
+	quad_data_t		*ghost_data = context->session->data();
 	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
-	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
+	const CVariable		*m_child1_read_vara, *m_child2_read_vara, *m_parent_read_vara;
+	CVariable		*m_child1_write_vara = NULL, *m_child2_write_vara = NULL, *m_parent_write_vara = NULL;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
 	p4est_iter_face_side_t *side[2];
 	sc_array_t				*sides = &(info->sides);
@@ -1551,11 +1559,10 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 		if (side[i]->is_hanging == Hanging)
 		{
 			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
-			if (side[i]->is.hanging.quadid[0]<0
-				|| side[i]->is.hanging.quadid[1]<0
-				|| side[i]->is.hanging.quadid[0]>info->p4est->global_num_quadrants
-				|| side[i]->is.hanging.quadid[1]>info->p4est->global_num_quadrants
-				) {
+			if ((side[i]->is.hanging.is_ghost[0]
+				&& !context->session->valid_remote_id(side[i]->is.hanging.quadid[0]))
+				|| (side[i]->is.hanging.is_ghost[1]
+				&& !context->session->valid_remote_id(side[i]->is.hanging.quadid[1]))) {
 				continue;
 			}
 			int			level = quad_child1->level;
@@ -1572,25 +1579,27 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 			if (side[i]->is.hanging.is_ghost[0])
 			{
 				m_child1_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[0]];
-				m_child1_vara = (CVariable *)&ghost_data[side[i]->is.hanging.quadid[0]].m_vara;
+				m_child1_read_vara = &context->session->remote(side[i]->is.hanging.quadid[0]).m_vara;
 				m_child1_cndata = (CCorner_data *)&(ghost_data[side[i]->is.hanging.quadid[0]].m_cndata);
 			}
 			else
 			{
 				m_child1_data = (quad_data_t *)quad_child1->p.user_data;
-				m_child1_vara = (CVariable *)&m_child1_data->m_vara;
+				m_child1_read_vara = &m_child1_data->m_vara;
+				m_child1_write_vara = &m_child1_data->m_vara;
 				m_child1_cndata = (CCorner_data *)&(m_child1_data->m_cndata);
 			}
 			if (side[i]->is.hanging.is_ghost[1])
 			{
 				m_child2_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[1]];
-				m_child2_vara = (CVariable *)&ghost_data[side[i]->is.hanging.quadid[1]].m_vara;
+				m_child2_read_vara = &context->session->remote(side[i]->is.hanging.quadid[1]).m_vara;
 				m_child2_cndata = (CCorner_data *)&(ghost_data[side[i]->is.hanging.quadid[1]].m_cndata);
 			}
 			else
 			{
 				m_child2_data = (quad_data_t *)quad_child2->p.user_data;
-				m_child2_vara = (CVariable *)&m_child2_data->m_vara;
+				m_child2_read_vara = &m_child2_data->m_vara;
+				m_child2_write_vara = &m_child2_data->m_vara;
 				m_child2_cndata = (CCorner_data *)&(m_child2_data->m_cndata);
 			}
 
@@ -1601,13 +1610,14 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 			if (side[full_index]->is.full.is_ghost)
 			{
 				m_parent_data = (quad_data_t *)&ghost_data[side[full_index]->is.full.quadid];
-				m_parent_vara = (CVariable *)&ghost_data[side[full_index]->is.full.quadid].m_vara;
+				m_parent_read_vara = &context->session->remote(side[full_index]->is.full.quadid).m_vara;
 				m_parent_cndata = (CCorner_data *)&ghost_data[side[full_index]->is.full.quadid].m_cndata;
 			}
 			else
 			{
 				m_parent_data = (quad_data_t *)quad_parent->p.user_data;
-				m_parent_vara = (CVariable *)&m_parent_data->m_vara;
+				m_parent_read_vara = &m_parent_data->m_vara;
+				m_parent_write_vara = &m_parent_data->m_vara;
 				m_parent_cndata = (CCorner_data *)&m_parent_data->m_cndata;
 			}
 			double		parent_para, child1_para, child2_para;
@@ -1617,14 +1627,14 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 			int				children_face, parent_face;
 
 			
-			parent_para = m_parent_vara->cell(idCPara);
-			child1_para = m_child1_vara->cell(idCPara);
-			child2_para = m_child2_vara->cell(idCPara);
+			parent_para = m_parent_read_vara->cell(idCPara);
+			child1_para = m_child1_read_vara->cell(idCPara);
+			child2_para = m_child2_read_vara->cell(idCPara);
 
 			
-			parent_center = m_parent_vara->cell_vector(idCentroidCoord_cur);
-			child1_center = m_child1_vara->cell_vector(idCentroidCoord_cur);
-			child2_center = m_child2_vara->cell_vector(idCentroidCoord_cur);
+			parent_center = m_parent_read_vara->cell_vector(idCentroidCoord_cur);
+			child1_center = m_child1_read_vara->cell_vector(idCentroidCoord_cur);
+			child2_center = m_child2_read_vara->cell_vector(idCentroidCoord_cur);
 
 			
 			dist1 = GeometryAlg::GetPointToPointDistance(parent_center, child1_center);
@@ -1639,9 +1649,12 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 			children_face = side[i]->face;
 			parent_face = side[1 - i]->face;
 
-			m_child1_vara->edge(idEPara, children_face) = child1_gradient;
-			m_child2_vara->edge(idEPara, children_face) = child2_gradient;
-			m_parent_vara->edge(idEPara, parent_face) = parent_gradient;
+			if (m_child1_write_vara != NULL)
+				m_child1_write_vara->edge(idEPara, children_face) = child1_gradient;
+			if (m_child2_write_vara != NULL)
+				m_child2_write_vara->edge(idEPara, children_face) = child2_gradient;
+			if (m_parent_write_vara != NULL)
+				m_parent_write_vara->edge(idEPara, parent_face) = parent_gradient;
 		}
 	}
 
@@ -1657,6 +1670,8 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 
 		p4est_quadrant_t		*brother1_quad, *brother2_quad;
 		quad_data_t				*brother1_data, *brother2_data;
+		const CVariable			*brother1_read_vara, *brother2_read_vara;
+		CVariable				*brother1_write_vara = NULL, *brother2_write_vara = NULL;
 		brother1_quad = side[0]->is.full.quad;
 		brother2_quad = side[1]->is.full.quad;
 
@@ -1665,46 +1680,62 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 		
 		if (side[0]->is.full.is_ghost)
 		{
-			brother1_data = &ghost_data[side[0]->is.full.quadid];
+			brother1_read_vara = &context->session->remote(side[0]->is.full.quadid).m_vara;
 		}
 		else
 		{
 			brother1_data = (quad_data_t  *)side[0]->is.full.quad->p.user_data;
+			brother1_read_vara = &brother1_data->m_vara;
+			brother1_write_vara = &brother1_data->m_vara;
 		}
 
 		
 		if (side[1]->is.full.quad == NULL || info->sides.elem_count <2 ||
 			side[1]->is.full.quadid>info->p4est->global_num_quadrants)
 		{
-			brother1_data->m_vara.edge(idEPara, face_index[0]) = 0.;
+			if (brother1_write_vara != NULL)
+			{
+				brother1_write_vara->edge(idEPara, face_index[0]) = 0.;
+			}
 			return;
 		}
 
 		face_index[1] = side[1]->face;
 		if (side[1]->is.full.is_ghost)
 		{
-			brother2_data = &ghost_data[side[1]->is.full.quadid];
+			brother2_read_vara = &context->session->remote(side[1]->is.full.quadid).m_vara;
 		}
 		else if (!(side[1]->is.full.quad))
 		{
-			brother1_data->m_vara.edge(idEPara, face_index[0]) = 0.;
+			if (brother1_write_vara != NULL)
+			{
+				brother1_write_vara->edge(idEPara, face_index[0]) = 0.;
+			}
 			return;
 		}
 		else
 		{
 			brother2_data = (quad_data_t  *)side[1]->is.full.quad->p.user_data;
+			brother2_read_vara = &brother2_data->m_vara;
+			brother2_write_vara = &brother2_data->m_vara;
 		}
 
-		m_para[0] = brother1_data->m_vara.cell(idCPara);
-		m_para[1] = brother2_data->m_vara.cell(idCPara);
-		m_center[0] = brother1_data->m_vara.cell_vector(idCentroidCoord_cur);
-		m_center[1] = brother2_data->m_vara.cell_vector(idCentroidCoord_cur);
+		m_para[0] = brother1_read_vara->cell(idCPara);
+		m_para[1] = brother2_read_vara->cell(idCPara);
+		m_center[0] = brother1_read_vara->cell_vector(idCentroidCoord_cur);
+		m_center[1] = brother2_read_vara->cell_vector(idCentroidCoord_cur);
 
 		double dist = GeometryAlg::GetPointToPointDistance(m_center[0], m_center[1]);
 		m_gradient = abs(m_para[0] - m_para[1]) / dist;
 
-		brother1_data->m_vara.edge(idEPara, face_index[0]) = m_gradient;
-		brother2_data->m_vara.edge(idEPara, face_index[1]) = m_gradient;
+		if (brother1_write_vara != NULL)
+		{
+			brother1_write_vara->edge(idEPara, face_index[0]) = m_gradient;
+		}
+		if (brother2_write_vara != NULL)
+		{
+			brother2_write_vara->edge(idEPara, face_index[1]) = m_gradient;
+		}
 	}
 }
 
@@ -1920,16 +1951,11 @@ static void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_f
 
 			if (side[full_index]->is.full.is_ghost)
 			{
-				m_parent_data = (quad_data_t *)&ghost_data[side[full_index]->is.full.quadid];
-				m_parent_vara = (CVariable *)&ghost_data[side[full_index]->is.full.quadid].m_vara;
-				m_parent_cndata = (CCorner_data *)&ghost_data[side[full_index]->is.full.quadid].m_cndata;
+				continue;
 			}
-			else
-			{
-				m_parent_data = (quad_data_t *)quad_parent->p.user_data;
-				m_parent_vara = (CVariable *)&m_parent_data->m_vara;
-				m_parent_cndata = (CCorner_data *)&m_parent_data->m_cndata;
-			}
+			m_parent_data = (quad_data_t *)quad_parent->p.user_data;
+			m_parent_vara = (CVariable *)&m_parent_data->m_vara;
+			m_parent_cndata = (CCorner_data *)&m_parent_data->m_cndata;
 
 			if ((childlevel - parentlevel) > 1)
 			{
@@ -1943,9 +1969,11 @@ static void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_f
 
 static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info, void *user_data)
 {
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*ghost_data = (quad_data_t *)user_data;
+	quad_data_t		*ghost_data = context->session->data();
 	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
@@ -1963,11 +1991,12 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 		if (side[i]->is_hanging == Hanging)
 		{
 			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
-			if (side[i]->is.hanging.quadid[0]<0
-				|| side[i]->is.hanging.quadid[1]<0
-				|| side[i]->is.hanging.quadid[0]>info->p4est->global_num_quadrants
-				|| side[i]->is.hanging.quadid[1]>info->p4est->global_num_quadrants
-				|| side[i]->is.hanging.quadid[0] == side[i]->is.hanging.quadid[1]) {
+			if ((side[i]->is.hanging.is_ghost[0]
+				&& !context->session->valid_remote_id(
+					side[i]->is.hanging.quadid[0]))
+				|| (side[i]->is.hanging.is_ghost[1]
+				&& !context->session->valid_remote_id(
+					side[i]->is.hanging.quadid[1]))) {
 
 				continue;
 			}
@@ -5104,9 +5133,10 @@ static void append_refresh_snapshot(
 static void
 refresh_after_balance(p4est_t *p4est, GhostSession &session)
 {
+	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
 		session.get(),
-		(void *)session.data(),
+		&callback_context,
 		NULL,
 		quadrant_update_after_balance_callback,
 #ifdef  P4_TO_P8
@@ -5147,6 +5177,7 @@ static void
 Gradient_estimate(p4est_t *p4est, GhostSession &session)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	GhostCallbackContext callback_context = { &session };
 
 	p4est_iterate(p4est,
 		session.get(),
@@ -5162,7 +5193,7 @@ Gradient_estimate(p4est_t *p4est, GhostSession &session)
 
 	p4est_iterate(p4est,
 		session.get(),
-		(void *)session.data(),
+		&callback_context,
 		NULL,
 		quadrant_edge_minmod_estimate_callback,
 #ifdef  P4_TO_P8

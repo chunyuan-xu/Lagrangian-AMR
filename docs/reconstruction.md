@@ -970,6 +970,8 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 
 **完成记录（2026-08-04）**：完成 ghost 调用点的兼容迁移：Gradient/AMR（`Gradient_estimate`、`PreProcess`、`set_allowing_coarsening_tag`）、balance refresh（`refresh_after_balance` 与幂等快照）、Corner/Riemann（`MatrixAssemble`、`ComputeCornerNodeVelocity`、`ComputeHangingNodeVelocity...`、`RiemannSolver`）和 AMR boundary（`Get_AMR_BDY_info`）均改为接收 `GhostSession&`，不再在业务函数签名中传递裸 `p4est_ghost_t*` / `void* ghost_data`。所有内部 `p4est_ghost_exchange_data` 调用改为 `session.exchange()`；所有 iterate ghost 参数改为 `session.get()/session.data()`；不需要 ghost 的 volume callback 显式保持 NULL。`advance_time_step` 只保留一个 `GhostSession` 局部对象，不再维护原始 ghost/data 别名，拓扑变化调用 invalidate+destroy/rebuild。`Predict_refining_Quads` 只接受 session 但本身为零调用死函数，保留到 M3.5 清理。门禁：G0 编译 + `test_variable_accessors.py`、`test_state_invariants.py`、`test_ghost_session.py` 全部 PASS；G1 三黄金（Noh 4112 / Sod 3046 / Sedov 3933）全部 PASS 且 `param.ini` 恢复；G3 四核 Sod AMR（28.1s）与 Sedov AMR（23.5s）均对并行黄金参考。状态：**完成**。下一子里程碑为 M3.4 remote 只读和 owner commit。
 
+**锚点重启规则（2026-08-04）**：返回最近一次 G0–G3 全部通过的已验证锚点后，未知中间态不得继续作为活动开发基线；M3.4 到后续里程碑之间未能证明根因已定位的活动工作链路应丢弃，重新细分并从锚点推进。失败中间态只能作为明确标记、可恢复的取证存档，不能恢复后继续叠加，除非后续调查已隔离并证明其根因。锚点本身没有发生的故障，不应被当作重启后的活动故障；只有新修改再次触发失败时，才分析该新修改引入的回归。状态：**执行中**。
+
 - 引入 `RemoteCellSnapshot` 与 scratch；
 - 逐 callback 消除对 ghost mirror 的权威写入；
 - **专项验收**：1/2/4 ranks 改变不影响规定步数结果；通过 G1+G3。
@@ -1137,3 +1139,13 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 - 4 核 Sod/Sedov 并行黄金（G3）通过，与 `reference/par4_*` 一致；
 - refine/coarsen 守恒、状态不变量和拓扑一致性均有自动测试；
 - 构建系统唯一、可重复，源目录不再被构建输出污染。
+
+### M3.4 小锚点验证记录（2026-08-04）
+
+- A1：edge minmod callback 改用显式 `GhostCallbackContext`，通过 G0、G1、serial rollback 和 G3 四进程 MPI rollback；`param.ini` 字节恢复。
+- A2：仅处理 conforming full-face 分支：远端 side 通过 `GhostSession::remote()` const read，owner-local side 才允许写入 gradient；通过最终直接编译、G0、G1 Noh/Sod/Sedov、serial rollback Noh/Sod/Sedov、G3 Sod/Sedov 和 MPI rollback；`mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。
+- A2 已验证为当前 M3.4 活动锚点；hanging 分支、ghost ID 域检查和其他 callback 未混入本片，M3.4 仍未整体关闭，M3.5 不得开始。
+- A3：仅处理同一 edge minmod callback 的 hanging branch：child/parent 通过 `GhostSession::remote()` 做 const read，gradient 仅经 owner-local write pointer 写回；通过编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `param.ini` 字节恢复。A3 已验证为当前 M3.4 活动锚点；ghost ID validity、corner data、其他 callback 和 hanging matrix 未混入本片。
+- B1：仅将同一 edge minmod callback hanging branch 的远端 child ghost-ID 范围检查替换为 `GhostSession::valid_remote_id()`；本地 child ID 不走远端域检查，full-face 旧 guard、geometry、corner data、其他 callback 和 hanging matrix 未混入本片。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B1 已验证为当前 M3.4 活动锚点；M3.4 仍未整体关闭，M3.5 不得开始。
+- B2：仅处理 `quadrant_whether_allowing_coarsening_from_edge_callback` 的 full parent 写入：ghost parent 不再被当作可写镜像，直接跳过；owner-local parent 保留原有 `idAllowCoarsening` 标量写入。未改变 level 判定、geometry、corner data、hanging matrix、parent-edge 或其他 callback。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B2 已验证为当前 M3.4 活动锚点；M3.4 仍未整体关闭，M3.5 不得开始。
+- B3：仅处理 `quadrant_update_after_balance_callback` 的 hanging ghost-ID guard：远端 child ID 仅在对应 `is_ghost` 标志为真时通过 `GhostSession::valid_remote_id()` 校验，本地 child ID 不再与 `global_num_quadrants` 比较；所有 geometry、corner data、源数据读写和其他 callback 未混入本片。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B3 已验证为当前 M3.4 活动锚点；M3.4 仍未整体关闭，M3.5 不得开始。
