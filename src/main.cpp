@@ -3259,28 +3259,31 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 		}
 
 
-		if (is_boundary)		
+		if (!is_ghost)
 		{
+			if (is_boundary)
+			{
 
 
-			m_data->points[cnid].velo_lag = BoundaryNodeVelocityComputation(
-				m_data->points[cnid].TwoBouns[0],    
-				m_data->points[cnid].TwoBouns[1],    
-				m_data->points[cnid].MatrixP,  
-				m_data->points[cnid].RHS);     
+				m_data->points[cnid].velo_lag = BoundaryNodeVelocityComputation(
+					m_data->points[cnid].TwoBouns[0],
+					m_data->points[cnid].TwoBouns[1],
+					m_data->points[cnid].MatrixP,
+					m_data->points[cnid].RHS);
+			}
+			else
+			{
+				CDoubleMatrix MatrixP_Inverse;
+				MatrixP_Inverse = GeometryAlg::MatrixInverse(m_data->points[cnid].MatrixP);
+				m_data->points[cnid].velo_lag = GeometryAlg::MatrixDotVector(MatrixP_Inverse, m_data->points[cnid].RHS);
+			}
+
+			if (fabs(m_data->points[cnid].velo_lag.x) < m_eps) { m_data->points[cnid].velo_lag.x = 0.; }
+			if (fabs(m_data->points[cnid].velo_lag.y) < m_eps) { m_data->points[cnid].velo_lag.y = 0.; }
+
+
+			m_vara->corner_vector(idcnVelocity_lag, cnid) = m_data->points[cnid].velo_lag;
 		}
-		else                
-		{
-			CDoubleMatrix MatrixP_Inverse;
-			MatrixP_Inverse = GeometryAlg::MatrixInverse(m_data->points[cnid].MatrixP);
-			m_data->points[cnid].velo_lag = GeometryAlg::MatrixDotVector(MatrixP_Inverse, m_data->points[cnid].RHS);
-		}
-		
-		if (fabs(m_data->points[cnid].velo_lag.x) < m_eps) { m_data->points[cnid].velo_lag.x = 0.; }
-		if (fabs(m_data->points[cnid].velo_lag.y) < m_eps) { m_data->points[cnid].velo_lag.y = 0.; }
-
-		
-		m_vara->corner_vector(idcnVelocity_lag, cnid) = m_data->points[cnid].velo_lag;
 		p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 		if (target_trace_enabled() && p4est_data->current_step == 3 && !is_ghost &&
 			((is_trace_fine(side[i]->quad) && cnid == 2) ||
