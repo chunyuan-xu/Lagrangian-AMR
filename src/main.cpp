@@ -3960,13 +3960,19 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 			OneBounMinus.Zc = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].Zcp;
 			OneBounMinus.enumType = WallBoundary;
 
-			m_quad_data->points[m_which_corner[0]].IsHanging = true;
-			m_quad_data->points[m_which_corner[0]].TwoBouns[0] = OneBounPlus;
-			m_quad_data->points[m_which_corner[0]].TwoBouns[1] = OneBounMinus;
+			if (!side[i]->is.hanging.is_ghost[0])
+			{
+				m_quad_data->points[m_which_corner[0]].IsHanging = true;
+				m_quad_data->points[m_which_corner[0]].TwoBouns[0] = OneBounPlus;
+				m_quad_data->points[m_which_corner[0]].TwoBouns[1] = OneBounMinus;
+			}
 
-			m_quad_data_aside->points[m_which_corner[1]].IsHanging = true;
-			m_quad_data_aside->points[m_which_corner[1]].TwoBouns[0] = OneBounMinus;
-			m_quad_data_aside->points[m_which_corner[1]].TwoBouns[1] = OneBounPlus;
+			if (!side[i]->is.hanging.is_ghost[1])
+			{
+				m_quad_data_aside->points[m_which_corner[1]].IsHanging = true;
+				m_quad_data_aside->points[m_which_corner[1]].TwoBouns[0] = OneBounMinus;
+				m_quad_data_aside->points[m_which_corner[1]].TwoBouns[1] = OneBounPlus;
+			}
 		}
 	}
 
