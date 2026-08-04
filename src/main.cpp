@@ -424,11 +424,12 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 		if (side[i]->is_hanging == Hanging)
 		{
 			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
-			if (side[i]->is.hanging.quadid[0]<0
-				|| side[i]->is.hanging.quadid[1]<0
-				|| side[i]->is.hanging.quadid[0]>info->p4est->global_num_quadrants
-				|| side[i]->is.hanging.quadid[1]>info->p4est->global_num_quadrants
-				) {
+			if ((side[i]->is.hanging.is_ghost[0]
+				&& !context->session->valid_remote_id(
+					side[i]->is.hanging.quadid[0]))
+				|| (side[i]->is.hanging.is_ghost[1]
+				&& !context->session->valid_remote_id(
+					side[i]->is.hanging.quadid[1]))) {
 				continue;
 			}
 			int			level = quad_child1->level;
