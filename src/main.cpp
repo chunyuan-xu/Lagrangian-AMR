@@ -2507,8 +2507,8 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 		{
 			m_data = (quad_data_t  *)side[i]->quad->p.user_data;
 		}
-		m_data->points[cnid].MatrixP = MatrixP;
-		m_data->points[cnid].RHS = RHS;
+		if (!is_ghost) m_data->points[cnid].MatrixP = MatrixP;
+		if (!is_ghost) m_data->points[cnid].RHS = RHS;
 	}
 
 	tree_boundary = info->tree_boundary;
@@ -2604,8 +2604,8 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 					m_data = (quad_data_t  *)side[i]->quad->p.user_data;
 				}
 
-				m_data->points[cnid].TwoBouns[0] = m_bouns[0];
-				m_data->points[cnid].TwoBouns[1] = m_bouns[1];
+				if (!is_ghost) m_data->points[cnid].TwoBouns[0] = m_bouns[0];
+				if (!is_ghost) m_data->points[cnid].TwoBouns[1] = m_bouns[1];
 			}
 		}
 		m_bouns.clear();
