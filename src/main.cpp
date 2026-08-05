@@ -3822,24 +3822,27 @@ static void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info,
 			ParentBounInfo		*PCInfo = (ParentBounInfo  *)&m_parent_data->m_pc_edge_data;
 			CHalf_edge_data *m_plus, *m_minus;
 
-			PCInfo[parent_face_index].IsParentChildBoun =
-				m_child1_data->points[m_which_corner[0]].IsHanging;
+			if (!side[full_index]->is.full.is_ghost)
+			{
+				PCInfo[parent_face_index].IsParentChildBoun =
+					m_child1_data->points[m_which_corner[0]].IsHanging;
 
-			PCInfo[parent_face_index].ParentPIStar =
+				PCInfo[parent_face_index].ParentPIStar =
 
-				m_child1_data->points[m_which_corner[0]].pi_constrained_parent;
+					m_child1_data->points[m_which_corner[0]].pi_constrained_parent;
 
-			PCInfo[parent_face_index].Hanging_velocity =
-				m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]);
+				PCInfo[parent_face_index].Hanging_velocity =
+					m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]);
 
-			PCInfo[parent_face_index].Lcp[0] =
-				m_child1_data->points[m_which_corner[0]].TwoBouns[0].Lcp;
+				PCInfo[parent_face_index].Lcp[0] =
+					m_child1_data->points[m_which_corner[0]].TwoBouns[0].Lcp;
 
-			PCInfo[parent_face_index].Lcp[1] =
-				m_child2_data->points[m_which_corner[1]].TwoBouns[0].Lcp;
+				PCInfo[parent_face_index].Lcp[1] =
+					m_child2_data->points[m_which_corner[1]].TwoBouns[0].Lcp;
 
-			PCInfo[parent_face_index].Ncp[0] = --m_child1_data->points[m_which_corner[0]].TwoBouns[0].Ncp;
-			PCInfo[parent_face_index].Ncp[1] = --m_child2_data->points[m_which_corner[1]].TwoBouns[0].Ncp;
+				PCInfo[parent_face_index].Ncp[0] = --m_child1_data->points[m_which_corner[0]].TwoBouns[0].Ncp;
+				PCInfo[parent_face_index].Ncp[1] = --m_child2_data->points[m_which_corner[1]].TwoBouns[0].Ncp;
+			}
 
 			CDoubleVector	master_coord[2], hanging_coord;
 			hanging_coord = m_child1_data->m_vara.corner_vector(idcnCoords_cur, m_which_corner[0]);
