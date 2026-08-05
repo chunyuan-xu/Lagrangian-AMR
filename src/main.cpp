@@ -3004,21 +3004,27 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 
 			BounParent.enumType = WallBoundary;
 
-			m_quad_data->points[m_which_corner[0]].IsHanging = true;
-			m_quad_data->points[m_which_corner[0]].TwoBouns[0] = OneBounPlus;
-			m_quad_data->points[m_which_corner[0]].TwoBouns[1] = OneBounMinus;
-			m_quad_data->points[m_which_corner[0]].BounParent = BounParent;
-			m_quad_data->points[m_which_corner[0]].master_coord_relaxed[0] = master_coord[0];
-			m_quad_data->points[m_which_corner[0]].master_coord_relaxed[1] = master_coord[1];
-			m_quad_data->points[m_which_corner[0]].hanging_coord = hanging_coord;
+			if (!side[i]->is.hanging.is_ghost[0])
+			{
+				m_quad_data->points[m_which_corner[0]].IsHanging = true;
+				m_quad_data->points[m_which_corner[0]].TwoBouns[0] = OneBounPlus;
+				m_quad_data->points[m_which_corner[0]].TwoBouns[1] = OneBounMinus;
+				m_quad_data->points[m_which_corner[0]].BounParent = BounParent;
+				m_quad_data->points[m_which_corner[0]].master_coord_relaxed[0] = master_coord[0];
+				m_quad_data->points[m_which_corner[0]].master_coord_relaxed[1] = master_coord[1];
+				m_quad_data->points[m_which_corner[0]].hanging_coord = hanging_coord;
+			}
 
-			m_quad_data_aside->points[m_which_corner[1]].IsHanging = true;
-			m_quad_data_aside->points[m_which_corner[1]].TwoBouns[0] = OneBounMinus;
-			m_quad_data_aside->points[m_which_corner[1]].TwoBouns[1] = OneBounPlus;
-			m_quad_data_aside->points[m_which_corner[1]].BounParent = BounParent;
-			m_quad_data_aside->points[m_which_corner[1]].master_coord_relaxed[0] = master_coord[0];
-			m_quad_data_aside->points[m_which_corner[1]].master_coord_relaxed[1] = master_coord[1];
-			m_quad_data_aside->points[m_which_corner[1]].hanging_coord = hanging_coord;
+			if (!side[i]->is.hanging.is_ghost[1])
+			{
+				m_quad_data_aside->points[m_which_corner[1]].IsHanging = true;
+				m_quad_data_aside->points[m_which_corner[1]].TwoBouns[0] = OneBounMinus;
+				m_quad_data_aside->points[m_which_corner[1]].TwoBouns[1] = OneBounPlus;
+				m_quad_data_aside->points[m_which_corner[1]].BounParent = BounParent;
+				m_quad_data_aside->points[m_which_corner[1]].master_coord_relaxed[0] = master_coord[0];
+				m_quad_data_aside->points[m_which_corner[1]].master_coord_relaxed[1] = master_coord[1];
+				m_quad_data_aside->points[m_which_corner[1]].hanging_coord = hanging_coord;
+			}
 		}
 	}
 }
