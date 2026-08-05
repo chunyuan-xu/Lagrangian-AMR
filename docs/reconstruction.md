@@ -1,5 +1,7 @@
 # Lagrangian-AMR 程序重构提纲
 
+> 当前 G0～G3 黄金回退的唯一可执行 SOP 是 [`golden-gates.md`](golden-gates.md)。本文保留重构阶段、回退锚点和历史证据；其中的门禁原则必须与该 SOP 一致，历史 PASS 记录不能替代当前提交的实测 summary。
+
 > 目标：在不破坏现有数值结果和 p4est/MPI 并行能力的前提下，把当前“以 `src/main.cpp` 和大量 `p4est_iterate` callback 为中心”的实现，逐步重构为职责清晰、通信契约显式、数值内核可单测、串并行可回归的模块化架构。
 >
 > 本文是重构路线提纲，不建议一次性大改。每一阶段都必须在独立提交中完成，并通过串行锚点与 MPI 一致性门禁后再进入下一阶段。
@@ -155,13 +157,28 @@ powershell -File .\validate_current.ps1
 
 若第 5 或第 6 步失败，子里程碑不得完成；优先恢复到上一个通过三黄金回退的提交，再定位问题。
 
-### 2.4 每次提交的边界
+### 2.4 M3.4～M3.5 细粒度闭环工作流（经验固化）
+
+M3.4～M3.5 的实践表明，通信语义重构不应按“大功能完成后再统一验收”，而应拆成可回退、可判定、可提交的小锚点。推荐采用以下工作流：
+
+1. **建立可靠入口锚点**：先确认当前提交、编译器、MPI launcher/runtime、PATH/DLL、参数文件 checksum 和输出目录状态；入口锚点必须通过完整 G0～G3，不能只依赖历史记录。
+2. **单一假设、单一改动**：每个子锚点只处理一个 callback、一个字段组、一个访问权限或一个生命周期边界；明确修改范围和不触碰的相邻路径，禁止把未解释的实验改动继续叠加。
+3. **先读审计，后写代码**：记录 callback 的 `Requires/Reads/Writes/Invalidates/Exchange`，区分 owner-local、remote snapshot 和 scratch；未证明为死路径的 callback、上下文和兼容入口暂不删除。
+4. **小步验证**：先完成 G0 和专项测试，再执行完整串行 G1；只有 G1 通过才允许把该小锚点视为数值行为未回归。
+5. **完整并行收口**：每一个达到收口条件的粒度——包括 callback 子锚点、字段组子锚点、清理子锚点和文档/协议子里程碑——都必须执行完整四进程 G3：Sod AMR 和 Sedov AMR 两个算例均实际运行并通过。短 MPI smoke、单 rank、单算例或 runner 因首个失败而跳过的算例，都不能替代 G3。
+6. **失败即停在当前粒度**：任一 G0～G3 失败，不进入下一子锚点，不提交为完成状态；保留失败证据，定位“最近 PASS 锚点 → 当前 FAIL 改动”的最小区间，必要时二分回退。诊断版、非 canonical launcher、断言路径或无输出 segfault 只能作为环境/构建证据，不能冒充 G3 根因。
+7. **通过即提交并追踪**：G0～G3 全部通过后，检查 staged diff 只包含当前粒度的源码/文档，排除参数、黄金参考、可执行文件、日志和输出目录；随后创建 focused commit，并按项目授权推送到 GitHub，使每个通过锚点都可追踪。提交信息必须记录门禁摘要、参数恢复和已知风险。
+8. **提交后再确认状态**：记录 commit hash、工作树状态和下一锚点；若推送或提交前发现门禁证据缺失、参数未恢复或工作树混入未知修改，则停留在当前锚点，不把未知中间态升级为基线。
+
+该流程的核心不是增加测试数量，而是缩小“一个改动对应一个结论”的范围：任何失败都能归因到当前最小粒度，任何通过都能形成可恢复的 G0～G3 追踪点。M3.4 的 owner-write 审计和 B1～B15 子锚点验证采用了这一模式；M3.5 的 G3 漂移则证明，在完整 G3 未闭合前不应启动旧路径删除或清理阶段。
+
+### 2.5 每次提交的边界
 
 每个重构提交应满足：
 
 - 只处理一个概念，如“封装 ghost 生命周期”或“抽取 AMR criterion”；
 - 不同时进行算法修复和大规模重命名；
-- 子里程碑收口提交必须附 Noh/Sod AMR/Sedov AMR 三黄金回退结果；
+- 子里程碑收口提交必须附 G0、G1、G3 结果；G2 仅记录为 retired/N/A，不再作为当前门禁；
 - 先保证串行三黄金锚点，再执行该子里程碑要求的 MPI/专项门禁；
 - 比较单元时使用 `(treeid, level, x, y)`，不依赖 `quadid`；
 - 若网格数量或稳定几何集合不同，立即停止字段比较并定位拓扑首分歧；
@@ -772,17 +789,20 @@ AMR controller
 
 ### 13.1 门禁等级
 
-为避免“完成”的含义随阶段变化，统一使用三级门禁：
+为避免“完成”的含义随阶段变化，统一使用 G0～G3 门禁；G2 已退休，不再作为有效验收门槛：
 
 | 门禁 | 内容 | 使用时机 |
 |---|---|---|
-| G0 | 编译、静态检查、相关单元测试 | 每个小批次调用迁移后 |
+| G0 | 干净编译、静态检查、相关单元测试 | 每个小批次调用迁移后，以及每个收口点 |
 | G1 | 完整串行 Noh、Sod AMR、Sedov AMR 黄金回退 | **每个子里程碑前后，以及清理瘦身后；强制** |
-| G3 | 4 核 Sod/Sedov 并行黄金、守恒量和负载合理性 | 每个大里程碑结束及最终发布前 |
+| G2 | retired / N/A；不恢复旧的特定 step 检查 | 仅作历史归档，不参与当前验收 |
+| G3 | 完整 4 核 Sod AMR 和 Sedov AMR 并行黄金、守恒量和负载合理性 | **每个达到收口条件的子锚点、子里程碑和清理阶段；强制** |
+
+> G3 必须实际执行 Sod 与 Sedov 两个四进程算例；不能用串行成功、单 rank、短 MPI smoke、单个 MPI 算例，或 runner 在首个失败后跳过的算例替代完整 G3。只有 G0～G3 全部通过，当前粒度才允许提交为已完成并推送到 GitHub。
 
 > **G2 退役说明（2026-08-04）**：原 G2（MPI 指定步数 step 3/4/10/50/54 逐点一致性）与 step-55 临界阈值追踪已退役，原因是指定步数验证耗时且与 G3 覆盖重叠。并行正确性统一由 G3（`python/run_mpi_gates.py`，4 核 Sod/Sedov 与 `reference/par4_*` 逐点比对）承担。本文件历史完成记录中出现的 G2 引用保留为归档事实，不再构成当前验收要求。
 
-G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过 G1。
+G1 是串行数值回归门槛，G3 是并行收口门槛；二者均不可由另一个门禁替代。任何一个门禁失败，当前粒度保持阻塞，不得创建“已完成”提交。
 
 ### M0：冻结可信基线与执行协议
 
@@ -978,12 +998,42 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 
 #### M3.5 通信旧路径瘦身
 
-- 仅删除已迁移且无调用的 ghost 分配、exchange 和可写 mirror 路径；
-- **专项验收**：删除前后各跑 G1，删除后再跑 G3。
+M3.5 只允许在 M3.4 通过当前完整 G0～G3 重跑后启动。清理对象必须先有全仓库零调用证据；活动 ghost 生命周期、`GhostSession::get()/data()`、callback context、`corner_solver.h` 兼容声明和 owner/remote 访问路径不得因“看起来旧”而删除。
 
+为降低通信重构的回归半径，M3.5 分为以下十个可独立回退的阶段。每个阶段都必须按本节 §2.4 的工作流执行；G0～G3 全部通过后，才能记录该阶段完成并创建 focused commit：
+
+| 阶段 | 范围 | 必须保持不变或确认的内容 |
+|---|---|---|
+| R0 | 重现入口锚点和完整门禁 | commit、工具链、MPI runtime、参数 checksum、G0～G3 证据 |
+| R1 | 隔离 G3 失败 | 重复 canonical G3，记录失败 step、能量误差、rank、partition、exit code；不改生产代码 |
+| R2 | 确认通过基线和清理契约 | 只有 G3 两算例都通过才可进入；列出零调用候选与 deferred 活动路径 |
+| C1 | 删除 `GhostSession::data_size_` | 不改变 ghost allocation、exchange、generation 和 validity |
+| C2 | 删除零调用 VTK 坐标 callback | 不改变 VTK writer、字段、文件名和时间元数据 |
+| C3 | 删除零调用 prediction path | 不改变 active refine criteria、AMR tag 和默认标记 |
+| C4 | 删除零调用 post-coarsening path | 不改变 active coarsen、balance、partition、refresh 和 rebuild 时序 |
+| C5 | 删除零调用 parent velocity/pressure callback | 不触碰 active parent update、Riemann、corner、hanging 或 exchange |
+| C6 | 全量符号、调用和 ownership 审计 | 确认五组清理符号无残留，活动 ghost API/context 仍保留 |
+| C7 | 最终 M3.5 收口 | clean build、完整 G0/G1/G3，G3 连续两次，参数和参考文件不变 |
+
+其中 R0～R2 是基线和原因隔离阶段，C1～C7 是清理阶段；R1 未闭合时禁止进入 R2 或任何 C 阶段。若 MPI rollback 失败，停留在最近一个可靠 G0～G3 锚点，不把诊断 executable、日志、summary 或未知工作树状态升级为基线。
+
+**当前状态记录（2026-08-05）**：当前 canonical 四进程 G3 Sod AMR 仍失败，MPI Sedov 因 runner 在首个失败后停止而尚未执行；因此当前 M3/M3.5 不能按历史记录标记为闭合，M3.5 停留在 R1，R2 和 C1～C7 均禁止启动。历史子锚点的 PASS 记录只能说明当时的验证结果，不能替代当前环境下完整 G0～G3 重跑。
+
+**M3.5 延迟清理项（转入 M4）**：
+为了绝对控制风险，以下仍在活跃执行的通信相关操作被严格剔除出 M3.5，统一推迟至 M4 解决：
+1. `ghost_data` 裸数组指针别名（如 `ghost_data[quadid]`）向 `GhostSession::remote()` 的安全迁移。
+2. Edge/Corner/Hanging 回调中针对幽灵层“仅为写入 mirror 而执行”的冗余浮点计算短路。
+3. 全局 `void *ghost_data` 等本地占位符声明的彻底根除。
 ### M4：AMR 子系统模块化
 
-**目标**：AMR 决策、transfer、悬点修复可分别测试，p4est callback 仅适配数据。
+**目标**：AMR 决策、transfer、悬点修复可分别测试，p4est callback 仅适配数据。同时安全清算 M3.5 遗留的高风险通信瘦身项。
+
+#### M4.0 剥离残留通信旧路径 (M3.5 遗留项)
+
+- **替换裸指针读取**：分批次（AMR判定/Edge/Corner/Hanging）将所有针对 `ghost_data[quadid]` 的裸数组解引用，安全迁移至强类型的 `GhostSession::remote(quadid)`，实现强制只读。
+- **短路死计算**：在核心回调中，把 `!is_ghost` 的“写入前拦截”升级为“计算前拦截”，跳过仅服务于幽灵层的庞大浮点矩阵和通量计算。
+- **清理本地占位符**：全局抹除 `void *ghost_data = context->session->data();` 等所有绕过封装的局部环境声明。
+- **专项验收**：每次指针替换和计算短路均属于极高危操作，必须强制闭环执行完整 G0~G3；并行黄金结果（特别是网格拓扑、边界条件和守恒量）不得出现偏差。
 
 #### M4.1 抽取 `AMRPolicy`
 
@@ -1152,3 +1202,26 @@ G1 是最低完成门槛。任何子里程碑不得因 G0 或 G3 通过而跳过
 - B4：仅将 `quadrant_relaxed_hanging_solver_callback` 的 `user_data` 解码和调用点改为显式 `GhostCallbackContext`；未改变 child velocity、relaxed flux、parent-edge state、geometry、corner data 或数值写入路径。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B4 已验证为当前 M3.4 活动锚点；M3.4 仍未整体关闭，M3.5 不得开始。
 - B5：仅将 `quadrant_relaxed_hanging_solver_callback` 的 hanging ghost ID guard 从 `global_num_quadrants` 比较改为仅对 `is_ghost` child 使用 `GhostSession::valid_remote_id()`；未改变 child velocity、relaxed flux、parent-edge state、geometry、corner data 或数值写入路径。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `param_restored: true`。B5 已验证为当前 M3.4 活动锚点；M3.4 仍未整体关闭，M3.5 不得开始。
 - B6：仅在 `quadrant_relaxed_hanging_solver_callback` 中为 child/parent `CVariable` 增加 const read aliases，并将 master velocity 与 total-energy 读取切换到 const overload；原 mutable aliases 继续承担 child velocity、relaxed flux 和 parent-edge 写入，未改变 geometry、corner data 或数值公式。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B6 已验证为当前 M3.4 活动锚点；M3.4 仍未整体关闭，M3.5 不得开始。
+- B7：仅为 `quadrant_relaxed_hanging_solver_callback` 的 child velocity、child relaxed-flux 和 parent-edge state 写入增加 owner-local `is_ghost` 门禁；远端 child/parent 仍可作为只读计算输入，未改变 hanging matrix、points、geometry、corner data、exchange 时序或数值公式。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B7 已验证为当前 M3.4 活动锚点；M3.4 仍未整体关闭，M3.5 不得开始。
+- B8a：仅为 `quadrant_corner_minmod_estimate_callback` 的两个 corner-gradient 目标写入增加 owner-local `is_ghost` 门禁；保留 local/ghost pressure、density、centroid 读取，未改变梯度公式、side 遍历顺序、`Gradient_estimate` 调用点、user-data 形态或 exchange 时序。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B8a 已验证为 M3.4 活动锚点；此前失败的 coarsening-corner B8 保持为已回退证据，M3.4 仍未整体关闭，M3.5 不得开始。
+- B8b：仅为 `quadrant_corner_to_point_matrix_assemble_callback` 的 `MatrixP`、`RHS` 和 boundary `TwoBouns` 四个目标写入增加 owner-local `is_ghost` 门禁；保留 local/ghost matrix、RHS、boundary 输入读取，未改变矩阵聚合、边界判定、side 遍历顺序、回调调用点或 exchange 时序。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B8b 已验证为 M3.4 活动锚点；M3.4 仍未整体关闭，M3.5 不得开始。
+- B8c：仅为 `quadrant_corner_velocity_callback` 的 boundary/interior velocity solve、`velo_lag` 归零归一化和 `idcnVelocity_lag` corner-vector 五类目标写入增加 owner-local `is_ghost` 门禁；保留 local/ghost MatrixP、RHS、TwoBouns 和 boundary flag 读取，未改变矩阵求解公式、trace 条件、side 遍历顺序、回调调用点或后续 exchange 时序。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B8c 已验证为 M3.4 活动锚点；M3.4 仍未整体关闭，M3.5 不得开始。
+- B9：仅为 `quadrant_update_after_balance_callback` 的 hanging child 1/2 几何、速度、体积、密度和压力更新增加对应 `is_ghost` owner-local 门禁；保留 midpoint/delta-velocity 判定、全部 local/remote 输入读取、原有公式、side 顺序、回调调用点和 exchange 时序，未修改此前导致 MPI Sedov 拓扑回归的 coarsening-corner callback。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B9 已验证为 M3.4 活动锚点；剩余 hanging matrix、parent-edge 和 children-info 写入路径仍未闭合，M3.4 仍未整体关闭，M3.5 不得开始。
+- B10（2026-08-05）：仅为 `quadrant_hanging_point_matrix_assemble_callback` 的两个 hanging child `MatrixP`/`RHS` 目标写入增加对应 `is_ghost` owner-local 门禁；保留矩阵/RHS 聚合、local/remote 输入读取、边界状态计算、side 顺序、回调调用点和 exchange 时序，未修改同一 callback 中的 hanging boundary metadata 写入。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B10 已验证为 M3.4 活动锚点；hanging boundary metadata、parent-edge 和 children-info 写入路径仍未闭合，M3.4 仍未整体关闭，M3.5 不得开始。
+- B11（2026-08-05）：仅为 `quadrant_hanging_point_matrix_assemble_callback` 的两个 hanging child point 状态组（`IsHanging`、`TwoBouns`、`BounParent`、`master_coord_relaxed`、`hanging_coord`）增加对应 `is_ghost` owner-local 门禁；保留边界数据读取、矩阵/RHS 聚合、既有公式、side 顺序、回调调用点和 exchange 时序，未修改 `quadrant_set_init_parent_edge_callback` 或 `quadrant_get_children_hanging_info_callback`。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B11 已验证为 M3.4 活动锚点；parent-edge 和 children-info 写入路径仍未闭合，M3.4 仍未整体关闭，M3.5 不得开始。
+- B12（2026-08-05）：仅为 `quadrant_set_init_parent_edge_callback` 的 full-parent `PCInfo[parent_face_index]` 发布写入增加 `is.full.is_ghost` owner-local 门禁；保留 child/parent 输入读取、`Lcp`/`Ncp` 聚合、`Hanging_velocity` 与既有公式、side 顺序、回调调用点和 exchange 时序，未修改同一 callback 中的 parent corner half-edge `Lcp` 写入，也未修改 `quadrant_get_children_hanging_info_callback` 或此前导致 MPI Sedov 拓扑回归的 coarsening-corner callback。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B12 已验证为 M3.4 活动锚点；parent corner half-edge 和 children-info 写入路径仍未闭合，M3.4 仍未整体关闭，M3.5 不得开始。
+- B13（2026-08-05）：仅为 `quadrant_set_init_parent_edge_callback` 中 full-parent corner half-edge 的 `m_plus->Lcp`/`m_minus->Lcp` switch 写入增加 `is.full.is_ghost` owner-local 门禁；保留四个 parent-face 分支、master/hanging 坐标读取、距离公式、side 顺序、回调调用点和 exchange 时序，未修改 `PCInfo` 发布、`quadrant_get_children_hanging_info_callback` 或此前导致 MPI Sedov 拓扑回归的 coarsening-corner callback。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B13 已验证为 M3.4 活动锚点；children-info 写入路径仍未闭合，M3.4 仍未整体关闭，M3.5 不得开始。
+- B14（2026-08-05）：仅为 `quadrant_get_children_hanging_info_callback` 的两个 hanging child point 状态组（`IsHanging`、`TwoBouns[0]`、`TwoBouns[1]`）增加对应 `is_ghost` owner-local 门禁；保留 boundary input 聚合、`Ncp`/`Lcp`/`delta_u_cp`/`Uc_cur`/`Zcp` 读取、既有值映射、side 顺序、回调调用点和 exchange 时序，未修改 parent-edge callbacks 或此前导致 MPI Sedov 拓扑回归的 coarsening-corner callback。通过直接编译、G0、serial rollback Noh/Sod/Sedov、G3 四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B14 已验证为 M3.4 活动锚点；需要进行最终 ghost-write 全量审计与收口门禁，M3.4 仍未整体关闭，M3.5 不得开始。
+- B15（2026-08-05）：仅为 `quadrant_whether_allowing_coarsening_from_corner_callback` 的 `idAllowCoarsening` 写入增加 `!is_ghost_a` owner-local 门禁；保留 ghost/local quadrant 的层级比较、双重 side 遍历、coarsening 判定和 callback 注册/时序，未跳过 ghost side，未修改此前导致 MPI Sedov 拓扑回归的 `continue` 实验或其他 callback。通过直接编译、G0、serial rollback Noh/Sod/Sedov、四进程 MPI Sod/Sedov，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。B15 已验证为 M3.4 活动锚点；需继续执行最终 ghost-write 全量审计与 M3.4 收口门禁，M3.5 仍不得开始。
+- M3.4 收口（2026-08-05）：B15 后对全部活动 `p4est_iterate` ghost callback 进行最终 ghost-write 审计，确认所有可写 quadrant 数据均限制为 owner-local 目标；未发现活动 blocker。B15 候选通过直接编译、G0、serial Noh/Sod/Sedov rollback、四进程 MPI Sod/Sedov rollback，且 `mpi_gate_summary.json` 报告 `status: PASS`、`param_restored: true`。据此 M3.4 已闭合，M3.5 可在本收口提交后启动。
+
+### 当前版本门禁复核记录（2026-08-05）
+
+当前 `main` 提交 `f4e99ff` 的实际复核结果不能视为完整回退成功：
+
+- G1 串行 Noh Uniform、Sod AMR、Sedov AMR：全部 PASS，比较容差为 `1e-12`，`param.ini` 已恢复；
+- G3 四进程 Sod AMR：FAIL，尚未进入 VTU 比较；第 24 步 rank 0 的 `total_work=nan`、`kinetic_variation=nan`，随后在 `src/main.cpp:3644` 的负能量保护路径触发 `abort()`，MS-MPI 返回 `0xc0000409`；
+- G3 Sedov AMR：因 Sod 首项失败而未执行；
+- 因此当前版本的 G3 以及 G0～G3 完整门禁状态为 FAIL，不得沿用此前“G3 PASS”作为当前提交的验收证据。
+
+原始机器摘要保存在 `mpi_gate_summary.json`，并保留 `param_restored: true`。后续历史版本验证必须在隔离导出目录中进行，不能通过 checkout、reset 或覆盖当前工作树来替代。

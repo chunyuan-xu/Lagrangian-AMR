@@ -9,6 +9,8 @@ description: >
 
 # Lagrangian-AMR 项目工作流 Skill
 
+> **Canonical 回退优先级**：G0～G3 的标准环境、构建、runner、VTU/PVTU 比较、失败停止、参数恢复和 reference 保护统一以 [`golden-gates.md`](golden-gates.md) 为准。本文档保留更广泛的开发、参数审计和专项调试方法；其中的临时 debug 输出、旧锚点和手工比较命令不是黄金资产生成流程，不能替代 canonical G1/G3，也不能把临时文件重命名或复制进 `reference/`。
+
 ## 项目概况
 
 - **项目路径**: `C:\Lagrangian-AMR`

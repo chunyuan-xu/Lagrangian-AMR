@@ -1,142 +1,95 @@
-# Lagrangian-AMR: High-Performance 2D Hydrodynamics Solver with Adaptive Mesh Refinement
+# Lagrangian-AMR
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/Build-MSYS2%20%7C%20UCRT64%20%7C%20MinGW-blue.svg)]()
-[![Regression Test](https://img.shields.io/badge/Regression%20Test-100%25%20PASS%20(%3C%201e--12)-success.svg)]()
+Lagrangian-AMR 是基于 p4est 四叉树自适应网格的二维拉格朗日流体力学求解器，支持 Windows/MSYS2 UCRT64 和 Microsoft MPI 并行运行。
 
-`Lagrangian-AMR` 是一款基于 **p4est** 四叉树（Quadtree）并行网格自适应（Adaptive Mesh Refinement, AMR）的高性能二维拉格朗日流体力学（Lagrangian Hydrodynamics）求解器。
+## 验证入口
 
-项目经过重构，具备清晰的 6 层模块化 C++ 架构、完整的基于 MS-MPI 的并行计算能力，以及与基准参考解（`reference/ref.vtu`）达到 `< 1e-12` 零偏差级别的强力回归自动化校验 SOP。
+- [`golden-gates.md`](golden-gates.md)：G0～G3 黄金回退唯一标准 SOP。
+- [`windows-msys2-msmpi-build.md`](windows-msys2-msmpi-build.md)：Windows/MSYS2 UCRT64/MS-MPI 构建、临时目录和 Python/NumPy 环境排障。
+- [`vtu-pvtu-contract.md`](vtu-pvtu-contract.md)：VTU/PVTU XML、piece、字段、对齐和数值比较契约。
+- [`SKILL.md`](SKILL.md)：回归方法论、参数审计和重构工作约束。
+- [`reconstruction.md`](reconstruction.md)：重构阶段、回退锚点和当前历史记录。
 
----
+正式脚本位于 `python/`：
 
-## 🌟 核心特性 (Key Features)
+- [`../python/run_tests.py`](../python/run_tests.py)：G1 串行 Noh Uniform→Sod AMR→Sedov AMR。
+- [`../python/run_mpi_gates.py`](../python/run_mpi_gates.py)：G3 四进程 Sod AMR→Sedov AMR。
+- [`../python/compare_vtu.py`](../python/compare_vtu.py)：VTU/PVTU 比较器，依赖 NumPy，不依赖 Python `vtk` 包。
 
-- **拉格朗日流体力学求解器**：基于单元中心（Cell-Centered）与角点节点（Corner Node）力/速度求解的拉格朗日压缩流体力学算法。
-- **p4est 动态网格自适应 (AMR)**：支持基于梯度估计与 MinMod 限制器的单元级自适应细化（Refine）与粗化（Coarsen）以及网格平衡（Balance）。
-- **模块化 C++ 架构**：核心数学库、物理内核/EOS、AMR 准则、节点求解器与 VTK 导出解耦为独立领域头文件。
-- **并行计算与 MS-MPI 适配**：高度适配 Windows MSYS2 UCRT64 + Microsoft MPI (MS-MPI) 构建与并行运行环境。
-- **零偏差回归测试 (Regression Verification)**：配套 Python VTK 数据比较工具（`compare_vtu.py`），提供 100% 可重复的 8 物理场零偏差（`tol < 1e-12`）门禁校验。
+当前 `main` 是否通过 G0～G3，必须以本次构建、runner 退出码和 `serial_golden_summary.json`/`mpi_gate_summary.json` 为准。历史提交的 PASS 不能替代当前提交的实测证据。
 
----
+## 目录和产物
 
-## 🏗️ 架构设计 (Architecture Blueprint)
-
-```
+```text
 Lagrangian-AMR/
-├── src/
-│   ├── core/               # 基础数学结构 (CDoubleVector, CDoubleMatrix)
-│   ├── physics/            # 物理内核与状态方程 (EOS, 声速, 单元质量)
-│   ├── amr/                # AMR 自适应准则 (Refine/Coarsen Error Estimation)
-│   ├── solver/             # 角点节点速度求解器与线性方程组矩阵组装
-│   ├── io/                 # 高层 VTK 导出与诊断流助手
-│   ├── alg.h / alg.cpp     # 几何与基础辅助算法
-│   ├── defines.h           # p4est 与计算变量全局结构定义
-│   ├── variable.h          # 全局变量容器类 (CVariable)
-│   └── main.cpp            # 精简模块化主驱动程序
-├── reference/
-│   └── ref.vtu             # 1000 步基准参考解 VTU 文件
-├── bin/                    # 可执行文件与输出目录 (bin/AMR_Solver.exe, bin/output/)
-├── compare_vtu.py          # VTK 自动化零偏差回归校验脚本
-├── Makefile                # MSYS2 / MinGW 编译规则脚本
-└── CMakeLists.txt          # Modern CMake 构建配置文件
+├── src/                         # C++ 求解器源码
+├── python/
+│   ├── run_tests.py             # G1 runner
+│   ├── run_mpi_gates.py         # G3 runner
+│   └── compare_vtu.py           # NumPy VTU/PVTU comparator
+├── reference/                   # 只读黄金资产
+│   ├── Noh_32x32.vtu
+│   ├── SodAMR.vtu
+│   ├── SedovAMR.vtu
+│   ├── par4_sod/                # 四进程 Sod 的 .pvtu 和 rank pieces
+│   └── par4_sedov/              # 四进程 Sedov 的 .pvtu 和 rank pieces
+├── output/                      # 当前运行的临时输出，不是 reference
+├── bin/AMR_Solver.exe           # Makefile 生成的求解器
+├── Makefile                     # 正式构建入口
+└── docs/                        # 本目录
 ```
 
-### 模块依赖关系
+串行 runner 会在每个算例前清理根目录 `output/`。G3 runner 当前只确保 `output/` 存在，不会自动清除旧的 `.pvtu`/piece；执行 G3 前必须按 [`golden-gates.md`](golden-gates.md) 核验输出隔离和末帧来源。
 
-```mermaid
-graph TD
-    Main[src/main.cpp - 主驱动] --> Core[src/core/vector_matrix.h]
-    Main --> Physics[src/physics/eos.h]
-    Main --> AMR[src/amr/amr_criteria.h]
-    Main --> Solver[src/solver/corner_solver.h]
-    Main --> IO[src/io/vtk_writer.h]
-    Solver --> Core
-    Physics --> Core
-    AMR --> Core
-```
+## 构建和运行
 
----
+正式构建使用根目录 `Makefile`、C++14、MSYS2 UCRT64 `g++.exe`、p4est/libsc、zlib、MS-MPI 和 Winsock。完整的 PATH、MS-MPI SDK/runtime、p4est、TEMP/TMP/TMPDIR 和 NumPy 检查见 [`windows-msys2-msmpi-build.md`](windows-msys2-msmpi-build.md)。
 
-## 🛠️ 环境要求 (Prerequisites)
-
-- **操作系统**：Windows 10 / 11 或 Linux / macOS
-- **编译器**：支持 C++14 的 GCC / Clang（Windows 推荐 [MSYS2 UCRT64](https://www.msys2.org/) 环境下的 `g++.exe`）
-- **MPI 库**：[Microsoft MPI (MS-MPI)](https://learn.microsoft.com/en-us/message-passing-interface/microsoft-mpi)
-- **网格库**：[p4est 2.8.5+](https://www.p4est.org/)（源码第三库已置于 `third_party/p4est`）
-- **Python 环境**：Python 3.x（用于运行 `compare_vtu.py` 比对脚本，需安装 `vtk` 库：`pip install vtk`）
-
----
-
-## 🚀 编译与运行 (Build & Run)
-
-### 方式一：使用 Makefile（推荐 Windows MSYS2 / UCRT64）
-
-1. **清理构建环境**：
-   ```powershell
-   $env:PATH="C:\msys64\usr\bin;" + $env:PATH
-   make clean
-   ```
-
-2. **编译求解器**：
-   ```powershell
-   $env:PATH="C:\msys64\usr\bin;C:\msys64\ucrt64\bin;" + $env:PATH
-   make
-   ```
-   *编译成功后将在 `bin/` 目录下生成 `AMR_Solver.exe`。*
-
-3. **运行单进程仿真**：
-   ```powershell
-   cd bin
-   & "$env:ProgramFiles/Microsoft MPI/Bin/mpiexec.exe" -n 1 ./AMR_Solver.exe
-   ```
-
-4. **运行多进程 MPI 仿真**（例如 4 进程）：
-   ```powershell
-   cd bin
-   & "$env:ProgramFiles/Microsoft MPI/Bin/mpiexec.exe" -n 4 ./AMR_Solver.exe
-   ```
-
----
-
-### 方式二：使用 CMake
-
-```bash
-mkdir build_cmake && cd build_cmake
-cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-cmake --build .
-```
-
----
-
-## 🧪 自动化回归测试与校验 (Regression Testing SOP)
-
-为保证代码重构或新功能开发不偏离原拉格朗日物理解状态，项目配备了自动化校验 SOP：
+最小入口：
 
 ```powershell
-# 1. 运行仿真并生成目标输出文件 bin/output/p4est_Lagrangian_1000_0000.vtu
-cd bin
-& "$env:ProgramFiles/Microsoft MPI/Bin/mpiexec.exe" -n 1 ./AMR_Solver.exe
-
-# 2. 返回项目根目录，执行比对测试（容差 1e-12）
-cd ..
-python compare_vtu.py --target bin/output/p4est_Lagrangian_1000_0000.vtu --ref reference/ref.vtu --tol 1e-12
+Set-Location C:\Lagrangian-AMR
+$env:PATH = 'C:\msys64\usr\bin;C:\msys64\ucrt64\bin;C:\Program Files\Microsoft MPI\Bin;' + $env:PATH
+make -j8
 ```
 
-### 校验项与合格标准
+不要用 CMake 构建结果替代 G0；当前 CMake 配置与正式 Makefile 入口存在差异。
 
-脚本将全面比对网格结构（节点数、单元数）及 8 个核心物理场：
-- `density` (密度)
-- `Pressure` (压力)
-- `internal_energy` (内能)
-- `NodeX`, `NodeY` (节点坐标)
-- `NodeU`, `NodeV` (节点速度)
-- `Position` (单元位置)
+## 黄金回退快速入口
 
-若所有物理场绝对误差均 `< 1.0e-12`，则判定为 `[PASS]`。
+先完成 NumPy 自检并把 `$py` 设置为已安装 NumPy 的 Python：
 
----
+```powershell
+& $py -c 'import numpy; print(numpy.__version__)'
+& $py .\python\run_tests.py
+if ($LASTEXITCODE -ne 0) { throw 'G1 failed' }
+& $py .\python\run_mpi_gates.py
+```
 
-## 📜 许可协议 (License)
+G0、G1、G3 必须按顺序执行；G2 已退休。两个 runner 都会在结束时逐字节恢复 `param.ini`，但仍必须检查 summary 中的 `param_restored: true`。首个算例失败后停止，未执行的后续算例不能报告为 PASS。
 
-本项目基于 [MIT License](LICENSE) 开源。欢迎贡献代码与提交 Issue！
+## VTU/PVTU 比较
+
+当前历史门禁固定绝对容差 `1e-12`。默认比较器字段为 `density` 和 `Pressure`，并会自动追加两侧同时存在的已知附加字段；字段名大小写敏感。需要显式验证扩展字段时：
+
+```powershell
+& $py .\python\compare_vtu.py `
+  --target .\output\current.vtu `
+  --ref .\reference\baseline.vtu `
+  --tol 1e-12 `
+  --fields density Pressure Temperature
+```
+
+比较器检查 XML/PVTU piece、点数、单元数、字段存在性、数组 shape、NaN/Inf 和数值误差；两侧都有 `Global_SFC_ID` 时按 ID 排序对齐。完整行为见 [`vtu-pvtu-contract.md`](vtu-pvtu-contract.md)。
+
+## 资产保护
+
+- 不修改、覆盖或重生成 `reference/`，除非单独批准黄金资产更新。
+- 不把 `output/` 当作 reference，也不让旧输出冒充当前末帧。
+- 不用 `git clean`、`reset`、`checkout` 或 `restore` 覆盖用户未提交工作。
+- 不提交 `.o`、本机临时输出或其他构建产物。
+- 当前 `main` 的失败状态必须如实记录，不能用历史基线 PASS 替代。
+
+## 许可
+
+本项目基于 MIT License。许可证文件位于仓库根目录。
