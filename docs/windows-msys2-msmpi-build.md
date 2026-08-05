@@ -139,6 +139,44 @@ make -j1 CXXFLAGS='-O2 -g -Wall -std=c++14 -pipe -fno-use-linker-plugin'
 
 本次 `make -j1` 已实际完成编译和最终链接，生成 `bin/AMR_Solver.exe`。单线程构建用于先获得完整、按顺序的诊断输出；确认链接成功后，再按正式要求执行 `make -j8`。如果改用 Git Bash，必须在同一个 Bash 进程中设置变量并启动构建；不能把 Bash 中的 `export` 当作对已经启动或另一个 shell 中的原生链接器有效。
 
+### 5.2 Git Bash 与 PowerShell 的环境边界复盘
+
+本次 B15 与合并后 `main` 的差异曾被临时文件错误误导。实际原因不是 B15 分支源码和 `main` 源码不同，而是启动编译时使用了不同的 shell 环境：
+
+- B15 的门禁是在已经配置好的 PowerShell 进程中运行的。该进程先设置 `TEMP`、`TMP`、`TMPDIR`，再直接启动 `make`；原生 Windows 版 `g++.exe` 能继承这些变量，并将 GCC 临时文件写入项目下的可写目录。
+- 合并后 `main` 的第一次尝试是在 Git Bash 中使用 `TEMP=... TMP=... TMPDIR=... make` 启动。虽然 Git Bash 自身可以看到这些变量，但在当前 MSYS2/Git Bash 到原生 Windows `g++.exe` 的启动链中，变量没有按预期传递或转换；GCC 最终回退到 `C:\Windows`。
+- 因此出现：
+
+  ```text
+  Cannot create temporary file in C:\Windows\: Permission denied
+  ```
+
+  该错误发生在 GCC 创建临时预处理文件或中间文件时，属于构建环境问题，与 `src/main.cpp` 的 B15 owner-write 修复无关。此时不能据此判定 B15 代码在 `main` 上失效，也不能跳过 G0 直接运行 G1/G3。
+
+遇到该症状时，优先在同一个 PowerShell 进程中设置变量并启动完整构建：
+
+```powershell
+Set-Location C:\Lagrangian-AMR
+$env:TEMP = 'C:\Lagrangian-AMR\.tmp'
+$env:TMP = $env:TEMP
+$env:TMPDIR = $env:TEMP
+New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null
+
+& 'C:\msys64\usr\bin\make.exe' clean
+if ($LASTEXITCODE -ne 0) { throw 'make clean failed' }
+& 'C:\msys64\usr\bin\make.exe' -j8
+if ($LASTEXITCODE -ne 0) { throw 'make failed' }
+```
+
+如果必须从 Git Bash 发起，也要让 PowerShell 自己创建环境并直接承载 `make`，而不是依赖 Git Bash 的前缀赋值：
+
+```bash
+powershell.exe -NoProfile -Command \
+  "$env:TEMP='C:\\Lagrangian-AMR\\.tmp'; $env:TMP=$env:TEMP; $env:TMPDIR=$env:TEMP; New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null; & 'C:\\msys64\\usr\\bin\\make.exe' clean; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & 'C:\\msys64\\usr\\bin\\make.exe' -j8; exit $LASTEXITCODE"
+```
+
+修复后应重新执行完整 G0，并记录 shell、`g++` 路径、`TEMP/TMP/TMPDIR` 和退出码。只有 G0 通过后，才可判断后续 G1/G3 是否暴露源码或数值问题。
+
 
 
 | 症状 | 优先检查 | 处理 |

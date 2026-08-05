@@ -94,6 +94,37 @@ New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null
 
 若出现 `Cannot create temporary file in C:\Windows\: Permission denied`，优先检查这三个变量。`-pipe` 和 `-fno-use-linker-plugin` 只能作为一次性诊断选项，不能替代修正临时目录，也不能永久写入 Makefile。
 
+本次 B15 与合并后 `main` 的构建复核表明，遇到该错误时还必须区分 **源码差异** 与 **启动编译的 shell 环境差异**：
+
+- B15 门禁是在已经配置好的 PowerShell 进程中执行的。该进程先设置 `TEMP`、`TMP`、`TMPDIR`，再直接启动 `make`；原生 Windows `g++.exe` 能继承变量，并把临时文件写入项目下的可写目录。
+- 合并后 `main` 第一次尝试是在 Git Bash 中使用 `TEMP=... TMP=... TMPDIR=... make` 启动。虽然 Git Bash 自身能看到这些变量，但当前 MSYS2/Git Bash 到原生 Windows `g++.exe` 的启动链没有按预期传递或转换变量，GCC 最终回退到 `C:\Windows`。
+- 随后改为由同一个 PowerShell 进程设置环境变量并直接启动 `make` 后，`main` 的 G0 clean build 和链接成功；这证明该次错误属于 GCC 临时文件环境问题，不是 B15 分支代码与 `main` 代码不同。
+
+错误示例：
+
+```text
+Cannot create temporary file in C:\Windows\: Permission denied
+```
+
+遇到该错误时，不得据此判断 B15 owner-write 修复失效，也不得跳过 G0 直接运行 G1/G3。应使用同一个 PowerShell 进程重新执行：
+
+```powershell
+Set-Location C:\Lagrangian-AMR
+$env:TEMP = 'C:\Lagrangian-AMR\.tmp'
+$env:TMP = $env:TEMP
+$env:TMPDIR = $env:TEMP
+New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null
+
+& 'C:\msys64\usr\bin\make.exe' clean
+if ($LASTEXITCODE -ne 0) { throw 'make clean failed' }
+& 'C:\msys64\usr\bin\make.exe' -j8
+if ($LASTEXITCODE -ne 0) { throw 'make failed' }
+```
+
+若命令必须从 Git Bash 发起，也应让 PowerShell 自己创建环境并直接承载 `make`，而不是依赖 Git Bash 的前缀赋值。详细复盘、兼容命令和诊断记录见 [`windows-msys2-msmpi-build.md`](windows-msys2-msmpi-build.md) 的“Git Bash 与 PowerShell 的环境边界复盘”。
+
+修复后必须重新执行完整 G0，并记录 shell、`g++` 路径、`TEMP/TMP/TMPDIR` 和退出码；只有 G0 通过后，才可判断后续 G1/G3 是否暴露源码或数值问题。
+
 回归前关闭高频诊断变量：
 
 ```powershell
