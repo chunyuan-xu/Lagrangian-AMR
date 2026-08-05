@@ -12,6 +12,45 @@ import argparse
 import base64
 import xml.etree.ElementTree as ET
 import numpy as np
+DEFAULT_FIELDS = ('density', 'Pressure')
+DISCOVERABLE_FIELDS = (
+    'density',
+    'Pressure',
+    'internal_energy',
+    'InternalEnergy',
+    'NodeX',
+    'NodeY',
+    'NodeU',
+    'NodeV',
+    'Position',
+    'VelocityU_c0',
+    'VelocityU_c1',
+    'VelocityU_c2',
+    'VelocityU_c3',
+    'VelocityV_c0',
+    'VelocityV_c1',
+    'VelocityV_c2',
+    'VelocityV_c3',
+    'Global_SFC_ID',
+)
+
+
+def normalize_fields(field_args):
+    """Normalize CLI field arguments while preserving their requested order."""
+    if not field_args:
+        raise ValueError('at least one field must be specified')
+
+    fields = []
+    for item in field_args:
+        for field in item.split(','):
+            field = field.strip()
+            if not field:
+                raise ValueError('field names cannot be empty')
+            if field in fields:
+                raise ValueError(f'duplicate field: {field}')
+            fields.append(field)
+    return fields
+
 
 def parse_vtu_file(vtu_path):
     """
@@ -122,7 +161,8 @@ def parse_pvtu_file(pvtu_path):
         'data': all_data
     }
 
-def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('density', 'Pressure')):
+def compare_vtu(target_path, ref_path, tol=1e-12, fields_to_check=DEFAULT_FIELDS,
+                strict_fields=False):
     """
     Compares target_path against ref_path.
     Returns True if passed, False otherwise.
@@ -159,30 +199,40 @@ def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('density', 'P
     print("-" * 65)
 
     if 'Global_SFC_ID' in target_info['data'] and 'Global_SFC_ID' in ref_info['data']:
-        print("[INFO] Found Global_SFC_ID. Sorting arrays for alignment (PVTU vs VTU)...")
-        target_sort_idx = np.argsort(target_info['data']['Global_SFC_ID'])
-        ref_sort_idx = np.argsort(ref_info['data']['Global_SFC_ID'])
-        
+        target_ids = target_info['data']['Global_SFC_ID']
+        ref_ids = ref_info['data']['Global_SFC_ID']
+        if target_ids.shape != ref_ids.shape:
+            print('[FAIL] Global_SFC_ID shape mismatch; cannot align files')
+            return False
+        target_sort_idx = np.argsort(target_ids)
+        ref_sort_idx = np.argsort(ref_ids)
+        if not np.array_equal(target_ids[target_sort_idx], ref_ids[ref_sort_idx]):
+            print('[FAIL] Global_SFC_ID values mismatch; cannot align files')
+            return False
+        print('[INFO] Found Global_SFC_ID. Sorting arrays for alignment (PVTU vs VTU)...')
+
         for k in target_info['data']:
             target_info['data'][k] = target_info['data'][k][target_sort_idx]
         for k in ref_info['data']:
             ref_info['data'][k] = ref_info['data'][k][ref_sort_idx]
-        print("[INFO] Sorting complete.")
-        print("-" * 65)
+        print('[INFO] Sorting complete.')
+        print('-' * 65)
+    elif 'Global_SFC_ID' in target_info['data'] or 'Global_SFC_ID' in ref_info['data']:
+        print('[INFO] Global_SFC_ID is present in only one file; comparing without ID alignment.')
+        print('-' * 65)
 
     # Detailed field comparison
     all_passed = True
     print(f"{'Field Name':<18} | {'Max Abs Diff':<14} | {'Rel Diff':<14} | {'Status'}")
-    print("-" * 65)
+    print('-' * 65)
 
-    check_fields = list(fields_to_check)
-    # Also check additional fields if present in both
-    for extra in ['density', 'InternalEnergy', 'NodeX', 'NodeY', 'NodeU', 'NodeV', 'Position',
-                  'VelocityU_c0', 'VelocityU_c1', 'VelocityU_c2', 'VelocityU_c3',
-                  'VelocityV_c0', 'VelocityV_c1', 'VelocityV_c2', 'VelocityV_c3',
-                  'Global_SFC_ID']:
-        if extra in target_info['data'] and extra in ref_info['data'] and extra not in check_fields:
-            check_fields.append(extra)
+    if strict_fields:
+        check_fields = list(fields_to_check)
+    else:
+        check_fields = list(fields_to_check)
+        for extra in DISCOVERABLE_FIELDS:
+            if extra in target_info['data'] and extra in ref_info['data'] and extra not in check_fields:
+                check_fields.append(extra)
 
     for field in check_fields:
         if field not in target_info['data']:
@@ -199,6 +249,11 @@ def compare_vtu(target_path, ref_path, tol=1e-10, fields_to_check=('density', 'P
 
         if arr_target.shape != arr_ref.shape:
             print(f"{field:<18} | {'SHAPE MISMATCH':<31} | [FAIL]")
+            all_passed = False
+            continue
+
+        if not np.all(np.isfinite(arr_target)) or not np.all(np.isfinite(arr_ref)):
+            print(f"{field:<18} | {'NON-FINITE VALUE':<31} | [FAIL]")
             all_passed = False
             continue
 
@@ -237,12 +292,22 @@ def main():
                         help="Path to newly generated target VTU file")
     parser.add_argument("--ref", type=str, default="reference/SodAMR.vtu",
                         help="Path to reference VTU file")
-    parser.add_argument("--tol", type=float, default=1e-10,
-                        help="Tolerance threshold for floating point field comparison (default: 1e-10)")
+    parser.add_argument("--tol", type=float, default=1e-12,
+                        help="Tolerance threshold for floating point field comparison (default: 1e-12)")
+    parser.add_argument("--fields", nargs='+',
+                        help="Explicit field list; accepts space- or comma-separated names")
 
     args = parser.parse_args()
 
-    success = compare_vtu(args.target, args.ref, tol=args.tol)
+    try:
+        if args.fields:
+            fields = normalize_fields(args.fields)
+            success = compare_vtu(args.target, args.ref, tol=args.tol,
+                                   fields_to_check=fields, strict_fields=True)
+        else:
+            success = compare_vtu(args.target, args.ref, tol=args.tol)
+    except ValueError as exc:
+        parser.error(str(exc))
     sys.exit(0 if success else 1)
 
 
