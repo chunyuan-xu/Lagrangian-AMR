@@ -533,8 +533,12 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 				}
 			}
 
-			m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]) = hanging_velo;
-			m_child2_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[1]) = hanging_velo;
+			if (!side[i]->is.hanging.is_ghost[0]) {
+				m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]) = hanging_velo;
+			}
+			if (!side[i]->is.hanging.is_ghost[1]) {
+				m_child2_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[1]) = hanging_velo;
+			}
 
 			CDoubleMatrix MatrixP = m_child1_data->points[m_which_corner[0]].MatrixP;
 			CDoubleVector m_rhs = m_child1_data->points[m_which_corner[0]].RHS;
@@ -547,16 +551,22 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			double parent_total_energy = m_parent_read_vara->cell(idMass) * m_parent_read_vara->cell(idTotalEnergy_cur);
 
 
-			m_child1_vara->corner_vector(idcnFluxRelaxed, m_which_corner[0]) = child1_total_energy /
-				(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
-			m_child2_vara->corner_vector(idcnFluxRelaxed, m_which_corner[1]) = child2_total_energy /
-				(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
-			ParentBounInfo  *PCInfo = (ParentBounInfo  *)&m_parent_data->m_pc_edge_data;
-			m_parent_data->m_pc_edge_data[parent_face_index].IsParentChildBoun = true;
-			PCInfo[parent_face_index].addDiss = true;
-			PCInfo[parent_face_index].Hanging_velocity = hanging_velo;
-			PCInfo[parent_face_index].FluxRelaxed = parent_total_energy /
-				(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			if (!side[i]->is.hanging.is_ghost[0]) {
+				m_child1_vara->corner_vector(idcnFluxRelaxed, m_which_corner[0]) = child1_total_energy /
+					(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			}
+			if (!side[i]->is.hanging.is_ghost[1]) {
+				m_child2_vara->corner_vector(idcnFluxRelaxed, m_which_corner[1]) = child2_total_energy /
+					(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			}
+			if (!side[full_index]->is.full.is_ghost) {
+				ParentBounInfo  *PCInfo = (ParentBounInfo  *)&m_parent_data->m_pc_edge_data;
+				m_parent_data->m_pc_edge_data[parent_face_index].IsParentChildBoun = true;
+				PCInfo[parent_face_index].addDiss = true;
+				PCInfo[parent_face_index].Hanging_velocity = hanging_velo;
+				PCInfo[parent_face_index].FluxRelaxed = parent_total_energy /
+					(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			}
 		}
 	}
 }
@@ -1445,7 +1455,9 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 		}
 		m_vara = (CVariable  *)&m_data->m_vara;
 
-		m_vara->corner(idCNPara, cnid) = 0.;
+		if (!is_ghost) {
+			m_vara->corner(idCNPara, cnid) = 0.;
+		}
 		for (int j = 0; j < m_size; j++)
 		{
 			if (j == i) { continue; }
@@ -1465,7 +1477,9 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 			double m_dist = GeometryAlg::GetPointToPointDistance(
 				m_vara->cell_vector(idCentroidCoord_cur), m_vara_aside->cell_vector(idCentroidCoord_cur));
 			ParaGradient = abs(m_vara->cell(idCPara) - m_vara_aside->cell(idCPara)) / m_dist;
-			m_vara->corner(idCNPara, cnid) = SC_MAX(m_vara->corner(idCNPara, cnid), ParaGradient);
+			if (!is_ghost) {
+				m_vara->corner(idCNPara, cnid) = SC_MAX(m_vara->corner(idCNPara, cnid), ParaGradient);
+			}
 		}
 	}
 }
@@ -2117,37 +2131,41 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 			{
 				CDoubleVector  m_cell_coord[CNDIM];
 
-				
-				m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]) = middle_coord;
-				m_child1_vara->corner_vector(idcnCoords_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
+				if (!side[i]->is.hanging.is_ghost[0])
+				{
+					m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]) = middle_coord;
+					m_child1_vara->corner_vector(idcnCoords_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
 
-				m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]) = middle_velo;
-				m_child1_vara->corner_vector(idcnVelocity_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
+					m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]) = middle_velo;
+					m_child1_vara->corner_vector(idcnVelocity_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
 
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->corner_vector(idcnCoords_cur, i); }
-				m_child1_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child1_vara->cell(idDensity_cur) = m_child1_vara->cell(idMass) / m_child1_vara->cell(idVolume);
+					for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->corner_vector(idcnCoords_cur, i); }
+					m_child1_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+					m_child1_vara->cell(idDensity_cur) = m_child1_vara->cell(idMass) / m_child1_vara->cell(idVolume);
 
-				m_child1_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
-					m_child1_vara->cell(idGamma),
-					m_child1_vara->cell(idDensity_cur),
-					m_child1_vara->cell(idInternalEnergy_cur));
+					m_child1_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
+						m_child1_vara->cell(idGamma),
+						m_child1_vara->cell(idDensity_cur),
+						m_child1_vara->cell(idInternalEnergy_cur));
+				}
 
-																   
-				m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]) = middle_coord;
-				m_child2_vara->corner_vector(idcnCoords_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
+				if (!side[i]->is.hanging.is_ghost[1])
+				{
+					m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]) = middle_coord;
+					m_child2_vara->corner_vector(idcnCoords_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
 
-				m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]) = middle_velo;
-				m_child2_vara->corner_vector(idcnVelocity_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
+					m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]) = middle_velo;
+					m_child2_vara->corner_vector(idcnVelocity_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
 
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->corner_vector(idcnCoords_cur, i); }
-				m_child2_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child2_vara->cell(idDensity_cur) = m_child2_vara->cell(idMass) / m_child2_vara->cell(idVolume);
+					for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->corner_vector(idcnCoords_cur, i); }
+					m_child2_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+					m_child2_vara->cell(idDensity_cur) = m_child2_vara->cell(idMass) / m_child2_vara->cell(idVolume);
 
-				m_child2_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
-					m_child2_vara->cell(idGamma),
-					m_child2_vara->cell(idDensity_cur),
-					m_child2_vara->cell(idInternalEnergy_cur));
+					m_child2_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
+						m_child2_vara->cell(idGamma),
+						m_child2_vara->cell(idDensity_cur),
+						m_child2_vara->cell(idInternalEnergy_cur));
+				}
 			}
 		}
 	}
@@ -2493,8 +2511,8 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 		{
 			m_data = (quad_data_t  *)side[i]->quad->p.user_data;
 		}
-		m_data->points[cnid].MatrixP = MatrixP;
-		m_data->points[cnid].RHS = RHS;
+		if (!is_ghost) m_data->points[cnid].MatrixP = MatrixP;
+		if (!is_ghost) m_data->points[cnid].RHS = RHS;
 	}
 
 	tree_boundary = info->tree_boundary;
@@ -2590,8 +2608,8 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 					m_data = (quad_data_t  *)side[i]->quad->p.user_data;
 				}
 
-				m_data->points[cnid].TwoBouns[0] = m_bouns[0];
-				m_data->points[cnid].TwoBouns[1] = m_bouns[1];
+				if (!is_ghost) m_data->points[cnid].TwoBouns[0] = m_bouns[0];
+				if (!is_ghost) m_data->points[cnid].TwoBouns[1] = m_bouns[1];
 			}
 		}
 		m_bouns.clear();
@@ -3245,28 +3263,31 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 		}
 
 
-		if (is_boundary)		
+		if (!is_ghost)
 		{
+			if (is_boundary)
+			{
 
 
-			m_data->points[cnid].velo_lag = BoundaryNodeVelocityComputation(
-				m_data->points[cnid].TwoBouns[0],    
-				m_data->points[cnid].TwoBouns[1],    
-				m_data->points[cnid].MatrixP,  
-				m_data->points[cnid].RHS);     
+				m_data->points[cnid].velo_lag = BoundaryNodeVelocityComputation(
+					m_data->points[cnid].TwoBouns[0],
+					m_data->points[cnid].TwoBouns[1],
+					m_data->points[cnid].MatrixP,
+					m_data->points[cnid].RHS);
+			}
+			else
+			{
+				CDoubleMatrix MatrixP_Inverse;
+				MatrixP_Inverse = GeometryAlg::MatrixInverse(m_data->points[cnid].MatrixP);
+				m_data->points[cnid].velo_lag = GeometryAlg::MatrixDotVector(MatrixP_Inverse, m_data->points[cnid].RHS);
+			}
+
+			if (fabs(m_data->points[cnid].velo_lag.x) < m_eps) { m_data->points[cnid].velo_lag.x = 0.; }
+			if (fabs(m_data->points[cnid].velo_lag.y) < m_eps) { m_data->points[cnid].velo_lag.y = 0.; }
+
+
+			m_vara->corner_vector(idcnVelocity_lag, cnid) = m_data->points[cnid].velo_lag;
 		}
-		else                
-		{
-			CDoubleMatrix MatrixP_Inverse;
-			MatrixP_Inverse = GeometryAlg::MatrixInverse(m_data->points[cnid].MatrixP);
-			m_data->points[cnid].velo_lag = GeometryAlg::MatrixDotVector(MatrixP_Inverse, m_data->points[cnid].RHS);
-		}
-		
-		if (fabs(m_data->points[cnid].velo_lag.x) < m_eps) { m_data->points[cnid].velo_lag.x = 0.; }
-		if (fabs(m_data->points[cnid].velo_lag.y) < m_eps) { m_data->points[cnid].velo_lag.y = 0.; }
-
-		
-		m_vara->corner_vector(idcnVelocity_lag, cnid) = m_data->points[cnid].velo_lag;
 		p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 		if (target_trace_enabled() && p4est_data->current_step == 3 && !is_ghost &&
 			((is_trace_fine(side[i]->quad) && cnid == 2) ||
