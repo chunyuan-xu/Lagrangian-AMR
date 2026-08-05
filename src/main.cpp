@@ -1529,7 +1529,10 @@ quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info
 			
 			if (level_b - level_a > 1)
 			{
-				m_vara_a->int_cell(idAllowCoarsening) = p4est_data_t::CoarseningEnum::CoarsingNotAllowed;
+				if (!is_ghost_a)
+				{
+					m_vara_a->int_cell(idAllowCoarsening) = p4est_data_t::CoarseningEnum::CoarsingNotAllowed;
+				}
 			}
 		}
 	}
