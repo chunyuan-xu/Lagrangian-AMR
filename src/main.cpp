@@ -814,29 +814,6 @@ static void get_quadrant_boundary_from_p4est(p4est_t *p4est, p4est_quadrant_t *q
 	}
 }
 
-static void quadrant_vtk_coord_update_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	p4est_connectivity_t *connectivity = info->p4est->connectivity;
-	p4est_qcoord_t qx = info->quad->x;
-	p4est_qcoord_t qy = info->quad->y;
-	int			level = info->quad->level;
-	p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
-	p4est_topidx_t	which_tree = info->treeid;
-	double			new_node_coords[CNDIM][P4EST_DIM];
-	for (int cnid = 0; cnid < CNDIM; cnid++)
-	{
-		new_node_coords[cnid][0] = m_vara->corner_vector(idcnCoords_lag, cnid).x;
-		new_node_coords[cnid][1] = m_vara->corner_vector(idcnCoords_lag, cnid).y;
-	}
-	int m_size = connectivity->num_vertices;
-	for(int i = 0; i <m_size*3;i++)
-	{
-		printf("Vertex %d, %lf\n", i, connectivity->vertices[i]);
-	}
-}
-
 static int Lagrangian_init_refine_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
 	p4est_quadrant_t *q)
 {
