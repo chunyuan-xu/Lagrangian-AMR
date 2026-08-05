@@ -3847,9 +3847,11 @@ static void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info,
 			CDoubleVector	master_coord[2], hanging_coord;
 			hanging_coord = m_child1_data->m_vara.corner_vector(idcnCoords_cur, m_which_corner[0]);
 
-			switch (parent_face_index)
+			if (!side[full_index]->is.full.is_ghost)
 			{
-			case quad_data_t::EnumEdge::LEFT:
+				switch (parent_face_index)
+				{
+				case quad_data_t::EnumEdge::LEFT:
 				m_plus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::LEFTBOTTOM].hdata[CHalf_edge_data::cside::plus];
 				m_minus = (CHalf_edge_data *)&cndata[quad_data_t::EnumCorner::LEFTUP].hdata[CHalf_edge_data::cside::minus];
 				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTBOTTOM);
@@ -3881,8 +3883,9 @@ static void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info,
 				m_plus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[1], hanging_coord) / 2.;
 				m_minus->Lcp = GeometryAlg::GetPointToPointDistance(master_coord[0], hanging_coord) / 2.;
 				break;
-			default:
-				break;
+				default:
+					break;
+				}
 			}
 		}
 	}
