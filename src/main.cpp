@@ -4970,51 +4970,6 @@ quadrant_set_default_refining_tag_callback(p4est_iter_volume_info_t *info, void 
 }
 
 
-static void
-quadrant_predict_refining_quads_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	DoubleCellVariableID idCPara;
-	p4est_qcoord_t		qx = info->quad->x;
-	p4est_qcoord_t		qy = info->quad->y;
-	int					level = info->quad->level;
-	p4est_qcoord_t		length = P4EST_QUADRANT_LEN(level);
-
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idCPressureGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idCDensityGradient;
-		break;
-	case RefineCriteria::Distance:
-		return;
-	default:
-		break;
-	}
-
-	if (level < p4est_data->minus_level)
-	{
-		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::MustRefing;
-	}
-	if (level >= p4est_data->max_level)
-	{
-		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::RefiningNotAllowed;
-	}
-
-	if (m_vara->cell(idCPara) > p4est_data->refine_err)
-	{
-		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::MustRefing;
-	}
-	else
-	{
-		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::RefiningNotAllowed;
-	}
-}
-
 static void 
 set_default_refining_tag(p4est_t *p4est)
 {
@@ -5054,22 +5009,6 @@ set_allowing_coarsening_tag(p4est_t *p4est, GhostSession &session)
 
 #endif
 		quadrant_whether_allowing_coarsening_from_corner_callback);
-}
-
-static void
-Predict_refining_Quads(p4est_t *p4est, GhostSession &session)
-{
-	(void)session;
-	p4est_iterate(p4est,
-		NULL,
-		NULL,
-		quadrant_predict_refining_quads_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
 }
 
 static void
