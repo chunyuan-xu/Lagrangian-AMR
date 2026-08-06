@@ -814,29 +814,6 @@ static void get_quadrant_boundary_from_p4est(p4est_t *p4est, p4est_quadrant_t *q
 	}
 }
 
-static void quadrant_vtk_coord_update_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	p4est_connectivity_t *connectivity = info->p4est->connectivity;
-	p4est_qcoord_t qx = info->quad->x;
-	p4est_qcoord_t qy = info->quad->y;
-	int			level = info->quad->level;
-	p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
-	p4est_topidx_t	which_tree = info->treeid;
-	double			new_node_coords[CNDIM][P4EST_DIM];
-	for (int cnid = 0; cnid < CNDIM; cnid++)
-	{
-		new_node_coords[cnid][0] = m_vara->corner_vector(idcnCoords_lag, cnid).x;
-		new_node_coords[cnid][1] = m_vara->corner_vector(idcnCoords_lag, cnid).y;
-	}
-	int m_size = connectivity->num_vertices;
-	for(int i = 0; i <m_size*3;i++)
-	{
-		printf("Vertex %d, %lf\n", i, connectivity->vertices[i]);
-	}
-}
-
 static int Lagrangian_init_refine_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
 	p4est_quadrant_t *q)
 {
@@ -1766,179 +1743,6 @@ static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info,
 	}
 }
 
-
-static void quadrant_update_after_coarsening_callback(p4est_iter_face_info_t *info, void *user_data)
-{
-	p4est_t			*p4est = info->p4est;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*ghost_data = (quad_data_t *)user_data;
-	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
-	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
-	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
-	p4est_iter_face_side_t *side[2];
-	sc_array_t				*sides = &(info->sides);
-	int				which_face;
-	int				m_which_corner[2], m_master_corner[2],
-		m_unconstrained_master_corner[2], m_which_side[2];
-
-	
-	for (int i = 0; i < 2; i++)
-	{
-		side[i] = p4est_iter_fside_array_index_int(sides, i);
-		side[1 - i] = p4est_iter_fside_array_index_int(sides, 1 - i);
-		if (side[i]->is_hanging == Hanging)
-		{
-			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
-			if (side[i]->is.hanging.quadid[0]<0
-				|| side[i]->is.hanging.quadid[1]<0
-				|| side[i]->is.hanging.quadid[0]>info->p4est->global_num_quadrants
-				|| side[i]->is.hanging.quadid[1]>info->p4est->global_num_quadrants) {
-
-				continue;
-			}
-			int			level = quad_child1->level;
-			p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
-			p4est_qcoord_t qx_child1 = quad_child1->x;
-			p4est_qcoord_t qy_child1 = quad_child1->y;
-			p4est_quadrant	*quad_child2 = side[i]->is.hanging.quad[1];
-			p4est_qcoord_t qx_child2 = quad_child2->x;
-			p4est_qcoord_t qy_child2 = quad_child2->y;
-
-			which_face = side[i]->face;
-
-			get_hanging_edge_info_from_logical_position(which_face, qx_child1, qy_child1,
-				qx_child2, qy_child2, length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
-			if (side[i]->is.hanging.is_ghost[0])
-			{
-				m_child1_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[0]];
-				m_child1_vara = (CVariable *)&ghost_data[side[i]->is.hanging.quadid[0]].m_vara;
-				m_child1_cndata = (CCorner_data *)&(ghost_data[side[i]->is.hanging.quadid[0]].m_cndata);
-			}
-			else
-			{
-				m_child1_data = (quad_data_t *)quad_child1->p.user_data;
-				m_child1_vara = (CVariable *)&m_child1_data->m_vara;
-				m_child1_cndata = (CCorner_data *)&(m_child1_data->m_cndata);
-			}
-			if (side[i]->is.hanging.is_ghost[1])
-			{
-				m_child2_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[1]];
-				m_child2_vara = (CVariable *)&ghost_data[side[i]->is.hanging.quadid[1]].m_vara;
-				m_child2_cndata = (CCorner_data *)&(ghost_data[side[i]->is.hanging.quadid[1]].m_cndata);
-			}
-			else
-			{
-				m_child2_data = (quad_data_t *)quad_child2->p.user_data;
-				m_child2_vara = (CVariable *)&m_child2_data->m_vara;
-				m_child2_cndata = (CCorner_data *)&(m_child2_data->m_cndata);
-			}
-
-			int full_index = GeometryAlg::GetCircleNext(2, i);
-			side[full_index] = p4est_iter_fside_array_index_int(sides, full_index);
-			p4est_quadrant	*quad_parent = (p4est_quadrant	*)side[full_index]->is.full.quad;
-			int parent_face_index = side[GeometryAlg::GetCircleNext(2, i)]->face;
-			if (side[full_index]->is.full.is_ghost)
-			{
-				m_parent_data = (quad_data_t *)&ghost_data[side[full_index]->is.full.quadid];
-				m_parent_vara = (CVariable *)&ghost_data[side[full_index]->is.full.quadid].m_vara;
-				m_parent_cndata = (CCorner_data *)&ghost_data[side[full_index]->is.full.quadid].m_cndata;
-			}
-			else
-			{
-				m_parent_data = (quad_data_t *)quad_parent->p.user_data;
-				m_parent_vara = (CVariable *)&m_parent_data->m_vara;
-				m_parent_cndata = (CCorner_data *)&m_parent_data->m_cndata;
-			}
-
-			CDoubleVector  master_coord[2], master_velo[2], middle_coord, middle_velo,
-				child1_cn_coord, child2_cn_coord, child1_cn_velo, child2_cn_velo;
-
-			switch (parent_face_index)
-			{
-			case quad_data_t::EnumEdge::LEFT:
-				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTBOTTOM);
-				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTUP);
-
-				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
-				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
-				break;
-			case quad_data_t::EnumEdge::RIGHT:
-				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTBOTTOM);
-				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTUP);
-
-				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
-				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
-				break;
-			case quad_data_t::EnumEdge::BOTTOM:
-				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTBOTTOM);
-				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTBOTTOM);
-
-				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
-				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
-				break;
-			case quad_data_t::EnumEdge::UP:
-				master_coord[0] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::LEFTUP);
-				master_coord[1] = m_parent_data->m_vara.corner_vector(idcnCoords_cur, quad_data_t::EnumCorner::RIGHTUP);
-
-				master_velo[0] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
-				master_velo[1] = m_parent_data->m_vara.corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
-				break;
-			}
-			middle_coord = 0.5*(master_coord[0] + master_coord[1]);
-			middle_velo = 0.5*(master_velo[0] + master_velo[1]);
-
-			child1_cn_coord = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
-			child2_cn_coord = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
-
-			child1_cn_velo = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
-			child2_cn_velo = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
-
-			double dist1, dist2, delta_velo1, delta_velo2;
-			dist1 = GeometryAlg::GetPointToPointDistance(middle_coord, child1_cn_coord);
-			dist2 = GeometryAlg::GetPointToPointDistance(middle_coord, child2_cn_coord);
-			delta_velo1 = GeometryAlg::GetPointToPointDistance(middle_velo, child1_cn_velo);
-			delta_velo2 = GeometryAlg::GetPointToPointDistance(middle_velo, child2_cn_velo);
-
-			
-			if (delta_velo1 >= m_coliner_eps || delta_velo2 >= m_coliner_eps)
-			{
-				CDoubleVector  m_cell_coord[CNDIM];
-
-				
-				m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]) = middle_coord;
-				m_child1_vara->corner_vector(idcnCoords_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnCoords_cur, m_which_corner[0]);
-				
-				m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]) = middle_velo;
-				m_child1_vara->corner_vector(idcnVelocity_lag, m_which_corner[0]) = m_child1_vara->corner_vector(idcnVelocity_cur, m_which_corner[0]);
-
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child1_vara->corner_vector(idcnCoords_cur, i); }
-				m_child1_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child1_vara->cell(idDensity_cur) = m_child1_vara->cell(idMass) / m_child1_vara->cell(idVolume);
-
-				m_child1_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
-					m_child1_vara->cell(idGamma),
-					m_child1_vara->cell(idDensity_cur),
-					m_child1_vara->cell(idInternalEnergy_cur));
-
-																   
-				m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]) = middle_coord;
-				m_child2_vara->corner_vector(idcnCoords_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnCoords_cur, m_which_corner[1]);
-
-				m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]) = middle_velo;
-				m_child2_vara->corner_vector(idcnVelocity_lag, m_which_corner[1]) = m_child2_vara->corner_vector(idcnVelocity_cur, m_which_corner[1]);
-
-				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_child2_vara->corner_vector(idcnCoords_cur, i); }
-				m_child2_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
-				m_child2_vara->cell(idDensity_cur) = m_child2_vara->cell(idMass) / m_child2_vara->cell(idVolume);
-
-				m_child2_vara->cell(idPressure_cur) = PhysicalAlg::EquationOfState(
-					m_child2_vara->cell(idGamma),
-					m_child2_vara->cell(idDensity_cur),
-					m_child2_vara->cell(idInternalEnergy_cur));
-			}
-		}
-	}
-}
 
 static void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_face_info_t *info, void *user_data)
 {
@@ -3074,90 +2878,6 @@ static void quadrant_copy_velocity_from_lag_to_relax_callback(p4est_iter_volume_
 		m_vara->corner_vector(idcnVelocity_relaxed, k) = m_vara->corner_vector(idcnVelocity_lag, k);
 	}
 }
-
-static void quadrant_update_parent_velo_press_callback(p4est_iter_face_info_t *info, void *user_data)
-{
-	p4est_t			*p4est = info->p4est;
-	quad_data_t		*ghost_data = (quad_data_t *)user_data;
-	quad_data_t		*m_quad_data, *m_quad_data_aside, *m_quad_data_full;
-	p4est_iter_face_side_t *side[2];
-	sc_array_t				*sides = &(info->sides);
-	int				which_face, parent_face_index;
-
-	
-	int				m_which_corner[2], m_master_corner[2], m_unconstrained_master_corner[2], m_which_side[2];
-
-	
-	for (int i = 0; i < 2; i++)
-	{
-		if (sides->elem_count < 2 && i == 1)
-		{
-			continue;
-		}
-		side[i] = p4est_iter_fside_array_index_int(sides, i);
-		
-		if (side[i]->is_hanging == Hanging)
-		{
-			p4est_quadrant	*quad = side[i]->is.hanging.quad[0];
-			if (side[i]->is.hanging.quadid[0]<0
-				|| side[i]->is.hanging.quadid[1]<0
-				|| side[i]->is.hanging.quadid[0]>info->p4est->global_num_quadrants
-				|| side[i]->is.hanging.quadid[1]>info->p4est->global_num_quadrants) {
-				continue;
-			}
-			int			level = quad->level;
-			p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
-			p4est_qcoord_t qx = quad->x;
-			p4est_qcoord_t qy = quad->y;
-			p4est_quadrant	*quad_aside = side[i]->is.hanging.quad[1];
-			p4est_qcoord_t qx_aside = quad_aside->x;
-			p4est_qcoord_t qy_aside = quad_aside->y;
-			which_face = side[i]->face;
-
-			get_hanging_edge_info_from_logical_position(which_face, qx, qy, qx_aside, qy_aside,
-				length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
-			if (side[i]->is.hanging.is_ghost[0])
-			{
-				m_quad_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[0]];
-			}
-			else
-			{
-				m_quad_data = (quad_data_t *)quad->p.user_data;
-			}
-			if (side[i]->is.hanging.is_ghost[1])
-			{
-				m_quad_data_aside = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[1]];
-			}
-			else
-			{
-				m_quad_data_aside = (quad_data_t *)quad_aside->p.user_data;
-			}
-
-			int full_index = GeometryAlg::GetCircleNext(2, i);
-			side[full_index] = p4est_iter_fside_array_index_int(sides, full_index);
-			p4est_quadrant	*quad_full = (p4est_quadrant *)side[full_index]->is.full.quad;
-			parent_face_index = side[GeometryAlg::GetCircleNext(2, i)]->face;
-			if (side[full_index]->is.full.is_ghost)
-			{
-				m_quad_data_full = (quad_data_t *)&ghost_data[side[full_index]->is.full.quadid];
-			}
-			else
-			{
-				m_quad_data_full = (quad_data_t *)quad_full->p.user_data;
-			}
-			ParentBounInfo	*PCInfo = (ParentBounInfo	*)&m_quad_data_full->m_pc_edge_data;
-			PCInfo[parent_face_index].Hanging_velocity = m_quad_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]);
-
-			if (m_quad_data->points[m_which_corner[0]].IsHanging == true &&
-				m_quad_data->points[m_which_corner[0]].add_dissipation_parent == true)
-			{
-				PCInfo[parent_face_index].addDiss = true;
-				PCInfo[parent_face_index].ParentPIStar = m_quad_data->points[m_which_corner[0]].pi_constrained_parent;
-			}
-		}
-	}
-}
-
 
 void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p4est, GhostSession &session)
 {
@@ -4993,51 +4713,6 @@ quadrant_set_default_refining_tag_callback(p4est_iter_volume_info_t *info, void 
 }
 
 
-static void
-quadrant_predict_refining_quads_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	DoubleCellVariableID idCPara;
-	p4est_qcoord_t		qx = info->quad->x;
-	p4est_qcoord_t		qy = info->quad->y;
-	int					level = info->quad->level;
-	p4est_qcoord_t		length = P4EST_QUADRANT_LEN(level);
-
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idCPressureGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idCDensityGradient;
-		break;
-	case RefineCriteria::Distance:
-		return;
-	default:
-		break;
-	}
-
-	if (level < p4est_data->minus_level)
-	{
-		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::MustRefing;
-	}
-	if (level >= p4est_data->max_level)
-	{
-		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::RefiningNotAllowed;
-	}
-
-	if (m_vara->cell(idCPara) > p4est_data->refine_err)
-	{
-		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::MustRefing;
-	}
-	else
-	{
-		m_vara->int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::RefiningNotAllowed;
-	}
-}
-
 static void 
 set_default_refining_tag(p4est_t *p4est)
 {
@@ -5077,22 +4752,6 @@ set_allowing_coarsening_tag(p4est_t *p4est, GhostSession &session)
 
 #endif
 		quadrant_whether_allowing_coarsening_from_corner_callback);
-}
-
-static void
-Predict_refining_Quads(p4est_t *p4est, GhostSession &session)
-{
-	(void)session;
-	p4est_iterate(p4est,
-		NULL,
-		NULL,
-		quadrant_predict_refining_quads_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
 }
 
 static void
@@ -5223,21 +4882,6 @@ refresh_after_balance(p4est_t *p4est, GhostSession &session)
 		NULL);
 }
 
-
-static void
-postprocess_after_coarsening(p4est_t *p4est)
-{
-	p4est_iterate(p4est,
-		NULL,
-		NULL,
-		NULL,
-		quadrant_update_after_coarsening_callback,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
 
 static void
 Gradient_estimate(p4est_t *p4est, GhostSession &session)

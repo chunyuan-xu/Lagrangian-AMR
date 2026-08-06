@@ -26,7 +26,7 @@ class GhostSession {
 public:
 	GhostSession()
 		: forest_(NULL), ghost_(NULL), data_(NULL),
-		  data_size_(0), generation_(0), topology_version_(0), valid_(false)
+		  generation_(0), topology_version_(0), valid_(false)
 	{
 	}
 
@@ -38,7 +38,6 @@ public:
 		forest_ = forest;
 		ghost_ = p4est_ghost_new(forest_, connectivity);
 		data_ = P4EST_ALLOC(quad_data_t, ghost_->ghosts.elem_count);
-		data_size_ = sizeof(quad_data_t) * ghost_->ghosts.elem_count;
 		generation_++;
 		valid_ = true;
 		exchange();
@@ -56,7 +55,6 @@ public:
 			P4EST_FREE(data_);
 			data_ = NULL;
 		}
-		data_size_ = 0;
 		valid_ = false;
 	}
 
@@ -124,7 +122,6 @@ private:
 	p4est_t *forest_;
 	p4est_ghost_t *ghost_;
 	quad_data_t *data_;
-	size_t data_size_;
 	size_t generation_;
 	size_t topology_version_;
 	bool valid_;
