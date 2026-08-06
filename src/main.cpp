@@ -1465,12 +1465,12 @@ static void
 quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info_t *info, void *user_data)
 {
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
 	sc_array_t	*sides = &(info->sides);
 	int	is_ghost_a, m_size;
 	int			quadid_a, quadid_b;
-	quad_data_t		*m_data_a;
 	CVariable		*m_vara_a;
-	quad_data_t		*ghost_data = (quad_data_t  *)user_data;
 
 	m_size = (int)(sides->elem_count);
 
@@ -1484,17 +1484,12 @@ quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info
 		is_ghost_a = side_i->is_ghost;
 		if (is_ghost_a)
 		{
-			if (!ghost_data) {
-				P4EST_GLOBAL_PRODUCTIONF("SEGV incoming! ghost_data is NULL!\n");
-				abort();
-			}
-			m_data_a = (quad_data_t  *)&ghost_data[quadid_a];
+			m_vara_a = (CVariable  *)&context->session->remote(quadid_a).m_vara;
 		}
 		else
 		{
-			m_data_a = (quad_data_t  *)side_i->quad->p.user_data;
+			m_vara_a = (CVariable  *)&((quad_data_t *)side_i->quad->p.user_data)->m_vara;
 		}
-		m_vara_a = (CVariable  *) &m_data_a->m_vara;
 		
 		for (int j = 0; j < m_size; j++)
 		{
@@ -4742,9 +4737,10 @@ set_allowing_coarsening_tag(p4est_t *p4est, GhostSession &session)
 #endif
 		NULL);
 
+	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
 		session.get(),
-		session.data(),
+		&callback_context,
 		NULL,
 		NULL,
 #ifdef  P4_TO_P8
