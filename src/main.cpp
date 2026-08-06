@@ -2265,7 +2265,8 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 	CDoubleMatrix	MatrixP = CDoubleMatrix(0., 0., 0., 0.);
 	CDoubleVector	RHS = CDoubleVector(0., 0.);
 	CPointBounInfo	OneBounPlus, OneBounMinus;
-	quad_data_t		*ghost_data = (quad_data_t  *)user_data;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
 
 	m_size = int(sides->elem_count);
 
@@ -2284,7 +2285,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 		is_ghost = side[i]->is_ghost;
 		if (is_ghost)
 		{
-			m_data = (quad_data_t  *)&ghost_data[quadid];
+			m_data = (quad_data_t  *)&context->session->remote(quadid);
 		}
 		else
 		{
@@ -2308,7 +2309,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 		is_ghost = side[i]->is_ghost;
 		if (is_ghost)
 		{
-			m_data = (quad_data_t  *)&ghost_data[quadid];
+			m_data = (quad_data_t  *)&context->session->remote(quadid);
 		}
 		else
 		{
@@ -2334,7 +2335,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 		is_ghost = side[i]->is_ghost;
 		if (is_ghost)
 		{
-			m_data = (quad_data_t  *)&ghost_data[quadid];
+			m_data = (quad_data_t  *)&context->session->remote(quadid);
 		}
 		else
 		{
@@ -2362,7 +2363,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 			is_ghost = side[i]->is_ghost;
 			if (is_ghost)
 			{
-				m_data = (quad_data_t  *)&ghost_data[quadid];
+				m_data = (quad_data_t  *)&context->session->remote(quadid);
 			}
 			else
 			{
@@ -2404,7 +2405,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 				is_ghost = side[i]->is_ghost;
 				if (is_ghost)
 				{
-					m_data = (quad_data_t  *)&ghost_data[quadid];
+					m_data = (quad_data_t  *)&context->session->remote(quadid);
 				}
 				else
 				{
@@ -2852,9 +2853,10 @@ void MatrixAssemble(p4est_t *p4est, GhostSession &session)
 		session.exchange();
 	}
 
+	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
 		session.get(),
-		(void*)session.data(),
+		&callback_context,
 		NULL,
 		NULL,
 #ifdef P4_TO_P8
