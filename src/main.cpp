@@ -2647,7 +2647,8 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 {
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*ghost_data = (quad_data_t *)user_data;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
 	quad_data_t		*m_quad_data, *m_quad_data_aside, *m_quad_data_full;
 	p4est_iter_face_side_t *side[2];
 	sc_array_t				*sides = &(info->sides);
@@ -2689,7 +2690,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 
 			if (side[i]->is.hanging.is_ghost[0])
 			{
-				m_quad_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[0]];
+				m_quad_data = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[0]);
 			}
 			else
 			{
@@ -2698,7 +2699,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 
 			if (side[i]->is.hanging.is_ghost[1])
 			{
-				m_quad_data_aside = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[1]];
+				m_quad_data_aside = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[1]);
 			}
 			else
 			{
@@ -2711,7 +2712,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			parent_face_index = side[GeometryAlg::GetCircleNext(2, i)]->face;
 			if (side[full_index]->is.full.is_ghost)
 			{
-				m_quad_data_full = (quad_data_t *)&ghost_data[side[full_index]->is.full.quadid];
+				m_quad_data_full = (quad_data_t *)&context->session->remote(side[full_index]->is.full.quadid);
 			}
 			else
 			{
@@ -2875,6 +2876,7 @@ static void quadrant_copy_velocity_from_lag_to_relax_callback(p4est_iter_volume_
 void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p4est, GhostSession &session)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	GhostCallbackContext callback_context = { &session };
 
 
 	p4est_iterate(p4est,
@@ -2906,7 +2908,7 @@ void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p
 
 	p4est_iterate(p4est,
 		session.get(),
-		(void*) session.data(),
+		&callback_context,
 		NULL,
 		quadrant_hanging_point_matrix_assemble_callback,
 #ifdef P4_TO_P8
@@ -2919,7 +2921,6 @@ void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p
 			session.exchange();
 		}
 
-	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
 		session.get(),
 		&callback_context,
