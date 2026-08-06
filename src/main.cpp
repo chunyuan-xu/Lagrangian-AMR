@@ -3613,7 +3613,8 @@ static void
 quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *user_data)
 {
 	p4est_t			*p4est = info->p4est;
-	quad_data_t		*ghost_data = (quad_data_t *)user_data;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
 	quad_data_t		*m_quad_data, *m_quad_data_aside;
 	p4est_iter_face_side_t *side[2];
 	sc_array_t				*sides = &(info->sides);
@@ -3622,7 +3623,7 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 
 	int				m_which_corner[2], m_master_corner[2], m_unconstrained_master_corner[2], m_which_side[2];
 
-	
+
 	if (sides->elem_count != 2) { return; }
 	for (int i = 0; i < 2; i++)
 	{
@@ -3652,7 +3653,7 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 
 			if (side[i]->is.hanging.is_ghost[0])
 			{
-				m_quad_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[0]];
+				m_quad_data = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[0]);
 			}
 			else
 			{
@@ -3661,7 +3662,7 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 
 			if (side[i]->is.hanging.is_ghost[1])
 			{
-				m_quad_data_aside = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[1]];
+				m_quad_data_aside = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[1]);
 			}
 			else
 			{
@@ -3701,9 +3702,10 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 
 static void Get_AMR_BDY_info(p4est_t *p4est, GhostSession &session)
 {
+	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
 		session.get(),
-		(void*)session.data(),
+		&callback_context,
 		NULL,
 		quadrant_get_children_hanging_info_callback,
 #ifdef P4_TO_P8
@@ -3729,7 +3731,6 @@ static void Get_AMR_BDY_info(p4est_t *p4est, GhostSession &session)
 		NULL);
 
 
-	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
 		session.get(),
 		&callback_context,
