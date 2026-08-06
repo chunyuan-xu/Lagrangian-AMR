@@ -169,4 +169,60 @@ inline void coarsen_children_to_parent(p4est_data_t *p4est_data,
 		parent_data->m_vara.cell(idDensity_cur));
 }
 
+inline void refine_distribute_buffers(quad_data_t *parent_data, quad_data_t *child_data,
+	int child_index, CDoubleVector children_coord[P4EST_CHILDREN][CNDIM])
+{
+	enum m_geometry_id {m_coord, m_velo};
+	enum m_physical_id {m_density, m_internal_energy};
+
+	int idParentGeometry;
+	for (int idChildrenIndex = idcnCoords_cur; idChildrenIndex <= idcnVelocity_lag; idChildrenIndex++)
+	{
+		if (idChildrenIndex == idcnCoords_cur || idChildrenIndex == idcnCoords_lag || idChildrenIndex == idcnCoords_half)
+		{
+			idParentGeometry = m_geometry_id::m_coord;
+		}
+		if (idChildrenIndex == idcnVelocity_cur || idChildrenIndex == idcnVelocity_lag)
+		{
+			idParentGeometry = m_geometry_id::m_velo;
+		}
+
+		for (int cnid = 0; cnid < CNDIM; cnid++)
+		{
+			child_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idChildrenIndex), cnid) =
+				parent_data->m_vara.ChildrenCnGeomVara[idParentGeometry][child_index][cnid];
+
+			if (idChildrenIndex == idcnCoords_lag)
+			{
+				children_coord[child_index][cnid] = parent_data->m_vara.ChildrenCnGeomVara[idParentGeometry][child_index][cnid];
+			}
+		}
+	}
+
+	int idParentPhysical;
+	for (int idChildrenIndex = idDensity_cur; idChildrenIndex <= idInternalEnergy_lag; idChildrenIndex++)
+	{
+		if (idChildrenIndex == idDensity_cur || idChildrenIndex == idDensity_half || idChildrenIndex == idDensity_lag)
+		{
+			idParentPhysical = m_physical_id::m_density;
+		}
+		if (idChildrenIndex == idInternalEnergy_cur || idChildrenIndex == idInternalEnergy_half || idChildrenIndex == idInternalEnergy_lag)
+		{
+			idParentPhysical = m_physical_id::m_internal_energy;
+		}
+
+		child_data->m_vara.cell(static_cast<DoubleCellVariableID>(idChildrenIndex)) =
+			parent_data->m_vara.ChildrenPhysicalVara[idParentPhysical][child_index];
+		double m_value = parent_data->m_vara.ChildrenPhysicalVara[idParentPhysical][child_index];
+		if (child_data->m_vara.cell(static_cast<DoubleCellVariableID>(idChildrenIndex)) > m_eps)
+		{
+		}
+		else
+		{
+			P4EST_GLOBAL_PRODUCTIONF("The cihldren value of idChildrenIndex is illegal in refining!\n");
+			abort();
+		}
+	}
+}
+
 } // namespace AMRTransfer

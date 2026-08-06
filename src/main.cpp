@@ -4186,56 +4186,8 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 			}
 
 			
-			int idParentGeometry;
-			for (int idChildrenIndex = idcnCoords_cur; idChildrenIndex <= idcnVelocity_lag; idChildrenIndex++)
-			{
-				if (idChildrenIndex == idcnCoords_cur || idChildrenIndex == idcnCoords_lag || idChildrenIndex == idcnCoords_half)
-				{
-					idParentGeometry = m_geometry_id::m_coord;
-				}
-				if (idChildrenIndex == idcnVelocity_cur || idChildrenIndex == idcnVelocity_lag)
-				{
-					idParentGeometry = m_geometry_id::m_velo;
-				}
+			AMRTransfer::refine_distribute_buffers(parent_data, child_data, i, children_coord);
 
-				for (int cnid = 0; cnid < CNDIM; cnid++)
-				{
-					child_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idChildrenIndex), cnid) =
-						parent_data->m_vara.ChildrenCnGeomVara[idParentGeometry][i][cnid];
-
-					if (idChildrenIndex == idcnCoords_lag)
-					{
-						children_coord[i][cnid] = parent_data->m_vara.ChildrenCnGeomVara[idParentGeometry][i][cnid];
-					}
-				}
-			}
-
-			
-			int idParentPhysical;
-			for (int idChildrenIndex = idDensity_cur; idChildrenIndex <= idInternalEnergy_lag; idChildrenIndex++)
-			{
-				if (idChildrenIndex == idDensity_cur || idChildrenIndex == idDensity_half || idChildrenIndex == idDensity_lag)
-				{
-					idParentPhysical = m_physical_id::m_density;
-				}
-				if (idChildrenIndex == idInternalEnergy_cur || idChildrenIndex == idInternalEnergy_half || idChildrenIndex == idInternalEnergy_lag)
-				{
-					idParentPhysical = m_physical_id::m_internal_energy;
-				}
-
-				child_data->m_vara.cell(static_cast<DoubleCellVariableID>(idChildrenIndex)) =
-					parent_data->m_vara.ChildrenPhysicalVara[idParentPhysical][i];
-				double m_value = parent_data->m_vara.ChildrenPhysicalVara[idParentPhysical][i];
-				if (child_data->m_vara.cell(static_cast<DoubleCellVariableID>(idChildrenIndex)) > m_eps)
-				{
-				}
-				else
-				{
-					P4EST_GLOBAL_PRODUCTIONF("The cihldren value of idChildrenIndex is illegal in refining!\n");
-					abort();
-				}
-			}
-			
 			for (int idVCn = idcnCoords_cur; idVCn <= idcnCoords_lag; idVCn++)
 			{
 				VectorCellVariableID idVC;
