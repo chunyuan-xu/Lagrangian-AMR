@@ -5,6 +5,7 @@
 #include "physics/corner_solve.h"
 #include "solver/corner_solver.h"
 #include "solver/solver_gate.h"
+#include "solver/riemann_phases.h"
 #include "io/vtk_writer.h"
 #include "io/config_parser.h"
 #include "io/output_stamp.h"
@@ -3458,24 +3459,9 @@ static void RiemannSolver(p4est_t * p4est, GhostSession &session)
 	{
 		g_trace_riemann_iter = iter_num;
 
-		MatrixAssemble(p4est, session);
-		trace_target_snapshot(p4est, "AFTER_MATRIX");
-		session.exchange();
-
-
-		ComputeCornerNodeVelocity(p4est, session);
-		trace_target_snapshot(p4est, "AFTER_CORNER_SOLVE");
-		session.exchange();
-
-		ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est, session);
-		trace_target_snapshot(p4est, "AFTER_HANGING");
-
-		p4est_data_t * p4est_data = (p4est_data_t *)p4est->user_pointer;
-		if (p4est_data->current_step == 1) {
-			//IOAlgorithm::p4est_debug_output_vtu(p4est, "output/debug_checkpoint", 0, iter_num);
-		}
-
-		session.exchange();
+		RiemannPhases::run_iteration(p4est, session,
+			MatrixAssemble, ComputeCornerNodeVelocity,
+			ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes);
 	}
 
 	
