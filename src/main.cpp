@@ -1796,7 +1796,6 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 		static_cast<GhostCallbackContext *>(user_data);
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*ghost_data = context->session->data();
 	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
@@ -1806,7 +1805,7 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 	int				m_which_corner[2], m_master_corner[2],
 		m_unconstrained_master_corner[2], m_which_side[2];
 	if (sides->elem_count != 2) { return; }
-	
+
 	for (int i = 0; i < 2; i++)
 	{
 		side[i] = p4est_iter_fside_array_index_int(sides, i);
@@ -1836,9 +1835,9 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 				qx_child2, qy_child2, length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
 			if (side[i]->is.hanging.is_ghost[0])
 			{
-				m_child1_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[0]];
-				m_child1_vara = (CVariable *)&ghost_data[side[i]->is.hanging.quadid[0]].m_vara;
-				m_child1_cndata = (CCorner_data *)&(ghost_data[side[i]->is.hanging.quadid[0]].m_cndata);
+				m_child1_data = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[0]);
+				m_child1_vara = (CVariable *)&context->session->remote(side[i]->is.hanging.quadid[0]).m_vara;
+				m_child1_cndata = (CCorner_data *)&(context->session->remote(side[i]->is.hanging.quadid[0]).m_cndata);
 			}
 			else
 			{
@@ -1848,9 +1847,9 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 			}
 			if (side[i]->is.hanging.is_ghost[1])
 			{
-				m_child2_data = (quad_data_t *)&ghost_data[side[i]->is.hanging.quadid[1]];
-				m_child2_vara = (CVariable *)&ghost_data[side[i]->is.hanging.quadid[1]].m_vara;
-				m_child2_cndata = (CCorner_data *)&(ghost_data[side[i]->is.hanging.quadid[1]].m_cndata);
+				m_child2_data = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[1]);
+				m_child2_vara = (CVariable *)&context->session->remote(side[i]->is.hanging.quadid[1]).m_vara;
+				m_child2_cndata = (CCorner_data *)&(context->session->remote(side[i]->is.hanging.quadid[1]).m_cndata);
 			}
 			else
 			{
@@ -1865,9 +1864,9 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 			int parent_face_index = side[GeometryAlg::GetCircleNext(2, i)]->face;
 			if (side[full_index]->is.full.is_ghost)
 			{
-				m_parent_data = (quad_data_t *)&ghost_data[side[full_index]->is.full.quadid];
-				m_parent_vara = (CVariable *)&ghost_data[side[full_index]->is.full.quadid].m_vara;
-				m_parent_cndata = (CCorner_data *)&ghost_data[side[full_index]->is.full.quadid].m_cndata;
+				m_parent_data = (quad_data_t *)&context->session->remote(side[full_index]->is.full.quadid);
+				m_parent_vara = (CVariable *)&context->session->remote(side[full_index]->is.full.quadid).m_vara;
+				m_parent_cndata = (CCorner_data *)&context->session->remote(side[full_index]->is.full.quadid).m_cndata;
 			}
 			else
 			{
