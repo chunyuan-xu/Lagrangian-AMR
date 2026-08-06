@@ -759,61 +759,7 @@ static void get_boundary_from_p4est(p4est_t *p4est)
 		NULL);
 }
 
-static void get_quadrant_boundary_from_p4est(p4est_t *p4est, p4est_quadrant_t *q)
-{
-	quad_data_t		*data = (quad_data_t *)q->p.user_data;
-	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
-	CCorner_data	*cndata = (CCorner_data *)&data->m_cndata;
-	int			level = q->level;
-	p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
-	p4est_qcoord_t qx = q->x;
-	p4est_qcoord_t qy = q->y;
 
-
-	for (int i = 0; i < CNDIM; i++) {
-
-		cndata[i].hdata[CHalf_edge_data::cside::minus].enumBYD = -1;
-		cndata[i].hdata[CHalf_edge_data::cside::plus].enumBYD = -1;
-		cndata[i].hdata[CHalf_edge_data::cside::minus].BYDVal = 0.;
-		cndata[i].hdata[CHalf_edge_data::cside::plus].BYDVal = 0.;
-	}
-	
-
-	if (qx==0)
-	{
-		cndata[0].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->LeftBoun;
-		cndata[1].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->LeftBoun;
-		cndata[0].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->LeftBounVal;
-		cndata[1].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->LeftBounVal;
-	}
-
-	
-	if (qx == P4EST_ROOT_LEN - length)
-	{
-		cndata[3].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->RightBoun;
-		cndata[2].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->RightBoun;
-		cndata[3].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->RightBounVal;
-		cndata[2].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->RightBounVal;
-	}
-
-	
-	if(qy==0)
-	{
-		cndata[0].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->BottomBoun;
-		cndata[3].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->BottomBoun;
-		cndata[0].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->BottomBounVal;
-		cndata[3].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->BottomBounVal;
-	}
-
-	
-	if(qy==P4EST_ROOT_LEN - length)
-	{
-		cndata[1].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->TopBoun;
-		cndata[2].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->TopBoun;
-		cndata[1].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->TopBounVal;
-		cndata[2].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->TopBounVal;
-	}
-}
 
 static int Lagrangian_refine_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
 	p4est_quadrant_t *q)
@@ -826,17 +772,7 @@ static int Lagrangian_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_
 {
 	return AMRAgorithm::CoarsenErrorEstimate(p4est, which_tree, children);
 }
-static int Lagrangian_coarsen_init_condition(p4est_t *p4est, p4est_topidx_t which_tree,
-	p4est_quadrant_t *children[])
-{
-	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_quadrant_t parent;
 
-
-	p4est_quadrant_parent(children[0], &parent);
-
-	return 0;
-}
 
 static void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariable *m_vara)
 {
@@ -3936,32 +3872,7 @@ static void quadrant_copy_coordx_to_array_callback(p4est_iter_volume_info_t *inf
 	}
 }
 
-static void quadrant_copy_cell_variable_to_array_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	vtu_cell_data_t	*m_cell_data = (vtu_cell_data_t *)user_data;
-	p4est_t			*p4est = info->p4est;
-	p4est_tree_t	*tree;
-	quad_data_t		*quad_data = (quad_data_t *)info->quad->p.user_data;
-	p4est_topidx_t	which_tree = info->treeid;
-	p4est_locidx_t	local_id = info->quadid;
-	p4est_locidx_t	arrayoffset, corner_arrayoffset;
-	CVariable		*m_vara = (CVariable *)&quad_data->m_vara;
 
-	tree = p4est_tree_array_index(p4est->trees, which_tree);
-	local_id += tree->quadrants_offset;
-
-	arrayoffset = local_id;
-	corner_arrayoffset = CNDIM*local_id;
-	double		*p_val = (double *)sc_array_index(m_cell_data->pressure_array, arrayoffset);
-	double		*t_val = (double *)sc_array_index(m_cell_data->temperature_array, arrayoffset);
-	double		*rho_val = (double *)sc_array_index(m_cell_data->density_array, arrayoffset);
-	double		*ie_val = (double *)sc_array_index(m_cell_data->internal_energy_array, arrayoffset);
-
-	*p_val = m_vara->cell(idPressure_lag);
-	*t_val = 0.0;
-	*rho_val = m_vara->cell(idDensity_lag);
-	*ie_val = m_vara->cell(idInternalEnergy_lag);
-}
 
 static void quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
@@ -4005,60 +3916,9 @@ static void quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *i
 }
 
 
-static void
-GetRefineCornerCoords(const CDoubleVector &coordLB,
-	const CDoubleVector &coordLU,
-	const CDoubleVector &coordRU,
-	const CDoubleVector &coordRB,
-	CDoubleVector children_coord[P4EST_CHILDREN*CNDIM])
-{
-	enum edgeEnum { LEFT, UP, RIGHT, BOTTOM };
-	CDoubleVector	coord[CNDIM];
-	coord[quad_data_t::EnumCorner::LEFTBOTTOM] = coordLB;
-	coord[quad_data_t::EnumCorner::LEFTUP] = coordLU;
-	coord[quad_data_t::EnumCorner::RIGHTUP] = coordRU;
-	coord[quad_data_t::EnumCorner::RIGHTBOTTOM] = coordRB;
 
-	CDoubleVector	EdgeMiddle[CNDIM], AverCentroid;
-	for (int k = 0; k < CNDIM; k++)
-	{
-		int knext = GeometryAlg::GetCircleNext(CNDIM, k);
-		EdgeMiddle[k] = 0.5*(coord[k] + coord[knext]);
-	}
-	AverCentroid = GeometryAlg::GetPolyCenterByAverage(coord);
 
-	
-	children_coord[quad_data_t::EnumCorner::LEFTBOTTOM] = coord[quad_data_t::EnumCorner::LEFTBOTTOM];
-	children_coord[quad_data_t::EnumCorner::LEFTUP] = EdgeMiddle[edgeEnum::LEFT];
-	children_coord[quad_data_t::EnumCorner::RIGHTUP] = AverCentroid;
-	children_coord[quad_data_t::EnumCorner::RIGHTBOTTOM] = EdgeMiddle[edgeEnum::BOTTOM];
 
-	
-	children_coord[CNDIM + quad_data_t::EnumCorner::LEFTBOTTOM] = EdgeMiddle[edgeEnum::BOTTOM];
-	children_coord[CNDIM + quad_data_t::EnumCorner::LEFTUP] = AverCentroid;
-	children_coord[CNDIM + quad_data_t::EnumCorner::RIGHTUP] = EdgeMiddle[edgeEnum::RIGHT];
-	children_coord[CNDIM + quad_data_t::EnumCorner::RIGHTBOTTOM] = coord[quad_data_t::EnumCorner::RIGHTBOTTOM];
-
-	
-	children_coord[2 * CNDIM + quad_data_t::EnumCorner::LEFTBOTTOM] = EdgeMiddle[edgeEnum::LEFT];
-	children_coord[2 * CNDIM + quad_data_t::EnumCorner::LEFTUP] = coord[quad_data_t::EnumCorner::LEFTUP];
-	children_coord[2 * CNDIM + quad_data_t::EnumCorner::RIGHTUP] = EdgeMiddle[edgeEnum::UP];
-	children_coord[2 * CNDIM + quad_data_t::EnumCorner::RIGHTBOTTOM] = AverCentroid;
-
-	
-	children_coord[3 * CNDIM + quad_data_t::EnumCorner::LEFTBOTTOM] = AverCentroid;
-	children_coord[3 * CNDIM + quad_data_t::EnumCorner::LEFTUP] = EdgeMiddle[edgeEnum::UP];
-	children_coord[3 * CNDIM + quad_data_t::EnumCorner::RIGHTUP] = coord[quad_data_t::EnumCorner::RIGHTUP];
-	children_coord[3 * CNDIM + quad_data_t::EnumCorner::RIGHTBOTTOM] = EdgeMiddle[edgeEnum::RIGHT];
-	return;
-}
-
-static void
-GetRefineCornerVelos(const CDoubleVector velo[CNDIM], CDoubleVector children_velo[P4EST_CHILDREN*CNDIM])
-{
-	
-	return;
-}
 
 
 static void
@@ -4576,143 +4436,11 @@ static void PreProcess(p4est_t *p4est, GhostSession &session)
 }
 
 
-static void write_balance_solution(p4est_t *p4est, const int &time_step)
-{
-	char				filename[BUFSIZ] = "";
-	int					retval;
-	sc_array_t			*coord_x;
-	sc_array_t			*coord_y;
-	p4est_locidx_t		numquads;
-	p4est_vtk_context_t	*context;
-	snprintf(filename, BUFSIZ, P4EST_STRING "_balance_%04d", time_step);
 
-	numquads = p4est->local_num_quadrants;
 
-	coord_x = sc_array_new_size(sizeof(double), numquads*P4EST_CHILDREN);
-	coord_y = sc_array_new_size(sizeof(double), numquads*P4EST_CHILDREN);
 
-	p4est_iterate(p4est,NULL,
-		(void *)coord_x,
-		quadrant_copy_coordx_to_array_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-#endif
-		NULL);
 
-	p4est_iterate(p4est, NULL,
-		(void *)coord_y,
-		quadrant_copy_coordy_to_array_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-#endif
-		NULL);
 
-	context = p4est_vtk_context_new(p4est, filename);
-	p4est_vtk_context_set_scale(context, 0.99);
-	SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk:Error:writing vtk header");
-	context = p4est_vtk_write_header(context);
-	context = p4est_vtk_write_point_dataf(context, 2, 0, "coordinate_X", coord_x,
-		"coordinate_Y", coord_y, context);
-	retval = p4est_vtk_write_footer(context);
-	SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk:Error:writing footer");
-	sc_array_destroy(coord_x);
-	sc_array_destroy(coord_y);
-
-}
-
-static void write_coarsen_solution(p4est_t *p4est, const int &time_step)
-{
-	char				filename[BUFSIZ] = "";
-	int					retval;
-	sc_array_t			*coord_x;
-	sc_array_t			*coord_y;
-	p4est_locidx_t		numquads;
-	p4est_vtk_context_t	*context;
-	snprintf(filename, BUFSIZ, P4EST_STRING "_coarsen_%04d", time_step);
-
-	numquads = p4est->local_num_quadrants;
-
-	coord_x = sc_array_new_size(sizeof(double), numquads*P4EST_CHILDREN);
-	coord_y = sc_array_new_size(sizeof(double), numquads*P4EST_CHILDREN);
-
-	p4est_iterate(p4est, NULL,
-		(void *)coord_x,
-		quadrant_copy_coordx_to_array_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-#endif
-		NULL);
-
-	p4est_iterate(p4est, NULL,
-		(void *)coord_y,
-		quadrant_copy_coordy_to_array_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-#endif
-		NULL);
-
-	context = p4est_vtk_context_new(p4est, filename);
-	p4est_vtk_context_set_scale(context, 0.99);
-	SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk:Error:writing vtk header");
-	context = p4est_vtk_write_header(context);
-	context = p4est_vtk_write_point_dataf(context, 2, 0, "coordinate_X", coord_x,
-		"coordinate_Y", coord_y, context);
-	retval = p4est_vtk_write_footer(context);
-	SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk:Error:writing footer");
-	sc_array_destroy(coord_x);
-	sc_array_destroy(coord_y);
-
-}
-
-static void write_refine_solution(p4est_t *p4est, const int &time_step)
-{
-	char				filename[BUFSIZ] = "";
-	int					retval;
-	sc_array_t			*coord_x;
-	sc_array_t			*coord_y;
-	p4est_locidx_t		numquads;
-	p4est_vtk_context_t	*context;
-	snprintf(filename, BUFSIZ, P4EST_STRING "_refine_%04d", time_step);
-
-	numquads = p4est->local_num_quadrants;
-
-	coord_x = sc_array_new_size(sizeof(double), numquads*P4EST_CHILDREN);
-	coord_y = sc_array_new_size(sizeof(double), numquads*P4EST_CHILDREN);
-
-	p4est_iterate(p4est, NULL,
-		(void *)coord_x,
-		quadrant_copy_coordx_to_array_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-#endif
-		NULL);
-
-	p4est_iterate(p4est, NULL,
-		(void *)coord_y,
-		quadrant_copy_coordy_to_array_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-#endif
-		NULL);
-
-	context = p4est_vtk_context_new(p4est, filename);
-	p4est_vtk_context_set_scale(context, 0.99);
-	SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk:Error:writing vtk header");
-	context = p4est_vtk_write_header(context);
-	context = p4est_vtk_write_point_dataf(context, 2, 0, "coordinate_X", coord_x,
-		"coordinate_Y", coord_y, context);
-	retval = p4est_vtk_write_footer(context);
-	SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk:Error:writing footer");
-	sc_array_destroy(coord_x);
-	sc_array_destroy(coord_y);
-
-}
 
 static void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
