@@ -1,6 +1,7 @@
 #include "alg.h"
 #include "amr/amr_criteria.h"
 #include "amr/amr_transfer.h"
+#include "amr/amr_controller.h"
 #include "solver/corner_solver.h"
 #include "solver/solver_gate.h"
 #include "io/vtk_writer.h"
@@ -5006,33 +5007,11 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			&& p4est_data->current_time>p4est_data->refine_coarsen_time)
 
 		{
-			AMR_DEBUG_LOG("DEBUG: Entering p4est_refine_ext\n");
-			p4est_refine_ext(p4est, recursive, allowed_level,
-				Lagrangian_refine_err_estimate, NULL,
-				Lagrangian_replace_quads);
-			AMR_DEBUG_LOG("DEBUG: Finished p4est_refine_ext\n");
-
-			ghost_session.invalidate_after_topology_change();
-			AMR_DEBUG_LOG("DEBUG: Entering GhostSession rebuild\n");
-			ghost_session.rebuild(p4est, P4EST_CONNECT_FULL);
-			AMR_DEBUG_LOG("DEBUG: Finished GhostSession rebuild\n");
-
-			AMR_DEBUG_LOG("DEBUG: Entering set_allowing_coarsening_tag\n");
-			set_allowing_coarsening_tag(p4est, ghost_session);
-			AMR_DEBUG_LOG("DEBUG: Finished set_allowing_coarsening_tag\n");
-
-			AMR_DEBUG_LOG("DEBUG: Entering p4est_coarsen_ext\n");
-			p4est_coarsen_ext(p4est, recursive, callbackorphans,
-			Lagrangian_coarsen_err_estimate, NULL,
-			Lagrangian_replace_quads);
-			AMR_DEBUG_LOG("DEBUG: Finished p4est_coarsen_ext\n");
-
-			StatTotalEnergyError(p4est);
-			p4est_balance_ext(p4est, P4EST_CONNECT_CORNER, NULL,
-				Lagrangian_replace_quads);
-
-			ghost_session.invalidate_after_topology_change();
-			ghost_session.destroy();
+						AMRController::execute_amr(p4est, ghost_session,
+				recursive, allowed_level, callbackorphans,
+				Lagrangian_refine_err_estimate, Lagrangian_coarsen_err_estimate,
+				Lagrangian_replace_quads, set_allowing_coarsening_tag,
+				StatTotalEnergyError);
 		}
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");
 
