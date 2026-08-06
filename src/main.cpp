@@ -1739,7 +1739,6 @@ static void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_f
 {
 	p4est_t			*p4est = info->p4est;
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*ghost_data = (quad_data_t *)user_data;
 	quad_data_t		*m_parent_data;
 	CVariable		*m_parent_vara;
 	CCorner_data	*m_parent_cndata;
@@ -4728,9 +4727,11 @@ set_default_refining_tag(p4est_t *p4est)
 static void
 set_allowing_coarsening_tag(p4est_t *p4est, GhostSession &session)
 {
+	GhostCallbackContext callback_context = { &session };
+
 	p4est_iterate(p4est,
 		session.get(),
-		session.data(),
+		&callback_context,
 		NULL,
 		quadrant_whether_allowing_coarsening_from_edge_callback,
 #ifdef  P4_TO_P8
@@ -4739,7 +4740,6 @@ set_allowing_coarsening_tag(p4est_t *p4est, GhostSession &session)
 #endif
 		NULL);
 
-	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
 		session.get(),
 		&callback_context,
