@@ -1390,7 +1390,8 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 	DoubleCornerVariableID idCNPara;
 	quad_data_t		*m_data, *m_data_aside;
 	CVariable		*m_vara, *m_vara_aside;
-	quad_data_t		*ghost_data = (quad_data_t  *)user_data;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
 	double			ParaGradient;
 
 	switch (p4est_data->refine_coarsen_enum)
@@ -1424,7 +1425,7 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 		is_ghost = side[i]->is_ghost;
 		if (is_ghost)
 		{
-			m_data = (quad_data_t  *)&ghost_data[quadid];
+			m_data = (quad_data_t  *)&context->session->remote(quadid);
 		}
 		else
 		{
@@ -1443,7 +1444,7 @@ quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *u
 			is_ghost_aside = side[j]->is_ghost;
 			if (is_ghost_aside)
 			{
-				m_data_aside = (quad_data_t  *)&ghost_data[quadid_aside];
+				m_data_aside = (quad_data_t  *)&context->session->remote(quadid_aside);
 			}
 			else
 			{
@@ -4912,7 +4913,7 @@ Gradient_estimate(p4est_t *p4est, GhostSession &session)
 
 	p4est_iterate(p4est,
 		session.get(),
-		(void *)session.data(),
+		&callback_context,
 		NULL,
 		NULL,
 #ifdef  P4_TO_P8
