@@ -2945,7 +2945,8 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 	bool						is_boundary ;
 	quad_data_t					*m_data;
 	CVariable					*m_vara;
-	quad_data_t					*ghost_data = (quad_data_t *)user_data;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
 
 	
 	tree_boundary = info->tree_boundary;
@@ -2964,7 +2965,7 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 		is_ghost = side[i]->is_ghost;
 		if (is_ghost)
 		{
-			m_data = (quad_data_t *)&ghost_data[quadid];
+			m_data = (quad_data_t *)&context->session->remote(quadid);
 		}
 		else
 		{
@@ -2986,8 +2987,8 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 		is_ghost = side[i]->is_ghost;
 		if (is_ghost)
 		{
-			m_data = (quad_data_t *)&ghost_data[quadid];
-			m_vara = (CVariable *)&ghost_data[quadid].m_vara;
+			m_data = (quad_data_t *)&context->session->remote(quadid);
+			m_vara = (CVariable *)&context->session->remote(quadid).m_vara;
 		}
 		else
 		{
@@ -3046,9 +3047,10 @@ static void ComputeCornerNodeVelocity(p4est_t * p4est, GhostSession &session)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
 
+	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
 		session.get(),
-		(void*)session.data(),
+		&callback_context,
 		NULL,
 		NULL,
 #ifdef P4_TO_P8
