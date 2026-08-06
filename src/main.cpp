@@ -5020,9 +5020,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 			!(p4est_data->current_step%p4est_data->repartition_period)
 			&& p4est_data->current_time>p4est_data->refine_coarsen_time)
 		{
-			p4est_partition(p4est, allowcoarsening, NULL);
-			ghost_session.invalidate_after_topology_change();
-			ghost_session.destroy();
+			AMRController::execute_partition(p4est, ghost_session, allowcoarsening);
 		}
 
 
