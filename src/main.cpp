@@ -3850,27 +3850,7 @@ static void advance_single_stage(p4est_t * p4est, GhostSession &session)
 }
 
 
-static void quadrant_copy_coordx_to_array_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	sc_array_t		*array_data = (sc_array_t *)user_data;
-	p4est_t			*p4est = info->p4est;
-	p4est_tree_t	*tree;
-	quad_data_t		*quad_data = (quad_data_t *)info->quad->p.user_data;
-	p4est_topidx_t	which_tree = info->treeid;
-	p4est_locidx_t	local_id = info->quadid;
-	p4est_locidx_t	arrayoffset;
-	CCorner_data	*cndata = (CCorner_data *)&quad_data->m_cndata;
-	CVariable		*m_vara = (CVariable *)&quad_data->m_vara;
 
-	tree = p4est_tree_array_index(p4est->trees, which_tree);
-	local_id += tree->quadrants_offset;
-	arrayoffset = P4EST_CHILDREN * local_id;
-	for (int i = 0; i < P4EST_CHILDREN; i++) {
-		int index0 = convert_user_define_index_to_which_corner(i);
-		double  *this_ptr = (double *)sc_array_index(array_data, arrayoffset + index0);
-		this_ptr[0] = m_vara->corner_vector(idcnCoords_lag, i).x;
-	}
-}
 
 
 
@@ -4118,27 +4098,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 	return;
 }
 
-static void quadrant_copy_coordy_to_array_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	sc_array_t		*array_data = (sc_array_t *)user_data;
-	p4est_t			*p4est = info->p4est;
-	p4est_tree_t	*tree;
-	quad_data_t		*quad_data = (quad_data_t *)info->quad->p.user_data;
-	p4est_topidx_t	which_tree = info->treeid;
-	p4est_locidx_t	local_id = info->quadid;
-	p4est_locidx_t	arrayoffset;
-	CCorner_data	*cndata = (CCorner_data *)&quad_data->m_cndata;
-	CVariable		*m_vara = (CVariable *)&quad_data->m_vara;
 
-	tree = p4est_tree_array_index(p4est->trees, which_tree);
-	local_id += tree->quadrants_offset;
-	arrayoffset = P4EST_CHILDREN * local_id;
-	for (int i = 0; i < P4EST_CHILDREN; i++) {
-		int index0 = convert_user_define_index_to_which_corner(i);
-		double  *this_ptr = (double *)sc_array_index(array_data, arrayoffset + index0);
-		this_ptr[0] = m_vara->corner_vector(idcnCoords_lag, i).y;
-	}
-}
 
 
 static void
