@@ -7,6 +7,7 @@
 #include "solver/solver_gate.h"
 #include "solver/riemann_phases.h"
 #include "solver/hydro_phases.h"
+#include "solver/hydro_callbacks.h"
 #include "io/vtk_writer.h"
 #include "io/config_parser.h"
 #include "io/output_stamp.h"
@@ -1105,40 +1106,16 @@ predict_timestep(p4est_t *p4est)
 }
 
 
-static void quadrant_compute_divergence_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	
-	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	
-	
-	CDoubleVector	cnVelocity[CNDIM];
-	CDoubleVector	cnCoord[CNDIM];
-	for (int k = 0; k < CNDIM; k++)
-	{
-		cnCoord[k] = m_vara->corner_vector(idcnCoords_lag, k);
-		cnVelocity[k] = m_vara->corner_vector(idcnVelocity_lag, k);
-	}
-	m_vara->cell(idDivergence) = PhysicalAlg::CalculateDivergence(p4est_data->coord_type, cnCoord, cnVelocity);
-}
+
 
 
 void ComputeDivergence(p4est_t *p4est)
 {
-	HydroPhases::run_volume_update(p4est, quadrant_compute_divergence_callback);
+	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_divergence_callback);
 }
 
 
-static void quadrant_compute_soundspeed_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	m_vara->cell(idSoundSpeed) = PhysicalAlg::CalculateSoundSpeed(
-		m_vara->cell(idGamma),
-		m_vara->cell(idPressure_lag),
-		m_vara->cell(idDensity_lag));
-}
+
 
 
 static void 
@@ -1774,7 +1751,7 @@ static void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *inf
 
 void ComputeSoundSpeed(p4est_t *p4est)
 {
-	HydroPhases::run_volume_update(p4est, quadrant_compute_soundspeed_callback);
+	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_soundspeed_callback);
 }
 
 
@@ -2665,217 +2642,48 @@ static void ComputeCoordinate(p4est_t * p4est)
 }
 
 
-static void quadrant_update_density_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable			*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	int					coordinate_type = p4est_data->coord_type;
-	CDoubleVector		m_cell_coord[CNDIM];
-	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_lag, i); }
 
-	m_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(coordinate_type, m_cell_coord);
-	m_vara->cell(idDensity_lag) = m_vara->cell(idMass) / m_vara->cell(idVolume);
-
-
-}
 
 
 static void UpdateDensity(p4est_t * p4est)
 {
-	HydroPhases::run_volume_update(p4est, quadrant_update_density_callback);
+	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_density_callback);
 }
 
 
-static void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable			*m_vara = (CVariable *)&data->m_vara;
-	ParentBounInfo		*PCInfo = (ParentBounInfo  *)&data->m_pc_edge_data;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	int					coordinate_type = p4est_data->coord_type;
-	int					scheme_type = p4est_data->Scheme_type;
-	CDoubleVector		SumFcp = CDoubleVector(0., 0.);
-	CDoubleVector		center_point;
-	double				m_alpha = 0.;
-	if (coordinate_type == p4est_data_t::MyCoordType::cylinder
-		&& scheme_type == p4est_data_t::MySchemeType::ControlVolume) {
-		m_alpha = 1.;
-	}
-	CDoubleVector m_baser = CDoubleVector(1., 0.);
-	for (int cnid = 0; cnid < CNDIM; cnid++)
-	{
-		if (scheme_type == p4est_data_t::MySchemeType::ControlVolume) 
-		{
-			SumFcp += m_vara->corner_vector(idcnFcp, cnid) + m_vara->corner_vector(idcnFluxRelaxed, cnid);
-		}
-	}
 
-	for (int eind = 0; eind < CNDIM; eind++)
-	{
-		if (scheme_type == p4est_data_t::MySchemeType::ControlVolume)
-		{
-			if (PCInfo[eind].IsParentChildBoun==true)
-			{
-				SumFcp += m_vara->corner_vector(ideFcp, eind) + PCInfo[eind].FluxRelaxed;
-			}
-		}
-	}
-
-	if (scheme_type == p4est_data_t::MySchemeType::ControlVolume)
-	{
-		m_vara->cell_vector(idCentroidVelo_lag) = m_vara->cell_vector(idCentroidVelo_half) -
-			p4est_data->dt_iter * SumFcp / m_vara->cell(idMass);
-	}
-	else if (scheme_type == p4est_data_t::MySchemeType::AreaWeighted)
-	{
-		CDoubleVector m_cell_coord[CNDIM];
-		for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_cur, i); }
-		center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
-		m_vara->cell_vector(idCentroidVelo_lag) = m_vara->cell_vector(idCentroidVelo_half) -
-			p4est_data->dt_iter * SumFcp / m_vara->cell(idMass) / center_point.x;
-	}
-}
 
 
 static void UpdateMomentumEquation(p4est_t * p4est)
 {
-	HydroPhases::run_volume_update(p4est, quadrant_update_momentum_callback);
+	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_momentum_callback);
 }
 
 
-static void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable				*m_vara = (CVariable *)&data->m_vara;
-	ParentBounInfo		*PCInfo = (ParentBounInfo  *)&data->m_pc_edge_data;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	int					coordinate_type = p4est_data->coord_type;
-	double				m_alpha = 1.;
-	double				m_beta = 1.;
 
-	
-	m_vara->cell(idKineticVariation) = 0.;
-	m_vara->cell(idTotalWork) = 0.;
-
-	if (coordinate_type == p4est_data_t::MyCoordType::cylinder)
-	{
-		m_alpha = 2.* M_PI;
-		m_beta = 2. * M_PI * m_vara->cell_vector(idCentroidCoord_cur).y;
-	}
-	CDoubleVector Velo = 0.5 * (m_vara->cell_vector(idCentroidVelo_half) + m_vara->cell_vector(idCentroidVelo_lag));
-	for (int cnid = 0; cnid < CNDIM; cnid++)
-	{
-		
-		if (coordinate_type == p4est_data_t::MyCoordType::plane)
-		{
-			
-			m_vara->cell(idKineticVariation) += m_beta * 
-				Velo^ (m_vara->corner_vector(idcnFcp, cnid)+ m_vara->corner_vector(idcnFluxRelaxed, cnid));
-		}
-		if (coordinate_type == p4est_data_t::MyCoordType::cylinder)
-		{
-			
-			m_vara->cell(idKineticVariation) += m_beta * Velo^ m_vara->corner_vector(idAWFcp, cnid);
-		}
-
-		
-		m_vara->cell(idTotalWork) += m_alpha*
-			m_vara->corner_vector(idcnVelocity_lag, cnid) ^ 
-			(m_vara->corner_vector(idcnFcp, cnid)+ m_vara->corner_vector(idcnFluxRelaxed, cnid)); 
-	}
-
-	for (int eind = 0; eind < CNDIM; eind++)
-	{
-		
-		if (PCInfo[eind].IsParentChildBoun==true)
-		{
-			if (coordinate_type == p4est_data_t::MyCoordType::plane)
-			{
-				m_vara->cell(idKineticVariation) += m_beta * Velo ^
-					(m_vara->corner_vector(ideFcp, eind) + PCInfo[eind].FluxRelaxed);
-			}
-			m_vara->cell(idTotalWork) += m_alpha* PCInfo[eind].Hanging_velocity ^
-				(m_vara->corner_vector(ideFcp, eind) + PCInfo[eind].FluxRelaxed);
-		}
-	}
-}
 
 
 static void ComputeWork(p4est_t * p4est)
 {
-	HydroPhases::run_volume_update(p4est, quadrant_compute_work_callback);
+	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_work_callback);
 }
 
 
-static void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
-	CVariable			*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 
-	
-	m_vara->cell(idTotalEnergy_lag) = m_vara->cell(idTotalEnergy_half) - p4est_data->dt_iter * m_vara->cell(idTotalWork) / m_vara->cell(idMass);
-
-
-	double source = 0.;
-	if (p4est_data->which_case == ProblemNo::TaylorGreen)
-	{
-		source = p4est_data->dt_iter * 5.*M_PI / 8.*m_vara->cell(idVolume) *
-			(cos(3.*M_PI*m_vara->cell_vector(idCentroidCoord_lag).x)*cos(M_PI * m_vara->cell_vector(idCentroidCoord_lag).y) -
-				cos(M_PI*m_vara->cell_vector(idCentroidCoord_lag).x)*cos(3.*M_PI*m_vara->cell_vector(idCentroidCoord_lag).y)) / m_vara->cell(idMass);
-	}
-
-	if (m_vara->cell(idTotalEnergy_lag) > m_eps)
-	{
-	}
-	else
-	{
-
-		P4EST_GLOBAL_PRODUCTIONF("the total energy of quad %d is negative!\n", info->quadid);
-		std::abort();
-	}
-
-	
-	m_vara->cell(idInternalEnergy_lag) = m_vara->cell(idInternalEnergy_half) - p4est_data->dt_iter
-		* (m_vara->cell(idTotalWork) - m_vara->cell(idKineticVariation)) / m_vara->cell(idMass);
-	m_vara->cell(idInternalEnergy_lag) += source;
-	if (m_vara->cell(idInternalEnergy_lag) > m_eps)
-	{
-	}
-	else
-	{
-
-		P4EST_GLOBAL_PRODUCTIONF("the total energy of quad %d is negative!\n", info->quadid);
-		std::abort();
-	}
-}
 
 
 static void UpdateEnergyEquation(p4est_t * p4est)
 {
-	HydroPhases::run_volume_update(p4est, quadrant_update_energy_callback);
+	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_energy_callback);
 }
 
 
-static void quadrant_update_EOS_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
-	CVariable				*m_vara = (CVariable *)&data->m_vara;
-	m_vara->cell(idPressure_lag) = PhysicalAlg::EquationOfState(m_vara->cell(idGamma), m_vara->cell(idDensity_lag), m_vara->cell(idInternalEnergy_lag));
-	if (m_vara->cell(idPressure_lag) > m_eps)
-	{
-	}
-	else
-	{
-		P4EST_GLOBAL_PRODUCTIONF("the value of pressure is illegal\n");
-	}
-}
+
 
 
 static void UpdateEquationOfState(p4est_t * p4est)
 {
-	HydroPhases::run_volume_update(p4est, quadrant_update_EOS_callback);
+	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_EOS_callback);
 }
 
 
