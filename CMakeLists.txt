@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(p4est_AMR_Hydro LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -77,6 +77,7 @@ endif()
 add_executable(AMR_Solver
   src/main.cpp
   src/alg.cpp
+  src/io/config_parser.cpp
 )
 
 target_include_directories(AMR_Solver PRIVATE
