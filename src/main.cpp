@@ -2185,11 +2185,7 @@ quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info
 }
 
 
-CDoubleVector BoundaryNodeVelocityComputation(const CPointBounInfo &BounPlus,
-	const CPointBounInfo &BounMinus, const CDoubleMatrix MatrixP, const CDoubleVector m_RHS)
-{
-	return CornerSolve::boundary_node_velocity(BounPlus, BounMinus, MatrixP, m_RHS);
-}
+
 
 
 static void 
@@ -2552,7 +2548,7 @@ static void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, vo
 			{
 
 
-				m_data->points[cnid].velo_lag = BoundaryNodeVelocityComputation(
+				m_data->points[cnid].velo_lag = CornerSolve::boundary_node_velocity(
 					m_data->points[cnid].TwoBouns[0],
 					m_data->points[cnid].TwoBouns[1],
 					m_data->points[cnid].MatrixP,
