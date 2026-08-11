@@ -13,6 +13,7 @@
 #include "physics/stage_policy.h"
 #include "diagnostics/state_invariant_checker.h"
 #include "mesh/ghost_session.h"
+#include "mesh/cell_key.h"
 #include <cstdlib>
 #include <cstring>
 #include <vector>
@@ -4556,7 +4557,7 @@ static void debug_quadrant_copy_variable_to_array_callback(p4est_iter_volume_inf
 	p4est_locidx_t local_id = info->quadid + tree->quadrants_offset;
 	
 	// Global SFC ID
-	double global_id = (double)(p4est->global_first_quadrant[p4est->mpirank] + local_id);
+	double global_id = MeshAdapter::global_sfc_id(p4est, local_id);
 	*(double *)sc_array_index(m_cell_data->global_sfc_id_array, local_id) = global_id;
 
 	CVariable *m_vara = (CVariable *)&quad_data->m_vara;
