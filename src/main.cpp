@@ -6,6 +6,7 @@
 #include "solver/corner_solver.h"
 #include "solver/solver_gate.h"
 #include "solver/riemann_phases.h"
+#include "solver/hydro_phases.h"
 #include "io/vtk_writer.h"
 #include "io/config_parser.h"
 #include "io/output_stamp.h"
@@ -1125,17 +1126,7 @@ static void quadrant_compute_divergence_callback(p4est_iter_volume_info_t *info,
 
 void ComputeDivergence(p4est_t *p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_iterate(p4est,
-		NULL,
-		(void*)p4est_data,
-		quadrant_compute_divergence_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
+	HydroPhases::run_volume_update(p4est, quadrant_compute_divergence_callback);
 }
 
 
@@ -1783,17 +1774,7 @@ static void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *inf
 
 void ComputeSoundSpeed(p4est_t *p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_iterate(p4est,
-		NULL,
-		(void*)p4est_data,
-		quadrant_compute_soundspeed_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
+	HydroPhases::run_volume_update(p4est, quadrant_compute_soundspeed_callback);
 }
 
 
@@ -2702,17 +2683,7 @@ static void quadrant_update_density_callback(p4est_iter_volume_info_t *info, voi
 
 static void UpdateDensity(p4est_t * p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_iterate(p4est,
-		NULL,          
-		(void*)p4est_data,   
-		quadrant_update_density_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
-
-#endif
-		NULL);         
+	HydroPhases::run_volume_update(p4est, quadrant_update_density_callback);
 }
 
 
@@ -2769,17 +2740,7 @@ static void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, vo
 
 static void UpdateMomentumEquation(p4est_t * p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_iterate(p4est,
-		NULL,          
-		(void*)p4est_data,   
-		quadrant_update_momentum_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
-
-#endif
-		NULL);         
+	HydroPhases::run_volume_update(p4est, quadrant_update_momentum_callback);
 }
 
 
@@ -2843,17 +2804,7 @@ static void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void 
 
 static void ComputeWork(p4est_t * p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_iterate(p4est,
-		NULL,          
-		(void*)p4est_data,   
-		quadrant_compute_work_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
-
-#endif
-		NULL);         
+	HydroPhases::run_volume_update(p4est, quadrant_compute_work_callback);
 }
 
 
@@ -2903,17 +2854,7 @@ static void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void
 
 static void UpdateEnergyEquation(p4est_t * p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_iterate(p4est,
-		NULL,          
-		(void*)p4est_data,   
-		quadrant_update_energy_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
-
-#endif
-		NULL);         
+	HydroPhases::run_volume_update(p4est, quadrant_update_energy_callback);
 }
 
 
@@ -2934,17 +2875,7 @@ static void quadrant_update_EOS_callback(p4est_iter_volume_info_t *info, void *u
 
 static void UpdateEquationOfState(p4est_t * p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_iterate(p4est,
-		NULL,          
-		(void*)p4est_data,   
-		quadrant_update_EOS_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
-
-#endif
-		NULL);         
+	HydroPhases::run_volume_update(p4est, quadrant_update_EOS_callback);
 }
 
 
