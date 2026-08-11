@@ -113,3 +113,9 @@ struct CDoubleMatrix {
 		return CDoubleMatrix(a.xx / f, a.xy / f, a.yx / f, a.yy / f);
 	}
 };
+
+// M7.1: canonical math type aliases. Vec2/Mat2 are names for the existing
+// 2D vector/matrix types so business code can migrate to a stable API without
+// changing any field layout, operators, or numeric behavior.
+using Vec2 = CDoubleVector;
+using Mat2 = CDoubleMatrix;
