@@ -12,6 +12,7 @@
 #include "physics/timestep_reduction.h"
 #include "physics/stage_policy.h"
 #include "diagnostics/state_invariant_checker.h"
+#include "simulation/simulation.h"
 #include "mesh/ghost_session.h"
 #include "mesh/cell_key.h"
 #include <cstdlib>
@@ -4670,9 +4671,10 @@ int main(int argc, char **argv)
 
 	const SimulationModel::SimulationClock startup_clock =
 		p4est_data->simulation_clock();
-	advance_time_step(p4est,
+	Simulation::run(p4est,
 		startup_clock.start_time,
-		startup_clock.end_time);
+		startup_clock.end_time,
+		advance_time_step);
 
 								   
 	p4est_destroy(p4est);
