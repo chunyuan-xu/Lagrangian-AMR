@@ -126,3 +126,67 @@ inline std::vector<InvariantViolation> check_cell_invariants(
 }
 
 }  // namespace Diagnostics
+
+// M6.3: p4est adapter. Iterates the forest with a volume callback that runs
+// the pure per-cell checker and aggregates violations. Kept header-only so
+// it stays a self-contained module; the checker itself is a pure function.
+namespace Diagnostics {
+
+struct InvariantContext
+{
+	int phase_id;
+	int violations;
+	p4est_topidx_t first_tree;
+	int first_level;
+	p4est_qcoord_t first_x;
+	p4est_qcoord_t first_y;
+	const char *first_name;
+};
+
+inline void invariant_volume_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	InvariantContext *ctx = (InvariantContext *)user_data;
+	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
+	const CVariable &vara = data->m_vara;
+	std::vector<Diagnostics::InvariantViolation> v =
+		Diagnostics::check_cell_invariants(vara);
+	if (v.empty()) {
+		return;
+	}
+	if (ctx->violations == 0) {
+		ctx->first_tree = info->treeid;
+		ctx->first_level = info->quad->level;
+		ctx->first_x = info->quad->x;
+		ctx->first_y = info->quad->y;
+		ctx->first_name = v[0].name;
+	}
+	ctx->violations += (int)v.size();
+	P4EST_GLOBAL_PRODUCTIONF(
+		"  [phase %d] (tree=%lld, level=%d, x=%lld, y=%lld) %s: "
+		"expected %.17e, got %.17e\n",
+		ctx->phase_id, (long long)info->treeid, info->quad->level,
+		(long long)info->quad->x, (long long)info->quad->y,
+		v[0].name, v[0].expected, v[0].actual);
+}
+
+inline void check_state_invariants(p4est_t *p4est, int phase_id)
+{
+	InvariantContext ctx = {phase_id, 0, -1, -1, -1, -1, NULL};
+	p4est_iterate(p4est, NULL, &ctx, invariant_volume_callback, NULL,
+#ifdef P4_TO_P8
+		NULL,
+#endif
+		NULL);
+	if (ctx.violations > 0) {
+		P4EST_GLOBAL_PRODUCTIONF(
+			"STATE INVARIANT VIOLATION (phase=%d): %d violation(s); "
+			"first at (tree=%lld, level=%d, x=%lld, y=%lld) [%s]\n",
+			ctx.phase_id, ctx.violations, (long long)ctx.first_tree,
+			ctx.first_level, (long long)ctx.first_x, (long long)ctx.first_y,
+			ctx.first_name ? ctx.first_name : "");
+		std::abort();
+	}
+}
+
+}  // namespace Diagnostics
+
