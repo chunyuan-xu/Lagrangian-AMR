@@ -842,4 +842,148 @@ void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info, void *
 		}
 	}
 }
+
+void
+quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info_t *info, void *user_data)
+{
+	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
+	sc_array_t	*sides = &(info->sides);
+	int	is_ghost_a, m_size;
+	int			quadid_a, quadid_b;
+	CVariable		*m_vara_a;
+
+	m_size = (int)(sides->elem_count);
+
+	for (int i = 0; i < m_size; i++)
+	{
+		p4est_iter_corner_side_t *side_i = p4est_iter_cside_array_index_int(sides, i);
+		quadid_a = side_i->quadid;
+		p4est_quadrant	*quad_a = side_i->quad;
+		int level_a = quad_a->level;
+
+		is_ghost_a = side_i->is_ghost;
+		if (is_ghost_a)
+		{
+			m_vara_a = (CVariable  *)&context->session->remote(quadid_a).m_vara;
+		}
+		else
+		{
+			m_vara_a = (CVariable  *)&((quad_data_t *)side_i->quad->p.user_data)->m_vara;
+		}
+		
+		for (int j = 0; j < m_size; j++)
+		{
+			if (j == i) { continue; }
+			p4est_iter_corner_side_t *side_j = p4est_iter_cside_array_index_int(sides, j);
+			quadid_b = side_j->quadid;
+			p4est_quadrant	*quad_b = side_j->quad;
+			int level_b = quad_b->level;
+			
+			if (level_b - level_a > 1)
+			{
+				if (!is_ghost_a)
+				{
+					m_vara_a->int_cell(idAllowCoarsening) = p4est_data_t::CoarseningEnum::CoarsingNotAllowed;
+				}
+			}
+		}
+	}
+}
+void
+quadrant_set_default_coarsening_tag_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
+	
+	
+	data->m_vara.int_cell(idCoarseningTag) = p4est_data_t::CoarseningEnum::NotCoarsenedJustNow;
+
+	
+	data->m_vara.int_cell(idAllowCoarsening) = p4est_data_t::CoarseningEnum::CoarsingAllowed;
+}
+void
+quadrant_set_default_refining_tag_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
+	CVariable		*m_vara = (CVariable *)&data->m_vara;
+
+	CDoubleVector m_coord[CNDIM];
+	
+	for (int cnid = 0; cnid < CNDIM; cnid++)
+	{
+		m_coord[cnid] = m_vara->corner_vector(idcnCoords_lag, CNDIM - 1 - cnid);
+
+	}
+	int IsConcaveQuad = GeometryAlg::is_concave_quad(m_coord);
+	m_vara->int_cell(idAllowRefining) = IsConcaveQuad;
+
+	if (IsConcaveQuad < 0)
+	{
+		
+		data->m_vara.int_cell(idAllowRefining) = p4est_data_t::RefiningEnum::RefiningAllowed;
+	}
+	else
+	{
+		
+
+	}
+}
+
+void set_default_coarsening_tag(p4est_t *p4est)
+{
+	p4est_iterate(p4est,
+		NULL,
+		NULL,
+		AMRCallbacks::quadrant_set_default_coarsening_tag_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+}
+void 
+set_default_refining_tag(p4est_t *p4est)
+{
+	p4est_iterate(p4est,
+		NULL,
+		NULL,
+		AMRCallbacks::quadrant_set_default_refining_tag_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+}
+void
+set_allowing_coarsening_tag(p4est_t *p4est, GhostSession &session)
+{
+	GhostCallbackContext callback_context = { &session };
+
+	p4est_iterate(p4est,
+		session.get(),
+		&callback_context,
+		NULL,
+		AMRCallbacks::quadrant_whether_allowing_coarsening_from_edge_callback,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+
+	p4est_iterate(p4est,
+		session.get(),
+		&callback_context,
+		NULL,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		AMRCallbacks::quadrant_whether_allowing_coarsening_from_corner_callback);
+}
 } // namespace AMRCallbacks
