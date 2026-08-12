@@ -596,4 +596,413 @@ void quadrant_flux_relaxed_reset_callback(p4est_iter_volume_info_t *info, void *
 		m_vara->corner_vector(idcnFluxRelaxed, k) = CDoubleVector(0.,0.);
 	}
 }
+
+void quadrant_compute_RcpLcpNcp_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	
+	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
+	CVariable		*m_vara = (CVariable *)&data->m_vara;
+	CCorner_data	*cndata = (CCorner_data *)&data->m_cndata;
+	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	int				CoordType = p4est_data->coord_type;
+	int				SolverType = p4est_data->solver_type;
+	CHalf_edge_data	*m_plus, *m_minus;
+	p4est_qcoord_t	qx = info->quad->x;
+	p4est_qcoord_t	qy = info->quad->y;
+
+	
+	CDoubleVector EdgeMiddle[CNDIM];
+	for (int k = 0; k < CNDIM; k++)
+	{
+		int knext = GeometryAlg::GetCircleNext(CNDIM, k);
+		EdgeMiddle[k] = 0.5 * (m_vara->corner_vector(idcnCoords_cur, k) + m_vara->corner_vector(idcnCoords_cur, knext));
+	}
+	for (int k = 0; k < CNDIM; k++)
+	{
+		int knext = GeometryAlg::GetCircleNext(CNDIM, k);
+		int kpre = GeometryAlg::GetCirclePre(CNDIM, k);
+		m_plus = (CHalf_edge_data *)&cndata[k].hdata[CHalf_edge_data::cside::plus];
+		m_minus = (CHalf_edge_data *)&cndata[k].hdata[CHalf_edge_data::cside::minus];
+		if (p4est_data->coord_type == p4est_data_t::MyCoordType::plane)
+		{
+			m_plus->Rcp = 1.0;
+			m_minus->Rcp = 1.0;
+		}
+		else
+		{
+			if (SolverType == p4est_data_t::RiemannSolver::GridAligned)
+			{
+				m_plus->Rcp = GeometryAlg::GetRcpWeightWithLinearDistribution(m_vara->corner_vector(idcnCoords_cur, k),EdgeMiddle[k]);
+				m_minus->Rcp = GeometryAlg::GetRcpWeightWithLinearDistribution(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[kpre]);
+			}
+			if (SolverType == p4est_data_t::RiemannSolver::Rotated)
+			{
+				m_plus->Rcp = GeometryAlg::GetRcpWeightWithConstDistribution(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[k]);
+				m_minus->Rcp = GeometryAlg::GetRcpWeightWithConstDistribution(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[kpre]);
+			}
+		}
+
+		m_plus->Lcp = GeometryAlg::GetPointToPointDistance(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[k]);
+		m_minus->Lcp = GeometryAlg::GetPointToPointDistance(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[kpre]);
+
+		
+		m_plus->Ncp = GeometryAlg::GetLineNormalVector(m_vara->corner_vector(idcnCoords_cur, k), EdgeMiddle[k]);
+
+		
+		m_minus->Ncp = GeometryAlg::GetLineNormalVector(EdgeMiddle[kpre], m_vara->corner_vector(idcnCoords_cur, k));
+	}
+}
+void quadrant_compute_relaxed_info_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	
+	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
+	CVariable		*m_vara = (CVariable *)&data->m_vara;
+	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	int				CoordType = p4est_data->coord_type;
+	int				SolverType = p4est_data->solver_type;
+	p4est_qcoord_t	qx = info->quad->x;
+	p4est_qcoord_t	qy = info->quad->y;
+
+	double			delta_time = p4est_data->dt_iter;
+	for (int k = 0; k < CNDIM; k++)
+	{
+		m_vara->corner_vector(idcnCoords_relaxed, k) = m_vara->corner_vector(idcnCoords_half, k) +
+			CDoubleVector(m_vara->corner_vector(idcnVelocity_relaxed, k).x * delta_time, m_vara->corner_vector(idcnVelocity_relaxed, k).y * delta_time);
+	}
+}
+void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *info, void *user_data)
+{
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
+	p4est_t			*p4est = info->p4est;
+	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
+	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
+	const CVariable	*m_child1_read_vara, *m_child2_read_vara, *m_parent_read_vara;
+	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
+	p4est_iter_face_side_t *side[2];
+	sc_array_t				*sides = &(info->sides);
+	int				which_face;
+	int				m_which_corner[2], m_master_corner[2], m_unconstrained_master_corner[2], m_which_side[2];
+	
+	P4EST_ASSERT(sides->elem_count == 2);
+	if (sides->elem_count != 2) { return; }
+	for (int i = 0; i < 2; i++)
+	{
+		side[i] = p4est_iter_fside_array_index_int(sides, i);
+		if (side[i]->is_hanging == Hanging)
+		{
+			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
+			if ((side[i]->is.hanging.is_ghost[0]
+				&& !context->session->valid_remote_id(
+					side[i]->is.hanging.quadid[0]))
+				|| (side[i]->is.hanging.is_ghost[1]
+				&& !context->session->valid_remote_id(
+					side[i]->is.hanging.quadid[1]))) {
+				continue;
+			}
+			int			level = quad_child1->level;
+			p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
+			p4est_qcoord_t qx_child1 = quad_child1->x;
+			p4est_qcoord_t qy_child1 = quad_child1->y;
+			p4est_quadrant	*quad_child2 = side[i]->is.hanging.quad[1];
+			p4est_qcoord_t qx_child2 = quad_child2->x;
+			p4est_qcoord_t qy_child2 = quad_child2->y;
+			which_face = side[i]->face;
+			AMRCallbacks::get_hanging_edge_info_from_logical_position(which_face, qx_child1, qy_child1,
+				qx_child2, qy_child2, length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
+			if (side[i]->is.hanging.is_ghost[0])
+			{
+				m_child1_data = context->session->data() + side[i]->is.hanging.quadid[0];
+				m_child1_vara = (CVariable *)&context->session->remote(side[i]->is.hanging.quadid[0]).m_vara;
+				m_child1_read_vara = &context->session->remote(side[i]->is.hanging.quadid[0]).m_vara;
+				m_child1_cndata = (CCorner_data *)&(context->session->remote(side[i]->is.hanging.quadid[0]).m_cndata);
+			}
+			else
+			{
+				m_child1_data = (quad_data_t *)quad_child1->p.user_data;
+				m_child1_vara = (CVariable *)&m_child1_data->m_vara;
+				m_child1_read_vara = &m_child1_data->m_vara;
+				m_child1_cndata = (CCorner_data *)&(m_child1_data->m_cndata);
+			}
+			if (side[i]->is.hanging.is_ghost[1])
+			{
+				m_child2_data = context->session->data() + side[i]->is.hanging.quadid[1];
+				m_child2_vara = (CVariable *)&context->session->remote(side[i]->is.hanging.quadid[1]).m_vara;
+				m_child2_read_vara = &context->session->remote(side[i]->is.hanging.quadid[1]).m_vara;
+				m_child2_cndata = (CCorner_data *)&(context->session->remote(side[i]->is.hanging.quadid[1]).m_cndata);
+			}
+			else
+			{
+				m_child2_data = (quad_data_t *)quad_child2->p.user_data;
+				m_child2_vara = (CVariable *)&m_child2_data->m_vara;
+				m_child2_read_vara = &m_child2_data->m_vara;
+				m_child2_cndata = (CCorner_data *)&(m_child2_data->m_cndata);
+			}
+
+			int full_index = GeometryAlg::GetCircleNext(2, i);
+			side[full_index] = p4est_iter_fside_array_index_int(sides, full_index);
+			p4est_quadrant	*quad_parent = (p4est_quadrant	*)side[full_index]->is.full.quad;
+			int parent_face_index = side[GeometryAlg::GetCircleNext(2, i)]->face;
+			if (side[full_index]->is.full.is_ghost)
+			{
+				m_parent_data = context->session->data() + side[full_index]->is.full.quadid;
+				m_parent_vara = (CVariable *)&context->session->remote(side[full_index]->is.full.quadid).m_vara;
+				m_parent_read_vara = &context->session->remote(side[full_index]->is.full.quadid).m_vara;
+				m_parent_cndata = (CCorner_data *)&context->session->remote(side[full_index]->is.full.quadid).m_cndata;
+			}
+			else
+			{
+				m_parent_data = (quad_data_t *)quad_parent->p.user_data;
+				m_parent_vara = (CVariable *)&m_parent_data->m_vara;
+				m_parent_read_vara = &m_parent_data->m_vara;
+				m_parent_cndata = (CCorner_data *)&m_parent_data->m_cndata;
+			}
+
+			CDoubleVector	master_velocity[2];
+			switch (parent_face_index)
+			{
+				case quad_data_t::EnumEdge::LEFT:
+					master_velocity[0] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+					master_velocity[1] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
+					break;
+				case quad_data_t::EnumEdge::RIGHT:
+					master_velocity[0] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
+					master_velocity[1] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
+					break;
+				case quad_data_t::EnumEdge::BOTTOM:
+					master_velocity[0] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTBOTTOM);
+					master_velocity[1] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTBOTTOM);
+					break;
+				case quad_data_t::EnumEdge::UP:
+					master_velocity[0] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::LEFTUP);
+					master_velocity[1] = m_parent_read_vara->corner_vector(idcnVelocity_lag, quad_data_t::EnumCorner::RIGHTUP);
+					break;
+			}
+
+			CDoubleVector hanging_velo = 0.5 * (master_velocity[0] + master_velocity[1]);
+
+			if (target_trace_enabled() && p4est_data->current_step == 3 &&
+				((is_trace_fine(quad_child1) && is_trace_sibling(quad_child2)) ||
+				 (is_trace_sibling(quad_child1) && is_trace_fine(quad_child2)))) {
+				FILE *f = open_corner2_trace(info->p4est);
+				if (f) {
+					fprintf(f, "TRACE stage=HANGING_OVERRIDE iter=%d child0=(%d,%d,L%d,c%d,g%d) child1=(%d,%d,L%d,c%d,g%d) parent=(%d,%d,L%d,face%d,g%d)",
+						g_trace_riemann_iter, quad_child1->x, quad_child1->y, quad_child1->level, m_which_corner[0], side[i]->is.hanging.is_ghost[0] ? 1 : 0,
+						quad_child2->x, quad_child2->y, quad_child2->level, m_which_corner[1], side[i]->is.hanging.is_ghost[1] ? 1 : 0,
+						quad_parent->x, quad_parent->y, quad_parent->level, parent_face_index, side[full_index]->is.full.is_ghost ? 1 : 0);
+					trace_vector(f, "master0", master_velocity[0]);
+					trace_vector(f, "master1", master_velocity[1]);
+					trace_vector(f, "before0", m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]));
+					trace_vector(f, "before1", m_child2_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[1]));
+					trace_vector(f, "hanging", hanging_velo);
+					fprintf(f, "\n");
+					fclose(f);
+				}
+			}
+
+			if (!side[i]->is.hanging.is_ghost[0]) {
+				m_child1_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[0]) = hanging_velo;
+			}
+			if (!side[i]->is.hanging.is_ghost[1]) {
+				m_child2_data->m_vara.corner_vector(idcnVelocity_lag, m_which_corner[1]) = hanging_velo;
+			}
+
+			CDoubleMatrix MatrixP = m_child1_data->points[m_which_corner[0]].MatrixP;
+			CDoubleVector m_rhs = m_child1_data->points[m_which_corner[0]].RHS;
+			CDoubleVector Flux_relaxed;
+			Flux_relaxed.x = MatrixP.xx * hanging_velo.x + MatrixP.xy * hanging_velo.y - m_rhs.x;
+			Flux_relaxed.y = MatrixP.yx * hanging_velo.x + MatrixP.yy * hanging_velo.y - m_rhs.y;
+
+			double child1_total_energy = m_child1_read_vara->cell(idMass) * m_child1_read_vara->cell(idTotalEnergy_cur);
+			double child2_total_energy = m_child2_read_vara->cell(idMass) * m_child2_read_vara->cell(idTotalEnergy_cur);
+			double parent_total_energy = m_parent_read_vara->cell(idMass) * m_parent_read_vara->cell(idTotalEnergy_cur);
+
+
+			if (!side[i]->is.hanging.is_ghost[0]) {
+				m_child1_vara->corner_vector(idcnFluxRelaxed, m_which_corner[0]) = child1_total_energy /
+					(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			}
+			if (!side[i]->is.hanging.is_ghost[1]) {
+				m_child2_vara->corner_vector(idcnFluxRelaxed, m_which_corner[1]) = child2_total_energy /
+					(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			}
+			if (!side[full_index]->is.full.is_ghost) {
+				ParentBounInfo  *PCInfo = (ParentBounInfo  *)&m_parent_data->m_pc_edge_data;
+				m_parent_data->m_pc_edge_data[parent_face_index].IsParentChildBoun = true;
+				PCInfo[parent_face_index].addDiss = true;
+				PCInfo[parent_face_index].Hanging_velocity = hanging_velo;
+				PCInfo[parent_face_index].FluxRelaxed = parent_total_energy /
+					(child1_total_energy + child2_total_energy + parent_total_energy)*Flux_relaxed;
+			}
+		}
+	}
+}
+void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
+	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	CCorner_data	*cndata = (CCorner_data *)&data->m_cndata;
+	CEdge_data		*edata = (CEdge_data *)&data->m_edata;
+	p4est_t			*p4est = info->p4est;
+	p4est_connectivity_t *conn = p4est->connectivity;
+	CHalf_edge_data  *m_plus, *m_minus;
+	int			level = info->quad->level;
+	int			quadid = info->quadid;
+	p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
+	p4est_qcoord_t qx = info->quad->x;
+	p4est_qcoord_t qy = info->quad->y;
+	p4est_topidx_t	which_tree = info->treeid;
+
+
+	p4est_qcoord_to_vertex(conn, which_tree, qx, qy, data->init_node_coords[0]);
+	p4est_qcoord_to_vertex(conn, which_tree, qx, qy+length, data->init_node_coords[1]);
+	p4est_qcoord_to_vertex(conn, which_tree, qx+length, qy+length, data->init_node_coords[2]);
+	p4est_qcoord_to_vertex(conn, which_tree, qx+length, qy, data->init_node_coords[3]);
+
+	double x_length = p4est_data->m_grid_info.global_nx*p4est_data->m_grid_info.tree_width;
+	double y_length = p4est_data->m_grid_info.global_ny*p4est_data->m_grid_info.tree_height;
+	bool m_left_boundary = false;
+	bool m_right_boundary = false;
+	bool m_bottom_boundary = false;
+	bool m_top_boundary = false;
+	
+	
+	int ix = info->treeid%p4est_data->x_tree_number;
+	int iy = info->treeid / p4est_data->y_tree_number;
+
+	for (int i = 0; i < CNDIM; i++){
+		
+		m_plus = (CHalf_edge_data *)&cndata[i].hdata[CHalf_edge_data::cside::plus];
+		m_minus = (CHalf_edge_data *)&cndata[i].hdata[CHalf_edge_data::cside::minus];
+		m_plus->enumBYD = -1;
+		m_minus->enumBYD = -1;
+		m_plus->BYDVal = 0.;
+		m_minus->BYDVal = 0.;
+	}
+	
+
+	if (p4est_data->which_case == ProblemNo::TriplePoint)
+	{
+		if (data->init_node_coords[0][0] == 0)
+		{
+			m_left_boundary = true;
+		}
+		if (data->init_node_coords[2][0] == x_length)
+		{
+			m_right_boundary = true;
+		}
+		if (data->init_node_coords[0][1] == 0)
+		{
+			m_bottom_boundary = true;
+		}
+		if (data->init_node_coords[2][1] == y_length)
+		{
+			m_top_boundary = true;
+		}
+	}
+	else
+	{
+		if (qx == 0) { m_left_boundary = true; }
+		if (qx == P4EST_ROOT_LEN - length) { m_right_boundary = true; }
+		if (qy == 0) { m_bottom_boundary = true; }
+		if (qy == P4EST_ROOT_LEN - length) { m_top_boundary = true; }
+	}
+
+	if (m_left_boundary)
+	{
+		cndata[0].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->LeftBoun;
+		cndata[1].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->LeftBoun;
+
+		cndata[0].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->LeftBounVal;
+		cndata[1].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->LeftBounVal;
+
+		edata[quad_data_t::EnumEdge::LEFT].EdgeType = p4est_data->LeftBoun;
+	}
+
+	
+	if (m_right_boundary)
+		
+	{
+		cndata[3].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->RightBoun;
+		cndata[2].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->RightBoun;
+
+		cndata[3].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->RightBounVal;
+		cndata[2].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->RightBounVal;
+
+		edata[quad_data_t::EnumEdge::RIGHT].EdgeType = p4est_data->RightBoun;
+	}
+
+	
+	if (m_bottom_boundary)
+		
+	{
+		cndata[0].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->BottomBoun;
+		cndata[3].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->BottomBoun;
+
+		cndata[0].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->BottomBounVal;
+		cndata[3].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->BottomBounVal;
+
+		edata[quad_data_t::EnumEdge::BOTTOM].EdgeType = p4est_data->BottomBoun;
+	}
+
+	
+	if (m_top_boundary)
+		
+	{
+		cndata[1].hdata[CHalf_edge_data::cside::plus].enumBYD = p4est_data->TopBoun;
+		cndata[2].hdata[CHalf_edge_data::cside::minus].enumBYD = p4est_data->TopBoun;
+
+		cndata[1].hdata[CHalf_edge_data::cside::plus].BYDVal = p4est_data->TopBounVal;
+		cndata[2].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->TopBounVal;
+
+		edata[quad_data_t::EnumEdge::UP].EdgeType = p4est_data->TopBoun;
+	}
+}
+void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
+	CVariable			*m_vara = (CVariable *)&data->m_vara;
+	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	double				delta_time = p4est_data->dt_iter;
+	for (int k = 0; k < CNDIM; k++)  
+	{
+		m_vara->corner_vector(idcnCoords_lag, k) = m_vara->corner_vector(idcnCoords_half, k) +
+			CDoubleVector(m_vara->corner_vector(idcnVelocity_lag, k).x * delta_time, m_vara->corner_vector(idcnVelocity_lag, k).y * delta_time);
+	}
+	CDoubleVector m_cell_coord[CNDIM];
+	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_lag, i); }
+
+	CDoubleVector center_point;
+	center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
+	m_vara->cell_vector(idCentroidCoord_lag) = center_point;
+
+	for (int idIndex = idEChildrenCoordinate_lag; idIndex < idVectorEdgeVariableNum; idIndex++)
+	{
+		VectorCornerVariableID idcnVara;
+		switch (idIndex)
+		{
+		case idEChildrenCoordinate_lag:
+			idcnVara = idcnCoords_lag;
+			break;
+		case idEChildrenVelocity_lag:
+			idcnVara = idcnVelocity_lag;
+			break;
+		default:
+			break;
+		}
+		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::LEFT) = 0.5 *
+			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTUP) +
+				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTBOTTOM));
+		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::RIGHT) = 0.5 *
+			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTUP) +
+				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTBOTTOM));
+		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::BOTTOM) = 0.5 *
+			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTBOTTOM) +
+				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTBOTTOM));
+		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::UP) = 0.5 *
+			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTUP) +
+				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTUP));
+	}
+}
 } // namespace HydroCallbacks
