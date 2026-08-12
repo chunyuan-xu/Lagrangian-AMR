@@ -989,158 +989,13 @@ static void UpdateEquationOfState(p4est_t * p4est)
 
 
 
-static void
-quadrant_reset_parent_edge_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	p4est_t			*p4est = info->p4est;
-	quad_data_t		*m_quad_data = (quad_data_t *)info->quad->p.user_data;
-
-	for (int eind = 0; eind < CNDIM; eind++)
-	{
-		m_quad_data->m_pc_edge_data[eind].IsParentChildBoun = false;
-		m_quad_data->m_pc_edge_data[eind].Lcp[0] = 0.;
-		m_quad_data->m_pc_edge_data[eind].Lcp[1] = 0.;
-		m_quad_data->m_pc_edge_data[eind].Ncp[0] = CDoubleVector(0., 0.);
-		m_quad_data->m_pc_edge_data[eind].Ncp[1] = CDoubleVector(0., 0.);
-		m_quad_data->m_pc_edge_data[eind].FluxRelaxed = CDoubleVector(0., 0.);
-	}
-}
 
 
 
-static void
-quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *user_data)
-{
-	p4est_t			*p4est = info->p4est;
-	GhostCallbackContext *context =
-		static_cast<GhostCallbackContext *>(user_data);
-	quad_data_t		*m_quad_data, *m_quad_data_aside;
-	p4est_iter_face_side_t *side[2];
-	sc_array_t				*sides = &(info->sides);
-	int				which_face;
-	CPointBounInfo	OneBounPlus, OneBounMinus;
-
-	int				m_which_corner[2], m_master_corner[2], m_unconstrained_master_corner[2], m_which_side[2];
 
 
-	if (sides->elem_count != 2) { return; }
-	for (int i = 0; i < 2; i++)
-	{
-		side[i] = p4est_iter_fside_array_index_int(sides, i);
-
-		if (side[i]->is_hanging == Hanging)
-		{
-			p4est_quadrant	*quad = side[i]->is.hanging.quad[0];
-			if (side[i]->is.hanging.quadid[0]<0
-				|| side[i]->is.hanging.quadid[1]<0
-				|| side[i]->is.hanging.quadid[0]>info->p4est->global_num_quadrants
-				|| side[i]->is.hanging.quadid[1]>info->p4est->global_num_quadrants
-				|| side[i]->is.hanging.quadid[0] == side[i]->is.hanging.quadid[1]) {
-				continue;
-			}
-			int			level = quad->level;
-			p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
-			p4est_qcoord_t qx = quad->x;
-			p4est_qcoord_t qy = quad->y;
-			p4est_quadrant	*quad_aside = side[i]->is.hanging.quad[1];
-			p4est_qcoord_t qx_aside = quad_aside->x;
-			p4est_qcoord_t qy_aside = quad_aside->y;
-			which_face = side[i]->face;
-
-			AMRCallbacks::get_hanging_edge_info_from_logical_position(which_face, qx, qy, qx_aside, qy_aside,
-				length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
-
-			if (side[i]->is.hanging.is_ghost[0])
-			{
-				m_quad_data = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[0]);
-			}
-			else
-			{
-				m_quad_data = (quad_data_t *)quad->p.user_data;
-			}
-
-			if (side[i]->is.hanging.is_ghost[1])
-			{
-				m_quad_data_aside = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[1]);
-			}
-			else
-			{
-				m_quad_data_aside = (quad_data_t *)quad_aside->p.user_data;
-			}
-
-			OneBounPlus.Ncp = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Ncp;
-			OneBounPlus.Lcp = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Lcp;
-			OneBounPlus.delta_u_cp = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].delta_u_cp;
-			OneBounPlus.Uc_cur = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Uc_cur;
-			OneBounPlus.Zc = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Zcp;
-			OneBounPlus.enumType = WallBoundary;
-			OneBounMinus.Ncp = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].Ncp;
-			OneBounMinus.Lcp = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].Lcp;
-			OneBounMinus.delta_u_cp = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].delta_u_cp;
-			OneBounMinus.Uc_cur = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].Uc_cur;
-			OneBounMinus.Zc = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].Zcp;
-			OneBounMinus.enumType = WallBoundary;
-
-			if (!side[i]->is.hanging.is_ghost[0])
-			{
-				m_quad_data->points[m_which_corner[0]].IsHanging = true;
-				m_quad_data->points[m_which_corner[0]].TwoBouns[0] = OneBounPlus;
-				m_quad_data->points[m_which_corner[0]].TwoBouns[1] = OneBounMinus;
-			}
-
-			if (!side[i]->is.hanging.is_ghost[1])
-			{
-				m_quad_data_aside->points[m_which_corner[1]].IsHanging = true;
-				m_quad_data_aside->points[m_which_corner[1]].TwoBouns[0] = OneBounMinus;
-				m_quad_data_aside->points[m_which_corner[1]].TwoBouns[1] = OneBounPlus;
-			}
-		}
-	}
-
-}
-
-static void Get_AMR_BDY_info(p4est_t *p4est, GhostSession &session)
-{
-	GhostCallbackContext callback_context = { &session };
-	p4est_iterate(p4est,
-		session.get(),
-		&callback_context,
-		NULL,
-		quadrant_get_children_hanging_info_callback,
-#ifdef P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-
-	if (!session.empty()) {
-		session.exchange();
-	}
 
 
-	p4est_iterate(p4est,
-		NULL,
-		NULL,
-		quadrant_reset_parent_edge_callback,
-		NULL,
-#ifdef P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-
-
-	p4est_iterate(p4est,
-		session.get(),
-		&callback_context,
-		NULL,
-		AMRCallbacks::quadrant_set_init_parent_edge_callback,
-#ifdef P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
 
 
 static void AcceptNumericalSolution(p4est_t * p4est)
@@ -1317,7 +1172,7 @@ static void advance_single_stage(p4est_t * p4est, GhostSession &session)
 		session.exchange();
 
 
-		Get_AMR_BDY_info(p4est, session);
+		AMRCallbacks::Get_AMR_BDY_info(p4est, session);
 		trace_target_snapshot(p4est, "AFTER_AMR_BDY");
 		session.exchange();
 
@@ -1631,24 +1486,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 
 
 
-static void
-quadrant_reset_hanging_info_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 
-	for (int cnid = 0; cnid < CNDIM; cnid++)
-	{
-		data->points[cnid].IsHanging = false;
-		data->points[cnid].AddDiss = false;
-		data->points[cnid].add_dissipation_parent = false;
-	}
-
-	for (int enid = 0; enid < CNDIM; enid++)
-	{
-		data->m_pc_edge_data[enid].addDiss = false;
-	}
-}
 
 
 static void
@@ -1695,69 +1533,9 @@ quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, voi
 	}
 }
 
-static void append_refresh_snapshot(
-	p4est_t *p4est,
-	GhostSession &session,
-	std::vector<unsigned char> &snapshot)
-{
-	const size_t ghost_count =
-		session.empty() ? 0 : session.get()->ghosts.elem_count;
-	const size_t snapshot_size =
-		(static_cast<size_t>(p4est->local_num_quadrants) + ghost_count) *
-		sizeof(quad_data_t);
-	snapshot.clear();
-	snapshot.reserve(snapshot_size);
 
-	for (p4est_topidx_t tree_id = p4est->first_local_tree;
-		tree_id <= p4est->last_local_tree; ++tree_id) {
-		p4est_tree_t *tree = p4est_tree_array_index(p4est->trees, tree_id);
-		for (size_t index = 0; index < tree->quadrants.elem_count; ++index) {
-			p4est_quadrant_t *quad =
-				p4est_quadrant_array_index(&tree->quadrants, index);
-			const unsigned char *bytes = static_cast<const unsigned char *>(
-				quad->p.user_data);
-			snapshot.insert(snapshot.end(), bytes, bytes + sizeof(quad_data_t));
-		}
-	}
 
-	const unsigned char *ghost_bytes = NULL;
-	size_t ghost_size = 0;
-	if (!session.empty()) {
-		ghost_bytes = reinterpret_cast<const unsigned char *>(session.data());
-		ghost_size = ghost_count * sizeof(quad_data_t);
-	}
-	if (ghost_size > 0) {
-		snapshot.insert(
-			snapshot.end(), ghost_bytes, ghost_bytes + ghost_size);
-	}
-}
 
-static void
-refresh_after_balance(p4est_t *p4est, GhostSession &session)
-{
-	GhostCallbackContext callback_context = { &session };
-	p4est_iterate(p4est,
-		session.get(),
-		&callback_context,
-		NULL,
-		AMRCallbacks::quadrant_update_after_balance_callback,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-
-	p4est_iterate(p4est,
-		NULL,
-		NULL,
-		quadrant_reset_hanging_info_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
 
 
 static void
@@ -2060,13 +1838,13 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		}
 
 
-		refresh_after_balance(p4est, ghost_session);
+		AMRCallbacks::refresh_after_balance(p4est, ghost_session);
 		if (refresh_idempotence_check_enabled()) {
 			std::vector<unsigned char> first_refresh;
 			std::vector<unsigned char> second_refresh;
-			append_refresh_snapshot(p4est, ghost_session, first_refresh);
-			refresh_after_balance(p4est, ghost_session);
-			append_refresh_snapshot(p4est, ghost_session, second_refresh);
+			AMRCallbacks::append_refresh_snapshot(p4est, ghost_session, first_refresh);
+			AMRCallbacks::refresh_after_balance(p4est, ghost_session);
+			AMRCallbacks::append_refresh_snapshot(p4est, ghost_session, second_refresh);
 			const int local_match = first_refresh == second_refresh ? 1 : 0;
 			int global_match = 0;
 			sc_MPI_Allreduce(&local_match, &global_match, 1, sc_MPI_INT,
