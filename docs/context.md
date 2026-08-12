@@ -30,7 +30,7 @@ M9 目标：剥离 main.cpp 剩余**包装壳函数**，压至数百行，仅留
 | M9.2.4 | MUSCL 角梯度回调（`quadrant_corner_minmod_estimate_callback`/`quadrant_set_gradient_zero_estimate_callback`）+ `Gradient_estimate`/`PreProcess` | `HydroCallbacks`/`HydroController` | ✅ `待提交` |
 | M9.3.2 | IO 写盘（`write_solution`/`p4est_debug_output_vtu`/`debug_quadrant_copy_variable_to_array_callback`） | `IOCallbacks` | ✅ `待提交` |
 | M9.3.3 | IO 统计诊断（`write_distance_profiles`/`StatTotalEnergyError`） | `IOCallbacks` | ✅ `待提交` |
-| M9.4.1 | main.cpp 终极编排瘦身（`advance_time_step`→`Simulation`，压至数百行） | `Simulation` | ⏳ 未开始 |
+| M9.4.1 | main.cpp 终极编排瘦身（`advance_time_step`→`Simulation`，压至数百行） | `Simulation` | ✅ `待提交` |
 
 ## 3. 门禁记录清单（docs/golden-gates-*）
 
@@ -44,6 +44,11 @@ M9 目标：剥离 main.cpp 剩余**包装壳函数**，压至数百行，仅留
 - `golden-gates-m9-2-4-2026-08-12.md`：M9.2.4
 - `golden-gates-m9-3-2-2026-08-12.md`：M9.3.2
 - `golden-gates-m9-3-3-2026-08-12.md`：M9.3.3
+- `golden-gates-m9-4-1-2026-08-13.md`：M9.4.1
+
+## 3.1 M9 收口状态
+
+**M9 全部子里程碑已收口**（M9.1.3/1.4/2.3/2.4/3.2/3.3/4.1），main.cpp 从 M8 的 2455 行减至 **346 行**（启动骨架 + `Simulation::run` 编排），达成"压至数百行"目标。G2 全程 retired。M9 后待处理：`quadtree_static`（185 行）归属识别（未纳入 M9 范围）。
 
 每个原子任务固定流程：G0 → G1 → G3 → reference/参数/产物检查 → focused commit → push GitHub → 门禁记录文档。任一失败停留当前项。
 
@@ -55,19 +60,18 @@ M9 目标：剥离 main.cpp 剩余**包装壳函数**，压至数百行，仅留
 - G1 串行耗时：Noh ~18s / Sod ~58s / Sedov ~46s；G3 四进程：Sod ~30s / Sedov ~26s。
 - 头文件迁移经验：从 main.cpp 迁出的头文件必须自带 `#include "hydro/hydro_callbacks.h"` 与 `"solver/hydro_callbacks.h"`（main.cpp 靠 include 顺序掩盖了缺失）；所有调用点（含 `p4est_balance` 回调）必须同步路由到新命名空间。
 
-## 5. 剩余壳函数清单（main.cpp 当前 472 行）
+## 5. 剩余壳函数清单（main.cpp 当前 346 行）
 
 | 函数 | 行数 | 归属 | 计划项 |
 |---|---|---|---|
-| `advance_time_step` | 123 | `Simulation` | M9.4.1 |
-| `quadtree_static` | 185 | 待识别，勿预设 | —— |
+| `quadtree_static` | 185 | 待识别，勿预设 | 未纳入 M9 |
 
-> 已迁出：M9.1.3/1.4/2.3/2.4/3.2/3.3 全部（IO 写盘与统计诊断已入 `IOCallbacks`）。main.cpp 已减至 472 行，`advance_time_step` 是最后一个大壳。
+> **M9 已全部收口**：所有包装壳函数已迁至 `AMRCallbacks`/`HydroCallbacks`/`HydroController`/`IOCallbacks`/`Simulation`/`Initializer`/`core/trace.h`。main.cpp 仅留启动骨架。
 
 ## 6. 下一步建议
 
-1. **M9.4.1**：`advance_time_step`（123 行）→ `Simulation`（`Simulation::run` driver），main.cpp 压至数百行。注意 `advance_time_step` 依赖 `AMRCallbacks`/`HydroController`/`IOCallbacks` 均已可见，迁移相对独立。
-2. 处理 `quadtree_static`（185 行）归属——先识别用途，勿预设迁移目标。
+1. 识别 `quadtree_static`（185 行）用途，决定归属或清理（M9 范围外）。
+2. 若继续推进整体重构，下一步为 M10 或回归审计；更新本文件后推进。
 3. 每个原子任务完成后更新本文件第 2、3、5 节，并追加新门禁记录。
 
 > 关键事实：`predict_timestep` 已在 M9.2.2 迁入 `hydro_controller.h`，勿重复迁移；`quadrant_corner_minmod_estimate_callback` 实测 48 行（非旧计划 184 行）；M9 全程 header-only，不新建 `.cpp`。
