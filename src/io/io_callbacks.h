@@ -91,4 +91,16 @@ void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *info, v
 		blank << blank << m_vara->cell(idTotalEnergy_lag) << endl;
 }
 
+
+void quadrant_total_energy_error_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
+	CVariable				*m_vara = (CVariable *)&data->m_vara;
+	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+
+	p4est_data->total_energy_lag += m_vara->cell(idMass) * m_vara->cell(idTotalEnergy_lag);
+	p4est_data->total_energy_cur += m_vara->cell(idMass) * m_vara->cell(idTotalEnergy_cur);
+
+
+}
 } // namespace IOCallbacks
