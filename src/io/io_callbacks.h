@@ -421,4 +421,71 @@ void p4est_debug_output_vtu(p4est_t *p4est, const char *prefix, int step, int lo
 	sc_array_destroy(m_cell_data.velov_c2_array);
 	sc_array_destroy(m_cell_data.velov_c3_array);
 }
+
+// M9.3.3: distance-profile writer (rank-local mkdir + iterate callback).
+void write_distance_profiles(p4est_t *p4est)
+{
+	p4est_data_t		*p4est_data = (p4est_data_t*)p4est->user_pointer;
+	int ret;
+#ifdef _WIN32
+	ret = _mkdir("output");
+	if (ret != 0 && errno != EEXIST) {
+#else
+	ret = mkdir("output", 0777);
+	if (ret != 0 && errno != EEXIST) {
+#endif
+		perror("Error creating directory");
+	}
+	p4est_iterate(p4est, NULL,
+		(void *)p4est_data,
+		IOCallbacks::quadrant_write_distance_profiles_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+#endif
+		NULL);
+}
+
+// M9.3.3: global total-energy conservation check (MPI Allreduce + abort gate).
+void StatTotalEnergyError(p4est_t * p4est)
+{
+	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data->total_energy_cur = 0.;
+	p4est_data->total_energy_lag = 0.;
+	p4est_iterate(p4est,
+		NULL,
+		(void*)p4est_data,
+		IOCallbacks::quadrant_total_energy_error_callback,
+		NULL,
+#ifdef P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+
+	double local_energy_cur = p4est_data->total_energy_cur;
+	double local_energy_lag = p4est_data->total_energy_lag;
+	sc_MPI_Allreduce(&local_energy_cur, &p4est_data->total_energy_cur, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
+	sc_MPI_Allreduce(&local_energy_lag, &p4est_data->total_energy_lag, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
+
+	if (p4est_data->current_step == 1)
+	{
+		p4est_data->total_energy_init = p4est_data->total_energy_cur;
+	}
+
+	if (p4est->mpirank == 0) {
+		p4est_data->EnergyFile << blank << blank << p4est_data->current_time << blank << blank <<
+			(p4est_data->total_energy_lag - p4est_data->total_energy_cur) /
+			p4est_data->total_energy_cur << endl;
+	}
+
+	P4EST_GLOBAL_PRODUCTIONF("the total energy error is %#.16g\n", (p4est_data->total_energy_lag - p4est_data->total_energy_init) /
+		p4est_data->total_energy_init);
+	if (abs((p4est_data->total_energy_lag - p4est_data->total_energy_init) /
+		p4est_data->total_energy_init) > 1e-6)
+	{
+		P4EST_GLOBAL_PRODUCTIONF("The total energy is not conservative after time step\n");
+		abort();
+	}
+}
 } // namespace IOCallbacks

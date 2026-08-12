@@ -207,47 +207,11 @@ using namespace std;
 
 
 
-static void StatTotalEnergyError(p4est_t * p4est)
-{
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_data->total_energy_cur = 0.;
-	p4est_data->total_energy_lag = 0.;
-	p4est_iterate(p4est,
-		NULL,          
-		(void*)p4est_data,   
-		IOCallbacks::quadrant_total_energy_error_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
 
-#endif
-		NULL);         
 
-	double local_energy_cur = p4est_data->total_energy_cur;
-	double local_energy_lag = p4est_data->total_energy_lag;
-	sc_MPI_Allreduce(&local_energy_cur, &p4est_data->total_energy_cur, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
-	sc_MPI_Allreduce(&local_energy_lag, &p4est_data->total_energy_lag, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
 
-	if (p4est_data->current_step == 1)
-	{
-		p4est_data->total_energy_init = p4est_data->total_energy_cur;
-	}
 
-	if (p4est->mpirank == 0) {
-		p4est_data->EnergyFile << blank << blank << p4est_data->current_time << blank << blank <<
-			(p4est_data->total_energy_lag - p4est_data->total_energy_cur) /
-			p4est_data->total_energy_cur << endl;
-	}
 
-	P4EST_GLOBAL_PRODUCTIONF("the total energy error is %#.16g\n", (p4est_data->total_energy_lag - p4est_data->total_energy_init) /
-		p4est_data->total_energy_init);
-	if (abs((p4est_data->total_energy_lag - p4est_data->total_energy_init) /
-		p4est_data->total_energy_init) > 1e-6)
-	{
-		P4EST_GLOBAL_PRODUCTIONF("The total energy is not conservative after time step\n");
-		abort();
-	}
-}
 
 
 
@@ -307,33 +271,6 @@ static void StatTotalEnergyError(p4est_t * p4est)
 
 
 
-
-
-
-
-
-static void write_distance_profiles(p4est_t *p4est)
-{
-	p4est_data_t		*p4est_data = (p4est_data_t*)p4est->user_pointer;
-	int ret;
-#ifdef _WIN32
-	ret = _mkdir("output");
-	if (ret != 0 && errno != EEXIST) {
-#else
-	ret = mkdir("output", 0777);
-	if (ret != 0 && errno != EEXIST) {
-#endif
-		perror("Error creating directory");
-	}
-	p4est_iterate(p4est, NULL,
-		(void *)p4est_data,
-		IOCallbacks::quadrant_write_distance_profiles_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-#endif
-		NULL);
-}
 
 
 static void advance_time_step(p4est_t * p4est, double start_time, double end_time)
@@ -376,7 +313,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 				recursive, allowed_level, callbackorphans,
 				AMRCallbacks::Lagrangian_refine_err_estimate, AMRCallbacks::Lagrangian_coarsen_err_estimate,
 				AMRCallbacks::Lagrangian_replace_quads, AMRCallbacks::set_allowing_coarsening_tag,
-				StatTotalEnergyError);
+				IOCallbacks::StatTotalEnergyError);
 		}
 		//StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");
 
@@ -438,7 +375,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		HydroController::advance_single_stage(p4est, ghost_session);
 
 		
-		StatTotalEnergyError(p4est);
+		IOCallbacks::StatTotalEnergyError(p4est);
 
 		
 		HydroController::AcceptNumericalSolution(p4est);
@@ -453,7 +390,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		P4EST_GLOBAL_PRODUCTIONF("simulation_step= %d, delta_time = %.10lf, simulation_time = %.6lf \n",
 			p4est_data->current_step, p4est_data->delta_time, p4est_data->current_time);
 	}
-	write_distance_profiles(p4est);
+	IOCallbacks::write_distance_profiles(p4est);
 	ghost_session.destroy();
 }
 
