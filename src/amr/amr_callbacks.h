@@ -8,6 +8,7 @@
 #include "physics/physics_alg.h"
 #include "physics/timestep_reduction.h"
 #include "amr/amr_transfer.h"
+#include "amr/amr_criteria.h"
 #include "core/trace.h"
 
 // M8.1: AMRCallbacks — AMR-domain quadrant callbacks stripped from main.cpp.
@@ -1429,5 +1430,21 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 		}
 	}
 	return;
+}
+
+// M9.1.4: p4est refine/coarsen error-estimate callbacks (thin wrappers
+// over the pure AMRAgorithm policies).
+int
+Lagrangian_refine_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
+	p4est_quadrant_t *q)
+{
+	return AMRAgorithm::RefineErrorEstimate(p4est, which_tree, q);
+}
+
+int
+Lagrangian_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
+	p4est_quadrant_t *children[])
+{
+	return AMRAgorithm::CoarsenErrorEstimate(p4est, which_tree, children);
 }
 } // namespace AMRCallbacks

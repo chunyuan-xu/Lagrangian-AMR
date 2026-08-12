@@ -120,17 +120,9 @@ static void trace_target_snapshot(p4est_t *p4est, const char *stage)
 
 
 
-static int Lagrangian_refine_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
-	p4est_quadrant_t *q)
-{
-	return AMRAgorithm::RefineErrorEstimate(p4est, which_tree, q);
-}
 
-static int Lagrangian_coarsen_err_estimate(p4est_t *p4est, p4est_topidx_t which_tree,
-	p4est_quadrant_t *children[])
-{
-	return AMRAgorithm::CoarsenErrorEstimate(p4est, which_tree, children);
-}
+
+
 
 
 
@@ -906,7 +898,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		{
 						AMRController::execute_amr(p4est, ghost_session,
 				recursive, allowed_level, callbackorphans,
-				Lagrangian_refine_err_estimate, Lagrangian_coarsen_err_estimate,
+				AMRCallbacks::Lagrangian_refine_err_estimate, AMRCallbacks::Lagrangian_coarsen_err_estimate,
 				AMRCallbacks::Lagrangian_replace_quads, AMRCallbacks::set_allowing_coarsening_tag,
 				StatTotalEnergyError);
 		}
