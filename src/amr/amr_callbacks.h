@@ -7,9 +7,20 @@
 #include "variable.h"
 #include "physics/physics_alg.h"
 #include "physics/timestep_reduction.h"
+#include "amr/amr_transfer.h"
+#include "core/trace.h"
 
 // M8.1: AMRCallbacks — AMR-domain quadrant callbacks stripped from main.cpp.
 // Each is a pure per-quadrant function over the p4est iterate context.
+
+// Forward declaration avoids a hydro_callbacks.h <-> amr_callbacks.h
+// include cycle: hydro_callbacks.h references AMRCallbacks:: and
+// amr_callbacks.h (M9.1.3) references HydroCallbacks::. main.cpp includes
+// amr_callbacks.h before hydro_callbacks.h, so the full definition is
+// visible at the call site.
+namespace HydroCallbacks {
+void generate_children_info_from_parent(p4est_data_t *p4est_data, CVariable *m_vara);
+}
 
 namespace AMRCallbacks {
 
@@ -1220,5 +1231,203 @@ quadrant_reset_hanging_info_callback(p4est_iter_volume_info_t *info, void *user_
 	{
 		data->m_pc_edge_data[enid].addDiss = false;
 	}
+}
+
+// M9.1.3: p4est refine/coarsen replace callback (parent-child transfer).
+void
+Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
+	int num_outgoing,
+	p4est_quadrant_t *outgoing[],
+	int num_incoming,
+	p4est_quadrant_t *incoming[])
+{
+	enum edgeEnum { LEFT, UP, RIGHT, BOTTOM };
+	enum m_geometry_id {m_coord, m_velo};
+	enum m_physical_id {m_density, m_internal_energy};
+	enum m_which_child {child1, child2, child3, child4};
+	quad_data_t			*parent_data, *child_data, *child_data1, *child_data2, *child_data3, *child_data4;
+	CVariable			*child_vara;
+	p4est_data_t		*p4est_data = (p4est_data_t *)p4est->user_pointer;
+
+	if (num_outgoing > 1)
+	{
+
+
+		parent_data = (quad_data_t *)incoming[0]->p.user_data;
+		child_data1 = (quad_data_t *)outgoing[0]->p.user_data;
+		child_data2 = (quad_data_t *)outgoing[1]->p.user_data;
+		child_data3 = (quad_data_t *)outgoing[2]->p.user_data;
+		child_data4 = (quad_data_t *)outgoing[3]->p.user_data;
+
+
+		AMRTransfer::coarsen_children_to_parent(p4est_data, parent_data,
+			child_data1, child_data2, child_data3, child_data4);
+	}
+	else
+	{
+
+
+		CDoubleVector children_coord[P4EST_CHILDREN][CNDIM];
+
+		parent_data = (quad_data_t *)outgoing[0]->p.user_data;
+
+		double children_total_energy = 0.;
+		double children_energy_per_mass = 0.;
+		double children_total_mass = 0.;
+		for (int i = 0; i < P4EST_CHILDREN; i++)
+		{
+			child_data = (quad_data_t *)incoming[i]->p.user_data;
+
+			p4est_qcoord_t qx = incoming[i]->x;
+			p4est_qcoord_t qy = incoming[i]->y;
+
+			if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_fine(incoming[i])) {
+				FILE *f = open_corner2_trace(p4est);
+				if (f) {
+					fprintf(f, "TRACE stage=REFINE_TRANSFER child_index=%d parent=(%d,%d,L%d) child=(%d,%d,L%d)", i,
+						outgoing[0]->x, outgoing[0]->y, outgoing[0]->level, incoming[i]->x, incoming[i]->y, incoming[i]->level);
+					for (int c = 0; c < CNDIM; ++c) {
+						char name[64];
+						sprintf(name, "parent_lag%d", c); trace_vector(f, name, parent_data->m_vara.corner_vector(idcnVelocity_lag, c));
+						sprintf(name, "buffer_lag%d", c); trace_vector(f, name, parent_data->m_vara.ChildrenCnGeomVara[m_geometry_id::m_velo][i][c]);
+					}
+					fprintf(f, " parent_rho=%.17e buffer_rho=%.17e parent_ie=%.17e buffer_ie=%.17e\n",
+						parent_data->m_vara.cell(idDensity_lag), parent_data->m_vara.ChildrenPhysicalVara[m_physical_id::m_density][i],
+						parent_data->m_vara.cell(idInternalEnergy_lag), parent_data->m_vara.ChildrenPhysicalVara[m_physical_id::m_internal_energy][i]);
+					fclose(f);
+				}
+			}
+
+			FILE *f_dbg = NULL;
+			double px = 0.;
+			double py = 0.;
+			if (refine_trace_enabled()) {
+				px = parent_data->m_vara.cell_vector(idCentroidCoord_cur).x;
+				py = parent_data->m_vara.cell_vector(idCentroidCoord_cur).y;
+				char fname[256];
+				sprintf(fname, "refine_dbg_%d_%d.txt", p4est->mpisize, p4est->mpirank);
+				f_dbg = fopen(fname, "a");
+				if (f_dbg) {
+					fprintf(f_dbg, "REFINE_STEP_%d_PARENT at (%.6f, %.6f): parent SoundSpeed=%e, mass=%e, vol=%e\n",
+						p4est_data->current_step, px, py, parent_data->m_vara.cell(idSoundSpeed), parent_data->m_vara.cell(idMass), parent_data->m_vara.cell(idVolume));
+				}
+			}
+
+			for (int j = 0; j < idDoubleCellVariableNum; j++)
+			{
+
+				child_data->m_vara.cell(static_cast<DoubleCellVariableID>(j)) = parent_data->m_vara.cell(static_cast<DoubleCellVariableID>(j));
+				if (j == idSoundSpeed && f_dbg) {
+					fprintf(f_dbg, "REFINE_STEP_%d_CHILD at (%.6f, %.6f): child SoundSpeed=%e\n",
+						p4est_data->current_step, px, py, child_data->m_vara.cell(idSoundSpeed));
+				}
+				if (parent_data->m_vara.cell(idInternalEnergy_cur) > m_eps)
+				{
+				}
+				else
+				{
+					P4EST_GLOBAL_PRODUCTIONF("The cihldren internal energy is illegal in refining!\n");
+					abort();
+				}
+			}
+			if (f_dbg) {
+				fclose(f_dbg);
+			}
+			for (int j = idReconstructPressure; j < idDoubleCornerVariableNum; j++)
+			{
+				for (int k = 0; k < CNDIM; k++)
+				{
+
+					child_data->m_vara.corner(static_cast<DoubleCornerVariableID>(j), k) = parent_data->m_vara.corner(static_cast<DoubleCornerVariableID>(j), k);
+				}
+			}
+			for (int j = 0; j < idIntCellVariableNum; j++)
+			{
+				child_data->m_vara.int_cell(static_cast<IntCellVariableID>(j)) = parent_data->m_vara.int_cell(static_cast<IntCellVariableID>(j));
+			}
+			for (int j = 0; j < idVectorCellVariableNum; j++)
+			{
+
+				child_data->m_vara.cell_vector(static_cast<VectorCellVariableID>(j)) = parent_data->m_vara.cell_vector(static_cast<VectorCellVariableID>(j));
+			}
+			for (int j = 0; j < idVectorCornerVariableNum; j++)
+			{
+				for (int k = 0; k < CNDIM; k++)
+				{
+
+					child_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(j), k) = parent_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(j), k);
+				}
+			}
+
+
+			AMRTransfer::refine_distribute_buffers(parent_data, child_data, i, children_coord);
+
+			for (int idVCn = idcnCoords_cur; idVCn <= idcnCoords_lag; idVCn++)
+			{
+				VectorCellVariableID idVC;
+				switch (idVCn)
+				{
+				case idcnCoords_cur:
+					idVC = idCentroidCoord_cur;
+					break;
+				case idcnCoords_half:
+					idVC = idCentroidCoord_half;
+					break;
+				case idcnCoords_lag:
+					idVC = idCentroidCoord_lag;
+					break;
+				default:
+					break;
+				}
+				CDoubleVector m_cell_coord[CNDIM];
+				for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = child_data->m_vara.corner_vector(static_cast<VectorCornerVariableID>(idVCn), i); }
+				CDoubleVector center_point;
+				center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
+				child_data->m_vara.cell_vector(idVC) = center_point;
+
+				if (idVCn == idcnCoords_cur)
+				{
+					child_data->m_vara.cell(idVolume) = GeometryAlg::CalculateCellVolume(p4est_data->coord_type, m_cell_coord);
+					child_data->m_vara.cell(idMass) = PhysicalAlg::CalculateCellMass(
+						child_data->m_vara.cell(idVolume), child_data->m_vara.cell(idDensity_cur));
+				}
+			}
+			children_total_energy += child_data->m_vara.cell(idMass) * child_data->m_vara.cell(idTotalEnergy_lag);
+			children_total_mass += child_data->m_vara.cell(idMass);
+			children_energy_per_mass += child_data->m_vara.cell(idTotalEnergy_lag);
+
+			child_vara = (CVariable *)&child_data->m_vara;
+			HydroCallbacks::generate_children_info_from_parent(p4est_data, child_vara);
+		}
+
+		double parent_total_energy = parent_data->m_vara.cell(idMass) * parent_data->m_vara.cell(idTotalEnergy_lag);
+		double parent_energy_per_mass = parent_data->m_vara.cell(idTotalEnergy_lag);
+		double parent_total_mass = parent_data->m_vara.cell(idMass);
+		if (abs((parent_total_energy - children_total_energy)/ parent_total_energy) > 1e-10)
+		{
+			P4EST_GLOBAL_PRODUCTIONF("The total energy is not conservative during refining!\n");
+			if (abs((parent_total_mass - children_total_mass) / parent_total_mass) > 1e-10)
+			{
+				P4EST_GLOBAL_PRODUCTIONF("In the mean time, the total mass is not conservative during refining!\n");
+				P4EST_GLOBAL_PRODUCTIONF("error is %.10lf\n", (parent_total_mass - children_total_mass) / parent_total_mass);
+			}
+			else
+			{
+				P4EST_GLOBAL_PRODUCTIONF("However, the total mass is conservative during refining!\n");
+			}
+
+			if (abs((parent_energy_per_mass - children_energy_per_mass) / parent_energy_per_mass) > 1e-10)
+			{
+				P4EST_GLOBAL_PRODUCTIONF("In the mean time, the energy per mass is not conservative during refining!\n");
+				P4EST_GLOBAL_PRODUCTIONF("error is %.10lf\n", (parent_energy_per_mass - children_energy_per_mass) / parent_energy_per_mass);
+			}
+			else
+			{
+				P4EST_GLOBAL_PRODUCTIONF("However, the energy per mass is conservative during refining!\n");
+			}
+
+		}
+	}
+	return;
 }
 } // namespace AMRCallbacks
