@@ -17,6 +17,7 @@
 #include "diagnostics/state_invariant_checker.h"
 #include "simulation/simulation.h"
 #include "mesh/ghost_session.h"
+#include "mesh/ghost_context.h"
 #include "mesh/cell_key.h"
 #include <cstdlib>
 #include <cstring>
@@ -31,10 +32,6 @@ using namespace std;
 
 static int g_trace_riemann_iter = -1;
 
-struct GhostCallbackContext
-{
-	GhostSession *session;
-};
 
 static bool debug_flag_enabled(const char *name)
 {
@@ -184,153 +181,7 @@ static void trace_target_snapshot(p4est_t *p4est, const char *stage)
 }
 
 
-static void get_hanging_edge_info_from_logical_position(const int which_face, const p4est_qcoord_t qx1, const p4est_qcoord_t qy1,
-	const p4est_qcoord_t qx2, const p4est_qcoord_t qy2, const p4est_qcoord_t length,
-	int which_corner[2], int which_side[2], int master_corner[2], int unconstrained_master_corner[2])
-{
-	switch (which_face)
-	{
-	case quad_data_t::EnumEdge::LEFT:
-		if (qy1 == qy2 + length)
-		{
-			
-			which_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			master_corner[0] = quad_data_t::EnumCorner::LEFTUP;
-			unconstrained_master_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			which_side[0] = CHalf_edge_data::cside::plus;
 
-			
-			which_corner[1] = quad_data_t::EnumCorner::LEFTUP;
-			master_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			unconstrained_master_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
-			which_side[1] = CHalf_edge_data::cside::minus;
-		}
-		else if (qy1 + length == qy2)
-		{
-			
-			which_corner[0] = quad_data_t::EnumCorner::LEFTUP;
-			master_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			unconstrained_master_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
-			which_side[0] = CHalf_edge_data::cside::minus;
-
-			
-			which_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			master_corner[1] = quad_data_t::EnumCorner::LEFTUP;
-			unconstrained_master_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			which_side[1] = CHalf_edge_data::cside::plus;
-		}
-		else
-		{
-			P4EST_GLOBAL_PRODUCTIONF("wrong in get_hanging_edge_info_from_logical_position!");
-		}
-		break;
-	case quad_data_t::EnumEdge::RIGHT:
-		if (qy1 == qy2 + length)
-		{
-			
-			which_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			master_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
-			unconstrained_master_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			which_side[0] = CHalf_edge_data::cside::minus;
-
-			
-			which_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
-			master_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			unconstrained_master_corner[1] = quad_data_t::EnumCorner::LEFTUP;
-			which_side[1] = CHalf_edge_data::cside::plus;
-		}
-		else if (qy1 + length == qy2)
-		{
-			
-			which_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
-			master_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			unconstrained_master_corner[0] = quad_data_t::EnumCorner::LEFTUP;
-			which_side[0] = CHalf_edge_data::cside::plus;
-
-			
-			which_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			master_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
-			unconstrained_master_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			which_side[1] = CHalf_edge_data::cside::minus;
-		}
-		else
-		{
-			P4EST_GLOBAL_PRODUCTIONF("wrong in get_hanging_edge_info_from_logical_position!");
-		}
-		break;
-	case quad_data_t::EnumEdge::BOTTOM:
-		if (qx1 == qx2 + length)
-		{
-			
-			which_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			master_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			unconstrained_master_corner[0] = quad_data_t::EnumCorner::LEFTUP;
-			which_side[0] = CHalf_edge_data::cside::minus;
-
-			
-			which_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			master_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			unconstrained_master_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
-			which_side[1] = CHalf_edge_data::cside::plus;
-		}
-		else if (qx1 + length == qx2)
-		{
-			
-			which_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			master_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			unconstrained_master_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
-			which_side[0] = CHalf_edge_data::cside::plus;
-
-			
-			which_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			master_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			unconstrained_master_corner[1] = quad_data_t::EnumCorner::LEFTUP;
-			which_side[1] = CHalf_edge_data::cside::minus;
-		}
-		else
-		{
-			P4EST_GLOBAL_PRODUCTIONF("wrong in get_hanging_edge_info_from_logical_position!");
-		}
-		break;
-	case quad_data_t::EnumEdge::UP:
-		if (qx1 == qx2 + length)
-		{
-			
-			which_corner[0] = quad_data_t::EnumCorner::LEFTUP;
-			master_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
-			unconstrained_master_corner[0] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			which_side[0] = CHalf_edge_data::cside::plus;
-
-			
-			which_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
-			master_corner[1] = quad_data_t::EnumCorner::LEFTUP;
-			unconstrained_master_corner[1] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			which_side[1] = CHalf_edge_data::cside::minus;
-		}
-		else if (qx1 + length == qx2)
-		{
-			
-			which_corner[0] = quad_data_t::EnumCorner::RIGHTUP;
-			master_corner[0] = quad_data_t::EnumCorner::LEFTUP;
-			unconstrained_master_corner[0] = quad_data_t::EnumCorner::RIGHTBOTTOM;
-			which_side[0] = CHalf_edge_data::cside::minus;
-
-			
-			which_corner[1] = quad_data_t::EnumCorner::LEFTUP;
-			master_corner[1] = quad_data_t::EnumCorner::RIGHTUP;
-			unconstrained_master_corner[1] = quad_data_t::EnumCorner::LEFTBOTTOM;
-			which_side[1] = CHalf_edge_data::cside::plus;
-		}
-		else
-		{
-			P4EST_GLOBAL_PRODUCTIONF("wrong in get_hanging_edge_info_from_logical_position!");
-		}
-		break;
-	default:
-		P4EST_GLOBAL_PRODUCTIONF("the value of which_face must be between 0 and 3!");
-		break;
-	}
-}
 
 
 static void quadrant_compute_RcpLcpNcp_callback(p4est_iter_volume_info_t *info, void *user_data)
@@ -449,7 +300,7 @@ static void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *inf
 			p4est_qcoord_t qx_child2 = quad_child2->x;
 			p4est_qcoord_t qy_child2 = quad_child2->y;
 			which_face = side[i]->face;
-			get_hanging_edge_info_from_logical_position(which_face, qx_child1, qy_child1,
+			AMRCallbacks::get_hanging_edge_info_from_logical_position(which_face, qx_child1, qy_child1,
 				qx_child2, qy_child2, length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
 			if (side[i]->is.hanging.is_ghost[0])
 			{
@@ -1213,228 +1064,7 @@ quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info
 }
 
 
-static void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info, void *user_data)
-{
-	GhostCallbackContext *context =
-		static_cast<GhostCallbackContext *>(user_data);
-	p4est_t			*p4est = info->p4est;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
-	const CVariable		*m_child1_read_vara, *m_child2_read_vara, *m_parent_read_vara;
-	CVariable		*m_child1_write_vara = NULL, *m_child2_write_vara = NULL, *m_parent_write_vara = NULL;
-	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
-	p4est_iter_face_side_t *side[2];
-	sc_array_t				*sides = &(info->sides);
-	int				which_face;
-	DoubleCellVariableID idCPara;
-	DoubleEdgeVariableID idEPara;
-	int				m_which_corner[2], m_master_corner[2], 
-		m_unconstrained_master_corner[2], m_which_side[2];
 
-	if (sides->elem_count != 2) { return; }
-	P4EST_ASSERT(sides->elem_count == 2);
-
-	
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idPressure_cur;
-		idEPara = idEPressureGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idDensity_cur;
-		idEPara = idERhoGradient;
-		break;
-	case RefineCriteria::Distance:
-		return;
-	default:
-		break;
-	}
-
-	
-	for (int i = 0; i < 2; i++)
-	{
-		side[i] = p4est_iter_fside_array_index_int(sides, i);
-		side[1-i] = p4est_iter_fside_array_index_int(sides, 1-i);
-		if (side[i]->is_hanging == Hanging)
-		{
-			p4est_quadrant	*quad_child1 = side[i]->is.hanging.quad[0];
-			if ((side[i]->is.hanging.is_ghost[0]
-				&& !context->session->valid_remote_id(side[i]->is.hanging.quadid[0]))
-				|| (side[i]->is.hanging.is_ghost[1]
-				&& !context->session->valid_remote_id(side[i]->is.hanging.quadid[1]))) {
-				continue;
-			}
-			int			level = quad_child1->level;
-			p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
-			p4est_qcoord_t qx_child1 = quad_child1->x;
-			p4est_qcoord_t qy_child1 = quad_child1->y;
-			p4est_quadrant	*quad_child2 = side[i]->is.hanging.quad[1];
-			p4est_qcoord_t qx_child2 = quad_child2->x;
-			p4est_qcoord_t qy_child2 = quad_child2->y;
-
-			which_face = side[i]->face;
-			get_hanging_edge_info_from_logical_position(which_face, qx_child1, qy_child1,
-				qx_child2, qy_child2, length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
-			if (side[i]->is.hanging.is_ghost[0])
-			{
-				m_child1_read_vara = &context->session->remote(side[i]->is.hanging.quadid[0]).m_vara;
-				m_child1_cndata = (CCorner_data *)&context->session->remote(side[i]->is.hanging.quadid[0]).m_cndata;
-			}
-			else
-			{
-				m_child1_data = (quad_data_t *)quad_child1->p.user_data;
-				m_child1_read_vara = &m_child1_data->m_vara;
-				m_child1_write_vara = &m_child1_data->m_vara;
-				m_child1_cndata = (CCorner_data *)&(m_child1_data->m_cndata);
-			}
-			if (side[i]->is.hanging.is_ghost[1])
-			{
-				m_child2_read_vara = &context->session->remote(side[i]->is.hanging.quadid[1]).m_vara;
-				m_child2_cndata = (CCorner_data *)&context->session->remote(side[i]->is.hanging.quadid[1]).m_cndata;
-			}
-			else
-			{
-				m_child2_data = (quad_data_t *)quad_child2->p.user_data;
-				m_child2_read_vara = &m_child2_data->m_vara;
-				m_child2_write_vara = &m_child2_data->m_vara;
-				m_child2_cndata = (CCorner_data *)&(m_child2_data->m_cndata);
-			}
-
-			int full_index = GeometryAlg::GetCircleNext(2, i);
-			side[full_index] = p4est_iter_fside_array_index_int(sides, full_index);
-			p4est_quadrant	*quad_parent = (p4est_quadrant	*)side[full_index]->is.full.quad;
-			int parent_face_index = side[GeometryAlg::GetCircleNext(2, i)]->face;
-			if (side[full_index]->is.full.is_ghost)
-			{
-				m_parent_read_vara = &context->session->remote(side[full_index]->is.full.quadid).m_vara;
-				m_parent_cndata = (CCorner_data *)&context->session->remote(side[full_index]->is.full.quadid).m_cndata;
-			}
-			else
-			{
-				m_parent_data = (quad_data_t *)quad_parent->p.user_data;
-				m_parent_read_vara = &m_parent_data->m_vara;
-				m_parent_write_vara = &m_parent_data->m_vara;
-				m_parent_cndata = (CCorner_data *)&m_parent_data->m_cndata;
-			}
-			double		parent_para, child1_para, child2_para;
-			double		parent_gradient, child1_gradient, child2_gradient;
-			double		dist1, dist2;
-			CDoubleVector	parent_center, child1_center, child2_center;
-			int				children_face, parent_face;
-
-			
-			parent_para = m_parent_read_vara->cell(idCPara);
-			child1_para = m_child1_read_vara->cell(idCPara);
-			child2_para = m_child2_read_vara->cell(idCPara);
-
-			
-			parent_center = m_parent_read_vara->cell_vector(idCentroidCoord_cur);
-			child1_center = m_child1_read_vara->cell_vector(idCentroidCoord_cur);
-			child2_center = m_child2_read_vara->cell_vector(idCentroidCoord_cur);
-
-			
-			dist1 = GeometryAlg::GetPointToPointDistance(parent_center, child1_center);
-			dist2 = GeometryAlg::GetPointToPointDistance(parent_center, child2_center);
-
-			
-			child1_gradient = abs(parent_para - child1_para) / dist1;
-			child2_gradient = abs(parent_para - child2_para) / dist2;
-			parent_gradient = (child1_gradient + child2_gradient) / 2.;
-
-			
-			children_face = side[i]->face;
-			parent_face = side[1 - i]->face;
-
-			if (m_child1_write_vara != NULL)
-				m_child1_write_vara->edge(idEPara, children_face) = child1_gradient;
-			if (m_child2_write_vara != NULL)
-				m_child2_write_vara->edge(idEPara, children_face) = child2_gradient;
-			if (m_parent_write_vara != NULL)
-				m_parent_write_vara->edge(idEPara, parent_face) = parent_gradient;
-		}
-	}
-
-	
-	side[0] = p4est_iter_fside_array_index_int(sides, 0);
-	side[1] = p4est_iter_fside_array_index_int(sides, 1);
-	if (!(side[0]->is_hanging) && !(side[1]->is_hanging))
-	{
-		double	m_para[2];
-		double	m_gradient;
-		CDoubleVector	m_center[2];
-		int				face_index[2];
-
-		p4est_quadrant_t		*brother1_quad, *brother2_quad;
-		quad_data_t				*brother1_data, *brother2_data;
-		const CVariable			*brother1_read_vara, *brother2_read_vara;
-		CVariable				*brother1_write_vara = NULL, *brother2_write_vara = NULL;
-		brother1_quad = side[0]->is.full.quad;
-		brother2_quad = side[1]->is.full.quad;
-
-		face_index[0] = side[0]->face;
-
-		
-		if (side[0]->is.full.is_ghost)
-		{
-			brother1_read_vara = &context->session->remote(side[0]->is.full.quadid).m_vara;
-		}
-		else
-		{
-			brother1_data = (quad_data_t  *)side[0]->is.full.quad->p.user_data;
-			brother1_read_vara = &brother1_data->m_vara;
-			brother1_write_vara = &brother1_data->m_vara;
-		}
-
-		
-		if (side[1]->is.full.quad == NULL || info->sides.elem_count <2 ||
-			side[1]->is.full.quadid>info->p4est->global_num_quadrants)
-		{
-			if (brother1_write_vara != NULL)
-			{
-				brother1_write_vara->edge(idEPara, face_index[0]) = 0.;
-			}
-			return;
-		}
-
-		face_index[1] = side[1]->face;
-		if (side[1]->is.full.is_ghost)
-		{
-			brother2_read_vara = &context->session->remote(side[1]->is.full.quadid).m_vara;
-		}
-		else if (!(side[1]->is.full.quad))
-		{
-			if (brother1_write_vara != NULL)
-			{
-				brother1_write_vara->edge(idEPara, face_index[0]) = 0.;
-			}
-			return;
-		}
-		else
-		{
-			brother2_data = (quad_data_t  *)side[1]->is.full.quad->p.user_data;
-			brother2_read_vara = &brother2_data->m_vara;
-			brother2_write_vara = &brother2_data->m_vara;
-		}
-
-		m_para[0] = brother1_read_vara->cell(idCPara);
-		m_para[1] = brother2_read_vara->cell(idCPara);
-		m_center[0] = brother1_read_vara->cell_vector(idCentroidCoord_cur);
-		m_center[1] = brother2_read_vara->cell_vector(idCentroidCoord_cur);
-
-		double dist = GeometryAlg::GetPointToPointDistance(m_center[0], m_center[1]);
-		m_gradient = abs(m_para[0] - m_para[1]) / dist;
-
-		if (brother1_write_vara != NULL)
-		{
-			brother1_write_vara->edge(idEPara, face_index[0]) = m_gradient;
-		}
-		if (brother2_write_vara != NULL)
-		{
-			brother2_write_vara->edge(idEPara, face_index[1]) = m_gradient;
-		}
-	}
-}
 
 
 static void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_face_info_t *info, void *user_data)
@@ -1531,7 +1161,7 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 			p4est_qcoord_t qy_child2 = quad_child2->y;
 
 			which_face = side[i]->face;
-			get_hanging_edge_info_from_logical_position(which_face, qx_child1, qy_child1,
+			AMRCallbacks::get_hanging_edge_info_from_logical_position(which_face, qx_child1, qy_child1,
 				qx_child2, qy_child2, length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
 			if (side[i]->is.hanging.is_ghost[0])
 			{
@@ -1669,45 +1299,7 @@ static void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info,
 	}
 }
 
-static void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	quad_data_t		*data=(quad_data_t		*)info->quad->p.user_data;
-	CVariable		*m_vara=(CVariable		*)&data->m_vara;
-	p4est_t			*p4est = info->p4est;
 
-	DoubleCellVariableID idCPara;
-	DoubleEdgeVariableID idEPara;
-	DoubleCornerVariableID idCNPara;
-	
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idCPressureGradient;
-		idEPara = idEPressureGradient;
-		idCNPara = idCNPressGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idCDensityGradient;
-		idEPara = idERhoGradient;
-		idCNPara = idCNRhoGradient;
-		break;
-	case RefineCriteria::Distance:
-		return;
-	default:
-		break;
-	}
-
-	m_vara->cell(idCPara) = 0.;
-
-	
-	for (int i = 0; i < CNDIM; i++)
-	{
-		m_vara->cell(idCPara) = SC_MAX(m_vara->cell(idCPara), m_vara->edge(idEPara, i));
-	}
-
-
-}
 
 
 void ComputeSoundSpeed(p4est_t *p4est)
@@ -2152,7 +1744,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			p4est_qcoord_t qy_aside = quad_aside->y;
 			which_face = side[i]->face;
 
-			get_hanging_edge_info_from_logical_position(which_face, qx, qy, qx_aside, qy_aside,
+			AMRCallbacks::get_hanging_edge_info_from_logical_position(which_face, qx, qy, qx_aside, qy_aside,
 				length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
 
 			if (side[i]->is.hanging.is_ghost[0])
@@ -2746,7 +2338,7 @@ static void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info,
 			p4est_qcoord_t qx_child2 = quad_child2->x;
 			p4est_qcoord_t qy_child2 = quad_child2->y;
 			which_face = side[i]->face;
-			get_hanging_edge_info_from_logical_position(which_face, qx_child1, qy_child1,
+			AMRCallbacks::get_hanging_edge_info_from_logical_position(which_face, qx_child1, qy_child1,
 				qx_child2, qy_child2, length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
 			if (side[i]->is.hanging.is_ghost[0])
 			{
@@ -2897,7 +2489,7 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 			p4est_qcoord_t qy_aside = quad_aside->y;
 			which_face = side[i]->face;
 
-			get_hanging_edge_info_from_logical_position(which_face, qx, qy, qx_aside, qy_aside,
+			AMRCallbacks::get_hanging_edge_info_from_logical_position(which_face, qx, qy, qx_aside, qy_aside,
 				length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
 
 			if (side[i]->is.hanging.is_ghost[0])
@@ -3819,7 +3411,7 @@ Gradient_estimate(p4est_t *p4est, GhostSession &session)
 		session.get(),
 		&callback_context,
 		NULL,
-		quadrant_edge_minmod_estimate_callback,
+		AMRCallbacks::quadrant_edge_minmod_estimate_callback,
 #ifdef  P4_TO_P8
 		NULL,
 
@@ -3841,7 +3433,7 @@ Gradient_estimate(p4est_t *p4est, GhostSession &session)
 	p4est_iterate(p4est,
 		NULL,
 		(void *)p4est_data,
-		quadrant_cell_minmod_estimate_callback,
+		AMRCallbacks::quadrant_cell_minmod_estimate_callback,
 		NULL,
 #ifdef  P4_TO_P8
 		NULL,
