@@ -1005,4 +1005,359 @@ void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t *info, 
 				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTUP));
 	}
 }
+
+void
+quadrant_corner_to_point_matrix_assemble_callback(p4est_iter_corner_info_t *info, void *user_data)
+{
+	p4est_iter_corner_side_t	*side[CNDIM];
+	sc_array_t	*sides = &(info->sides);
+	int	which_corner, cnid, is_ghost, m_size;
+	int			quadid;
+	bool		is_boundary;
+	int			tree_boundary;
+	quad_data_t		*m_data;
+	CVariable		*m_vara;
+	CDoubleMatrix	MatrixP = CDoubleMatrix(0., 0., 0., 0.);
+	CDoubleVector	RHS = CDoubleVector(0., 0.);
+	CPointBounInfo	OneBounPlus, OneBounMinus;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
+
+	m_size = int(sides->elem_count);
+
+	for (int i = 0; i < m_size; i++)
+	{
+		
+		side[i] = p4est_iter_cside_array_index_int(sides, i);
+
+
+		quadid = side[i]->quadid;
+
+		which_corner = side[i]->corner;
+		cnid = HydroCallbacks::convert_which_corner_to_user_define_index(which_corner);
+
+		
+		is_ghost = side[i]->is_ghost;
+		if (is_ghost)
+		{
+			m_data = (quad_data_t  *)&context->session->remote(quadid);
+		}
+		else
+		{
+			m_data = (quad_data_t  *)side[i]->quad->p.user_data;
+		}
+		m_vara = (CVariable  *)&m_data->m_vara;
+
+		
+		MatrixP += m_vara->MarCnData[idcnMcp][cnid];
+		RHS += m_vara->corner_vector(idcnRHS, cnid);
+	}
+
+	for (int i = 0; i < m_size; i++)
+	{
+		
+		side[i] = p4est_iter_cside_array_index_int(sides, i);
+		quadid = side[i]->quadid;
+		which_corner = side[i]->corner;
+		cnid = HydroCallbacks::convert_which_corner_to_user_define_index(which_corner);
+
+		is_ghost = side[i]->is_ghost;
+		if (is_ghost)
+		{
+			m_data = (quad_data_t  *)&context->session->remote(quadid);
+		}
+		else
+		{
+			m_data = (quad_data_t  *)side[i]->quad->p.user_data;
+		}
+		if (!is_ghost) m_data->points[cnid].MatrixP = MatrixP;
+		if (!is_ghost) m_data->points[cnid].RHS = RHS;
+	}
+
+	tree_boundary = info->tree_boundary;
+
+
+	m_size = int(sides->elem_count);
+	CHalf_edge_data	*m_plus, *m_minus;
+	is_boundary = false;
+	for (int i = 0; i < m_size; i++)
+	{
+		side[i] = p4est_iter_cside_array_index_int(sides, i);
+		quadid = side[i]->quadid;
+		which_corner = side[i]->corner;
+		cnid = HydroCallbacks::convert_which_corner_to_user_define_index(which_corner);
+
+		is_ghost = side[i]->is_ghost;
+		if (is_ghost)
+		{
+			m_data = (quad_data_t  *)&context->session->remote(quadid);
+		}
+		else
+		{
+			m_data = (quad_data_t  *)side[i]->quad->p.user_data;
+		}
+		m_plus = (CHalf_edge_data *)&m_data->m_cndata[cnid].hdata[CHalf_edge_data::cside::plus];
+		m_minus = (CHalf_edge_data *)&m_data->m_cndata[cnid].hdata[CHalf_edge_data::cside::minus];
+		if (m_plus->enumBYD != InnerBoundary) { is_boundary = true; }
+		if (m_minus->enumBYD != InnerBoundary) { is_boundary = true; }
+	}
+
+	
+	if (is_boundary)
+	{
+		vector<CPointBounInfo> m_bouns;
+		CHalf_edge_data	*m_plus, *m_minus;
+		m_size = int(sides->elem_count);
+		for (int i = 0; i < m_size; i++)
+		{
+			side[i] = p4est_iter_cside_array_index_int(sides, i);
+			quadid = side[i]->quadid;
+			which_corner = side[i]->corner;
+			cnid = HydroCallbacks::convert_which_corner_to_user_define_index(which_corner);
+
+			is_ghost = side[i]->is_ghost;
+			if (is_ghost)
+			{
+				m_data = (quad_data_t  *)&context->session->remote(quadid);
+			}
+			else
+			{
+				m_data = (quad_data_t  *)side[i]->quad->p.user_data;
+			}
+			m_plus = (CHalf_edge_data *)&m_data->m_cndata[cnid].hdata[CHalf_edge_data::cside::plus];
+			m_minus = (CHalf_edge_data *)&m_data->m_cndata[cnid].hdata[CHalf_edge_data::cside::minus];
+
+			if (m_plus->enumBYD != InnerBoundary)
+			{
+				OneBounPlus.enumType = m_plus->enumBYD;
+				OneBounPlus.Val = m_plus->BYDVal;
+				OneBounPlus.Ncp = m_plus->Ncp;
+				OneBounPlus.Lcp = m_plus->Lcp;
+				m_bouns.push_back(OneBounPlus);
+			}
+			if (m_minus->enumBYD != InnerBoundary)
+			{
+				OneBounMinus.enumType = m_minus->enumBYD;
+				OneBounMinus.Val = m_minus->BYDVal;
+				OneBounMinus.Ncp = m_minus->Ncp;
+				OneBounMinus.Lcp = m_minus->Lcp;
+				m_bouns.push_back(OneBounMinus);
+			}
+		}
+		if (m_bouns.size() != 2)
+		{
+			P4EST_GLOBAL_PRODUCTIONF("WARNING:boundary number must be 2!\n");
+		}
+		else
+		{
+			for (int i = 0; i < m_size; i++)
+			{
+				side[i] = p4est_iter_cside_array_index_int(sides, i);
+				quadid = side[i]->quadid;
+				which_corner = side[i]->corner;
+				cnid = HydroCallbacks::convert_which_corner_to_user_define_index(which_corner);
+
+				is_ghost = side[i]->is_ghost;
+				if (is_ghost)
+				{
+					m_data = (quad_data_t  *)&context->session->remote(quadid);
+				}
+				else
+				{
+					m_data = (quad_data_t  *)side[i]->quad->p.user_data;
+				}
+
+				if (!is_ghost) m_data->points[cnid].TwoBouns[0] = m_bouns[0];
+				if (!is_ghost) m_data->points[cnid].TwoBouns[1] = m_bouns[1];
+			}
+		}
+		m_bouns.clear();
+	}
+}
+void 
+quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, void *user_data)
+{
+	p4est_t			*p4est = info->p4est;
+	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
+	quad_data_t		*m_quad_data, *m_quad_data_aside, *m_quad_data_full;
+	p4est_iter_face_side_t *side[2];
+	sc_array_t				*sides = &(info->sides);
+	int				which_face, parent_face_index;
+	CDoubleMatrix	MatrixP = CDoubleMatrix(0., 0., 0., 0.);
+	CDoubleVector	RHS = CDoubleVector(0., 0.);
+	CPointBounInfo	OneBounPlus, OneBounMinus, BounParent;
+
+	int				m_which_corner[2], m_master_corner[2], m_unconstrained_master_corner[2], m_which_side[2];
+
+	
+	if (sides->elem_count != 2) { return; }
+	for (int i = 0; i < 2; i++)
+	{
+		side[i] = p4est_iter_fside_array_index_int(sides, i);
+
+		if (side[i]->is_hanging == Hanging)
+		{
+			int i_parent = 1 - i;
+			p4est_quadrant	*quad = side[i]->is.hanging.quad[0];
+			if (side[i]->is.hanging.quadid[0]<0
+				|| side[i]->is.hanging.quadid[1]<0
+				|| side[i]->is.hanging.quadid[0]>info->p4est->global_num_quadrants
+				|| side[i]->is.hanging.quadid[1]>info->p4est->global_num_quadrants
+				|| side[i]->is.hanging.quadid[0] == side[i]->is.hanging.quadid[1]) {
+				continue;
+			}
+			int			level = quad->level;
+			p4est_qcoord_t length = P4EST_QUADRANT_LEN(level);
+			p4est_qcoord_t qx = quad->x;
+			p4est_qcoord_t qy = quad->y;
+			p4est_quadrant	*quad_aside = side[i]->is.hanging.quad[1];
+			p4est_qcoord_t qx_aside = quad_aside->x;
+			p4est_qcoord_t qy_aside = quad_aside->y;
+			which_face = side[i]->face;
+
+			AMRCallbacks::get_hanging_edge_info_from_logical_position(which_face, qx, qy, qx_aside, qy_aside,
+				length, m_which_corner, m_which_side, m_master_corner, m_unconstrained_master_corner);
+
+			if (side[i]->is.hanging.is_ghost[0])
+			{
+				m_quad_data = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[0]);
+			}
+			else
+			{
+				m_quad_data = (quad_data_t *)quad->p.user_data;
+			}
+
+			if (side[i]->is.hanging.is_ghost[1])
+			{
+				m_quad_data_aside = (quad_data_t *)&context->session->remote(side[i]->is.hanging.quadid[1]);
+			}
+			else
+			{
+				m_quad_data_aside = (quad_data_t *)quad_aside->p.user_data;
+			}
+
+			int full_index = GeometryAlg::GetCircleNext(2, i);
+			side[full_index] = p4est_iter_fside_array_index_int(sides, full_index);
+			p4est_quadrant	*quad_full = (p4est_quadrant *)side[full_index]->is.full.quad;
+			parent_face_index = side[GeometryAlg::GetCircleNext(2, i)]->face;
+			if (side[full_index]->is.full.is_ghost)
+			{
+				m_quad_data_full = (quad_data_t *)&context->session->remote(side[full_index]->is.full.quadid);
+			}
+			else
+			{
+				m_quad_data_full = (quad_data_t *)quad_full->p.user_data;
+			}
+			ParentBounInfo	*PCInfo = (ParentBounInfo	*)&m_quad_data_full->m_pc_edge_data;
+
+			CDoubleVector	master_coord[2];
+
+			switch (parent_face_index)
+			{
+			case quad_data_t::EnumEdge::LEFT:
+				master_coord[0] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::LEFTUP);
+				break;
+			case quad_data_t::EnumEdge::RIGHT:
+				master_coord[0] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::RIGHTBOTTOM);
+				master_coord[1] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::RIGHTUP);
+				break;
+			case quad_data_t::EnumEdge::BOTTOM:
+				master_coord[0] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::LEFTBOTTOM);
+				master_coord[1] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::RIGHTBOTTOM);
+				break;
+			case quad_data_t::EnumEdge::UP:
+				master_coord[0] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::LEFTUP);
+				master_coord[1] = m_quad_data_full->m_vara.corner_vector(idcnCoords_relaxed, quad_data_t::EnumCorner::RIGHTUP);
+				break;
+			}
+
+
+			MatrixP = m_quad_data->m_vara.MarCnData[idcnMcp][m_which_corner[0]] +
+				m_quad_data_aside->m_vara.MarCnData[idcnMcp][m_which_corner[1]] +
+				m_quad_data_full->m_vara.MarCnData[ideMcp][parent_face_index];
+			RHS = m_quad_data->m_vara.corner_vector(idcnRHS, m_which_corner[0]) +
+				m_quad_data_aside->m_vara.corner_vector(idcnRHS, m_which_corner[1]) +
+				m_quad_data_full->m_vara.corner_vector(ideRHS, parent_face_index);
+			if (target_trace_enabled() && p4est_data->current_step == 3 &&
+				((is_trace_fine(quad) && is_trace_sibling(quad_aside)) ||
+				 (is_trace_sibling(quad) && is_trace_fine(quad_aside)))) {
+				FILE *f = open_corner2_trace(info->p4est);
+				if (f) {
+					fprintf(f, "TRACE stage=HANGING_SUM iter=%d fine0=(%d,%d,L%d,c%d,g%d) fine1=(%d,%d,L%d,c%d,g%d) parent=(%d,%d,L%d,face%d,g%d)",
+						g_trace_riemann_iter, quad->x, quad->y, quad->level, m_which_corner[0], side[i]->is.hanging.is_ghost[0] ? 1 : 0,
+						quad_aside->x, quad_aside->y, quad_aside->level, m_which_corner[1], side[i]->is.hanging.is_ghost[1] ? 1 : 0,
+						quad_full->x, quad_full->y, quad_full->level, parent_face_index, side[full_index]->is.full.is_ghost ? 1 : 0);
+					trace_matrix(f, "fine0_M", m_quad_data->m_vara.MarCnData[idcnMcp][m_which_corner[0]]);
+					trace_vector(f, "fine0_R", m_quad_data->m_vara.corner_vector(idcnRHS, m_which_corner[0]));
+					trace_matrix(f, "fine1_M", m_quad_data_aside->m_vara.MarCnData[idcnMcp][m_which_corner[1]]);
+					trace_vector(f, "fine1_R", m_quad_data_aside->m_vara.corner_vector(idcnRHS, m_which_corner[1]));
+					trace_matrix(f, "parent_M", m_quad_data_full->m_vara.MarCnData[ideMcp][parent_face_index]);
+					trace_vector(f, "parent_R", m_quad_data_full->m_vara.corner_vector(ideRHS, parent_face_index));
+					trace_matrix(f, "sum_M", MatrixP);
+					trace_vector(f, "sum_R", RHS);
+					fprintf(f, "\n");
+					fclose(f);
+				}
+			}
+			if (!side[i]->is.hanging.is_ghost[0])
+			{
+				m_quad_data->points[m_which_corner[0]].MatrixP = MatrixP;
+				m_quad_data->points[m_which_corner[0]].RHS = RHS;
+			}
+			if (!side[i]->is.hanging.is_ghost[1])
+			{
+				m_quad_data_aside->points[m_which_corner[1]].MatrixP = MatrixP;
+				m_quad_data_aside->points[m_which_corner[1]].RHS = RHS;
+			}
+
+			CDoubleVector		hanging_coord;
+			hanging_coord = m_quad_data->m_vara.corner_vector(idcnCoords_half, m_which_corner[0]);
+
+			OneBounPlus.Ncp = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Ncp;
+			OneBounPlus.Lcp = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Lcp;
+			OneBounPlus.delta_u_cp = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].delta_u_cp;
+			OneBounPlus.Uc_cur = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Uc_cur;
+			OneBounPlus.Zc = m_quad_data->m_cndata[m_which_corner[0]].hdata[m_which_side[0]].Zcp;
+			OneBounPlus.enumType = WallBoundary;
+			OneBounMinus.Ncp = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].Ncp;
+			OneBounMinus.Lcp = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].Lcp;
+			OneBounMinus.delta_u_cp = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].delta_u_cp;
+			OneBounMinus.Uc_cur = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].Uc_cur;
+			OneBounMinus.Zc = m_quad_data_aside->m_cndata[m_which_corner[1]].hdata[m_which_side[1]].Zcp;
+			OneBounMinus.enumType = WallBoundary;
+			BounParent.Ncp = --OneBounPlus.Ncp;
+			BounParent.Lcp = OneBounPlus.Lcp + OneBounMinus.Lcp;
+			BounParent.Uc_cur = m_quad_data_full->m_vara.corner_vector(idReconstructVelocity, 0);
+			BounParent.delta_u_cp = OneBounPlus.delta_u_cp + OneBounPlus.Uc_cur - BounParent.Uc_cur;
+			BounParent.Zc = m_quad_data_full->m_cndata[quad_data_t::EnumCorner::LEFTUP].hdata[CHalf_edge_data::cside::plus].Zcp;
+
+			BounParent.enumType = WallBoundary;
+
+			if (!side[i]->is.hanging.is_ghost[0])
+			{
+				m_quad_data->points[m_which_corner[0]].IsHanging = true;
+				m_quad_data->points[m_which_corner[0]].TwoBouns[0] = OneBounPlus;
+				m_quad_data->points[m_which_corner[0]].TwoBouns[1] = OneBounMinus;
+				m_quad_data->points[m_which_corner[0]].BounParent = BounParent;
+				m_quad_data->points[m_which_corner[0]].master_coord_relaxed[0] = master_coord[0];
+				m_quad_data->points[m_which_corner[0]].master_coord_relaxed[1] = master_coord[1];
+				m_quad_data->points[m_which_corner[0]].hanging_coord = hanging_coord;
+			}
+
+			if (!side[i]->is.hanging.is_ghost[1])
+			{
+				m_quad_data_aside->points[m_which_corner[1]].IsHanging = true;
+				m_quad_data_aside->points[m_which_corner[1]].TwoBouns[0] = OneBounMinus;
+				m_quad_data_aside->points[m_which_corner[1]].TwoBouns[1] = OneBounPlus;
+				m_quad_data_aside->points[m_which_corner[1]].BounParent = BounParent;
+				m_quad_data_aside->points[m_which_corner[1]].master_coord_relaxed[0] = master_coord[0];
+				m_quad_data_aside->points[m_which_corner[1]].master_coord_relaxed[1] = master_coord[1];
+				m_quad_data_aside->points[m_which_corner[1]].hanging_coord = hanging_coord;
+			}
+		}
+	}
+}
 } // namespace HydroCallbacks
