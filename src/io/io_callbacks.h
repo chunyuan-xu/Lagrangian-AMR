@@ -1,8 +1,17 @@
 #pragma once
 #include <p4est.h>
+#include <p4est_vtk.h>
 #include "defines.h"
 #include "variable.h"
 #include "core/trace.h"
+#include "io/output_stamp.h"
+#include "mesh/cell_key.h"
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 // M8.3: IOCallbacks — IO/Diagnostics quadrant callbacks stripped from main.cpp.
 
@@ -144,5 +153,272 @@ void quadrant_total_energy_error_callback(p4est_iter_volume_info_t *info, void *
 	p4est_data->total_energy_cur += m_vara->cell(idMass) * m_vara->cell(idTotalEnergy_cur);
 
 
+}
+
+// M9.3.2: main VTU/PVTU writer (includes OutputStamp field data injection).
+void write_solution(p4est_t *p4est, const IOAlgorithm::OutputStamp &stamp)
+{
+	char				filename[BUFSIZ] = "";
+	int					retval;
+	p4est_locidx_t		numquads;
+	p4est_vtk_context_t	*context;
+	int					ret;
+
+#ifdef _WIN32
+	ret = _mkdir("output");
+	if (ret != 0 && errno != EEXIST) {
+#else
+	ret = mkdir("output", 0777);
+	if (ret != 0 && errno != EEXIST) {
+#endif
+		perror("Error creating directory");
+	}
+
+#ifdef _WIN32
+	const char* path_format = "output\\" P4EST_STRING "_Lagrangian_%04d";
+#else
+	const char* path_format = "output/"P4EST_STRING "_Lagrangian_%04d";
+#endif
+
+	snprintf(filename, BUFSIZ, path_format, stamp.file_step);
+
+	numquads = p4est->local_num_quadrants;
+
+	sc_array_t		*coord_x_array = sc_array_new_size(sizeof(double), numquads*CNDIM);
+	sc_array_t		*coord_y_array = sc_array_new_size(sizeof(double), numquads*CNDIM);
+	sc_array_t		*velo_x_array = sc_array_new_size(sizeof(double), numquads*CNDIM);
+	sc_array_t		*velo_y_array = sc_array_new_size(sizeof(double), numquads*CNDIM);
+	sc_array_t		*pressure_array = sc_array_new_size(sizeof(double), numquads);
+	sc_array_t		*temperature_array = sc_array_new_size(sizeof(double), numquads);
+	sc_array_t		*rho_array = sc_array_new_size(sizeof(double), numquads);
+	sc_array_t		*internal_energy_array = sc_array_new_size(sizeof(double), numquads);
+
+	vtu_cell_data_t		m_cell_data;
+	m_cell_data.density_array = rho_array;
+	m_cell_data.pressure_array = pressure_array;
+	m_cell_data.temperature_array = temperature_array;
+	m_cell_data.internal_energy_array = internal_energy_array;
+	m_cell_data.coordx = coord_x_array;
+	m_cell_data.coordy = coord_y_array;
+	m_cell_data.velox = velo_x_array;
+	m_cell_data.veloy = velo_y_array;
+
+
+	p4est_iterate(p4est, NULL,
+		&m_cell_data,
+		IOCallbacks::quadrant_copy_variable_to_array_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+#endif
+		NULL);
+
+	context = p4est_vtk_context_new(p4est, filename);
+	p4est_vtk_context_set_scale(context, 0.99);
+	SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk:Error:writing vtk header");
+	context = p4est_vtk_write_header(context);
+
+	context = p4est_vtk_write_cell_dataf(
+		context,
+		0,
+		1,
+		1,
+		0,
+		3,
+		0,
+		"Pressure",
+		pressure_array,
+		"density",
+		rho_array,
+		"internal_energy",
+		internal_energy_array,
+		context
+	);
+	SC_CHECK_ABORT(context != NULL,
+		P4EST_STRING "_vtk:Error:writing cell data");
+
+	context = p4est_vtk_write_point_dataf(context, 4, 0,
+		"NodeX", coord_x_array,
+		"NodeY", coord_y_array,
+		"NodeU", velo_x_array,
+		"NodeV", velo_y_array,
+		context);
+	retval = p4est_vtk_write_footer(context);
+	SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk:Error:writing footer");
+	sc_array_destroy(coord_x_array);
+	sc_array_destroy(coord_y_array);
+	sc_array_destroy(velo_x_array);
+	sc_array_destroy(velo_y_array);
+	sc_array_destroy(pressure_array);
+	sc_array_destroy(rho_array);
+	sc_array_destroy(internal_energy_array);
+	sc_array_destroy(temperature_array);
+
+
+	if (p4est->mpirank == 0) {
+		char pvtu_filename[1024];
+		snprintf(pvtu_filename, sizeof(pvtu_filename), "%s.pvtu", filename);
+		FILE *f = fopen(pvtu_filename, "rb");
+		if (f) {
+			fseek(f, 0, SEEK_END);
+			long fsize = ftell(f);
+			fseek(f, 0, SEEK_SET);
+			char *string = (char *)malloc(fsize + 1);
+			fread(string, 1, fsize, f);
+			fclose(f);
+			string[fsize] = 0;
+
+			char *insert_pos = strstr(string, "</VTKFile>");
+			if (insert_pos) {
+				*insert_pos = '\0';
+				f = fopen(pvtu_filename, "wb");
+				if (f) {
+					fprintf(f, "%s", string);
+					fprintf(f,
+						"  <FieldData>\n"
+						"    <DataArray type=\"Float64\" Name=\"TimeValue\" NumberOfTuples=\"1\" format=\"ascii\">\n"
+						"      %.16g\n"
+						"    </DataArray>\n"
+						"    <DataArray type=\"Int32\" Name=\"FileStep\" NumberOfTuples=\"1\" format=\"ascii\">\n"
+						"      %d\n"
+						"    </DataArray>\n"
+						"    <DataArray type=\"Int32\" Name=\"StateStep\" NumberOfTuples=\"1\" format=\"ascii\">\n"
+						"      %d\n"
+						"    </DataArray>\n"
+						"    <DataArray type=\"Int32\" Name=\"OutputPhase\" NumberOfTuples=\"1\" format=\"ascii\">\n"
+						"      %d\n"
+						"    </DataArray>\n"
+						"  </FieldData>\n</VTKFile>\n",
+						stamp.time,
+						stamp.file_step,
+						stamp.state_step,
+						IOAlgorithm::phase_code(stamp.phase));
+					fclose(f);
+				}
+			}
+			free(string);
+		}
+	}
+}
+
+// M9.3.2: debug checkpoint VTU writer and its array-copy callback.
+void debug_quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	debug_vtu_cell_data_t *m_cell_data = (debug_vtu_cell_data_t *)user_data;
+	p4est_t *p4est = info->p4est;
+	p4est_tree_t *tree = p4est_tree_array_index(p4est->trees, info->treeid);
+	quad_data_t *quad_data = (quad_data_t *)info->quad->p.user_data;
+
+	p4est_locidx_t local_id = info->quadid + tree->quadrants_offset;
+
+	// Global SFC ID
+	double global_id = MeshAdapter::global_sfc_id(p4est, local_id);
+	*(double *)sc_array_index(m_cell_data->global_sfc_id_array, local_id) = global_id;
+
+	CVariable *m_vara = (CVariable *)&quad_data->m_vara;
+
+	*(double *)sc_array_index(m_cell_data->density_array, local_id) =
+		m_vara->cell(idDensity_lag);
+	*(double *)sc_array_index(m_cell_data->pressure_array, local_id) =
+		m_vara->cell(idPressure_lag);
+	*(double *)sc_array_index(m_cell_data->internal_energy_array, local_id) =
+		m_vara->cell(idInternalEnergy_lag);
+
+	// Corner pressures (using hdata[0].pi as proxy for half-edge pressure)
+	*(double *)sc_array_index(m_cell_data->pressure_c0_array, local_id) = quad_data->m_cndata[0].hdata[0].pi;
+	*(double *)sc_array_index(m_cell_data->pressure_c1_array, local_id) = quad_data->m_cndata[1].hdata[0].pi;
+	*(double *)sc_array_index(m_cell_data->pressure_c2_array, local_id) = quad_data->m_cndata[2].hdata[0].pi;
+	*(double *)sc_array_index(m_cell_data->pressure_c3_array, local_id) = quad_data->m_cndata[3].hdata[0].pi;
+
+	// Corner velocities
+	*(double *)sc_array_index(m_cell_data->velou_c0_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 0).x;
+	*(double *)sc_array_index(m_cell_data->velou_c1_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 1).x;
+	*(double *)sc_array_index(m_cell_data->velou_c2_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 2).x;
+	*(double *)sc_array_index(m_cell_data->velou_c3_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 3).x;
+
+	*(double *)sc_array_index(m_cell_data->velov_c0_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 0).y;
+	*(double *)sc_array_index(m_cell_data->velov_c1_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 1).y;
+	*(double *)sc_array_index(m_cell_data->velov_c2_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 2).y;
+	*(double *)sc_array_index(m_cell_data->velov_c3_array, local_id) = m_vara->corner_vector(idcnVelocity_lag, 3).y;
+}
+
+void p4est_debug_output_vtu(p4est_t *p4est, const char *prefix, int step, int location_id)
+{
+	char filename[1024];
+	snprintf(filename, sizeof(filename), "%s_checkpoint_%04d_loc%d", prefix, step, location_id);
+
+	p4est_locidx_t numquads = p4est->local_num_quadrants;
+
+	debug_vtu_cell_data_t m_cell_data;
+	m_cell_data.global_sfc_id_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.density_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.internal_energy_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_c0_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_c1_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_c2_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.pressure_c3_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velou_c0_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velou_c1_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velou_c2_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velou_c3_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velov_c0_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velov_c1_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velov_c2_array = sc_array_new_size(sizeof(double), numquads);
+	m_cell_data.velov_c3_array = sc_array_new_size(sizeof(double), numquads);
+
+	p4est_iterate(p4est, NULL, &m_cell_data, IOCallbacks::debug_quadrant_copy_variable_to_array_callback, NULL,
+#ifdef P4_TO_P8
+		NULL,
+#endif
+		NULL);
+
+	p4est_vtk_context_t *context = p4est_vtk_context_new(p4est, filename);
+	p4est_vtk_context_set_scale(context, 0.99);
+	SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk:Error:writing vtk header");
+	context = p4est_vtk_write_header(context);
+
+	context = p4est_vtk_write_cell_dataf(
+		context, 1, 1, 1, 0,
+		16, 0,
+		"Global_SFC_ID", m_cell_data.global_sfc_id_array,
+		"Density", m_cell_data.density_array,
+		"Pressure", m_cell_data.pressure_array,
+		"InternalEnergy", m_cell_data.internal_energy_array,
+		"Pressure_c0", m_cell_data.pressure_c0_array,
+		"Pressure_c1", m_cell_data.pressure_c1_array,
+		"Pressure_c2", m_cell_data.pressure_c2_array,
+		"Pressure_c3", m_cell_data.pressure_c3_array,
+		"VelocityU_c0", m_cell_data.velou_c0_array,
+		"VelocityU_c1", m_cell_data.velou_c1_array,
+		"VelocityU_c2", m_cell_data.velou_c2_array,
+		"VelocityU_c3", m_cell_data.velou_c3_array,
+		"VelocityV_c0", m_cell_data.velov_c0_array,
+		"VelocityV_c1", m_cell_data.velov_c1_array,
+		"VelocityV_c2", m_cell_data.velov_c2_array,
+		"VelocityV_c3", m_cell_data.velov_c3_array,
+		context
+	);
+	SC_CHECK_ABORT(context != NULL, P4EST_STRING "_vtk:Error:writing cell data");
+
+	int retval = p4est_vtk_write_footer(context);
+	SC_CHECK_ABORT(!retval, P4EST_STRING "_vtk:Error:writing footer");
+
+	sc_array_destroy(m_cell_data.global_sfc_id_array);
+	sc_array_destroy(m_cell_data.pressure_array);
+	sc_array_destroy(m_cell_data.density_array);
+	sc_array_destroy(m_cell_data.internal_energy_array);
+	sc_array_destroy(m_cell_data.pressure_c0_array);
+	sc_array_destroy(m_cell_data.pressure_c1_array);
+	sc_array_destroy(m_cell_data.pressure_c2_array);
+	sc_array_destroy(m_cell_data.pressure_c3_array);
+	sc_array_destroy(m_cell_data.velou_c0_array);
+	sc_array_destroy(m_cell_data.velou_c1_array);
+	sc_array_destroy(m_cell_data.velou_c2_array);
+	sc_array_destroy(m_cell_data.velou_c3_array);
+	sc_array_destroy(m_cell_data.velov_c0_array);
+	sc_array_destroy(m_cell_data.velov_c1_array);
+	sc_array_destroy(m_cell_data.velov_c2_array);
+	sc_array_destroy(m_cell_data.velov_c3_array);
 }
 } // namespace IOCallbacks

@@ -28,7 +28,7 @@ M9 目标：剥离 main.cpp 剩余**包装壳函数**，压至数百行，仅留
 | M9.1.4 | AMR 误差估计器（`Lagrangian_refine/coarsen_err_estimate`） | `AMRCallbacks` | ✅ `待提交` |
 | M9.2.3 | Hydro 流水线（`advance_single_stage`，M9.2.2 跳过项） | `HydroController` | ✅ `待提交` |
 | M9.2.4 | MUSCL 角梯度回调（`quadrant_corner_minmod_estimate_callback`/`quadrant_set_gradient_zero_estimate_callback`）+ `Gradient_estimate`/`PreProcess` | `HydroCallbacks`/`HydroController` | ✅ `待提交` |
-| M9.3.2 | IO 写盘（`write_solution`/`p4est_debug_output_vtu`/`debug_quadrant_copy_variable_to_array_callback`） | `IOCallbacks` | ⏳ 未开始 |
+| M9.3.2 | IO 写盘（`write_solution`/`p4est_debug_output_vtu`/`debug_quadrant_copy_variable_to_array_callback`） | `IOCallbacks` | ✅ `待提交` |
 | M9.3.3 | IO 统计诊断（`write_distance_profiles`/`StatTotalEnergyError`/`StatGlobalFieldChecksum`） | `IOCallbacks` | ⏳ 未开始 |
 | M9.4.1 | main.cpp 终极编排瘦身（`advance_time_step`→`Simulation`，压至数百行） | `Simulation` | ⏳ 未开始 |
 
@@ -42,6 +42,7 @@ M9 目标：剥离 main.cpp 剩余**包装壳函数**，压至数百行，仅留
 - `golden-gates-m9-1-4-2026-08-12.md`：M9.1.4
 - `golden-gates-m9-2-3-2026-08-12.md`：M9.2.3
 - `golden-gates-m9-2-4-2026-08-12.md`：M9.2.4
+- `golden-gates-m9-3-2-2026-08-12.md`：M9.3.2
 
 每个原子任务固定流程：G0 → G1 → G3 → reference/参数/产物检查 → focused commit → push GitHub → 门禁记录文档。任一失败停留当前项。
 
@@ -53,26 +54,22 @@ M9 目标：剥离 main.cpp 剩余**包装壳函数**，压至数百行，仅留
 - G1 串行耗时：Noh ~18s / Sod ~58s / Sedov ~46s；G3 四进程：Sod ~30s / Sedov ~26s。
 - 头文件迁移经验：从 main.cpp 迁出的头文件必须自带 `#include "hydro/hydro_callbacks.h"` 与 `"solver/hydro_callbacks.h"`（main.cpp 靠 include 顺序掩盖了缺失）；所有调用点（含 `p4est_balance` 回调）必须同步路由到新命名空间。
 
-## 5. 剩余壳函数清单（main.cpp 当前 798 行）
+## 5. 剩余壳函数清单（main.cpp 当前 535 行）
 
 | 函数 | 行数 | 归属 | 计划项 |
 |---|---|---|---|
-| `write_solution` | 145 | `IOCallbacks` | M9.3.2 |
-| `p4est_debug_output_vtu` | 82 | `IOCallbacks` | M9.3.2 |
 | `write_distance_profiles` | 23 | `IOCallbacks` | M9.3.3 |
 | `StatTotalEnergyError` | 55 | `IOCallbacks` | M9.3.3 |
-| `debug_quadrant_copy_variable_to_array_callback` | 40 | `IOCallbacks` | M9.3.2 |
 | `advance_time_step` | 123 | `Simulation` | M9.4.1 |
 | `quadtree_static` | 185 | 待识别，勿预设 | —— |
 
-> 已迁出：`Lagrangian_replace_quads`（M9.1.3）、误差估计器（M9.1.4）、`advance_single_stage`（M9.2.3）、`StatGlobalFieldChecksum`（M9.2.3）、trace 快照（M9.2.3）、`quadrant_corner_minmod_estimate_callback`/`quadrant_set_gradient_zero_estimate_callback`/`Gradient_estimate`/`PreProcess`（M9.2.4）。main.cpp 已减至 798 行。
+> 已迁出：M9.1.3/1.4/2.3/2.4 全部 + M9.3.2（`write_solution`/`p4est_debug_output_vtu`/`debug_quadrant_copy_variable_to_array_callback`）。main.cpp 已减至 535 行。
 
 ## 6. 下一步建议
 
-1. **M9.3.2**：迁移 `write_solution`（145 行）+ `p4est_debug_output_vtu` + `debug_quadrant_copy_variable_to_array_callback` 到 `IOCallbacks`（`write_solution` 依赖 debug copy 回调，须同批）。
-2. **M9.3.3**：迁移 `write_distance_profiles`/`StatTotalEnergyError` 到 `IOCallbacks`（`StatGlobalFieldChecksum` 已迁完）。
-3. **M9.4.1**：`advance_time_step` → `Simulation`，main.cpp 压至数百行。
-4. 每个原子任务完成后更新本文件第 2、3、5 节，并追加新门禁记录。
+1. **M9.3.3**：迁移 `write_distance_profiles`（23 行）/`StatTotalEnergyError`（55 行）到 `IOCallbacks`（`StatGlobalFieldChecksum` 已迁完）。
+2. **M9.4.1**：`advance_time_step` → `Simulation`，main.cpp 压至数百行。
+3. 每个原子任务完成后更新本文件第 2、3、5 节，并追加新门禁记录。
 
 > 关键事实：`predict_timestep` 已在 M9.2.2 迁入 `hydro_controller.h`，勿重复迁移；`quadrant_corner_minmod_estimate_callback` 实测 48 行（非旧计划 184 行）；M9 全程 header-only，不新建 `.cpp`。
 > M9.1.3 经验：`amr_callbacks.h` 与 `hydro_callbacks.h` 互相引用 `AMRCallbacks::`/`HydroCallbacks::`，形成 include 循环，用前置声明（`namespace HydroCallbacks { void generate_children_info_from_parent(...); }`）打破，勿直接互相 include。
