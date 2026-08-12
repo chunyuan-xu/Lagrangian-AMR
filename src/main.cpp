@@ -53,45 +53,6 @@ using namespace std;
 #include<p8est_communication.h>
 #endif 
 
-static const char *g_trace_snapshot_stage = NULL;
-
-static void trace_target_snapshot_callback(p4est_iter_volume_info_t *info, void *user_data)
-{
-	p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
-	if ((p4est_data->current_step != 2 && p4est_data->current_step != 3) || g_trace_snapshot_stage == NULL ||
-		(!is_trace_fine(info->quad) && !is_trace_parent(info->quad) && !is_trace_refine_parent(info->quad))) {
-		return;
-	}
-	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
-	CVariable *v = &data->m_vara;
-	FILE *f = open_corner2_trace(info->p4est);
-	if (f) {
-		fprintf(f, "TRACE stage=SNAPSHOT step=%d point=%s cell=(%d,%d,L%d)", p4est_data->current_step, g_trace_snapshot_stage,
-			info->quad->x, info->quad->y, info->quad->level);
-		fprintf(f, " rho_cur=%.17e p_cur=%.17e sound=%.17e", v->cell(idDensity_cur), v->cell(idPressure_cur), v->cell(idSoundSpeed));
-		for (int c = 0; c < CNDIM; ++c) {
-			char name[64];
-			sprintf(name, "cur%d", c); trace_vector(f, name, v->corner_vector(idcnVelocity_cur, c));
-			sprintf(name, "lag%d", c); trace_vector(f, name, v->corner_vector(idcnVelocity_lag, c));
-		}
-		fprintf(f, "\n");
-		fclose(f);
-	}
-}
-
-static void trace_target_snapshot(p4est_t *p4est, const char *stage)
-{
-	if (!target_trace_enabled()) {
-		return;
-	}
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	if (p4est_data->current_step != 2 && p4est_data->current_step != 3) {
-		return;
-	}
-	g_trace_snapshot_stage = stage;
-	p4est_iterate(p4est, NULL, NULL, trace_target_snapshot_callback, NULL, NULL);
-	g_trace_snapshot_stage = NULL;
-}
 
 
 
@@ -144,10 +105,7 @@ static void trace_target_snapshot(p4est_t *p4est, const char *stage)
 
 
 
-
-
-static void 
-quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *user_data)
+static void quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *user_data)
 {
 	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 	p4est_iter_corner_side_t	*side[CNDIM];
@@ -386,153 +344,9 @@ static void StatTotalEnergyError(p4est_t * p4est)
 
 
 
-static void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
-    double local_sums[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
-    double c[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
-    
-    p4est_tree_t *tree;
-    p4est_quadrant_t *quad;
-    sc_array_t *tquadrants;
-    for (p4est_topidx_t t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
-        tree = p4est_tree_array_index (p4est->trees, t);
-        tquadrants = &tree->quadrants;
-        for (size_t i = 0; i < tquadrants->elem_count; ++i) {
-            quad = p4est_quadrant_array_index (tquadrants, i);
-            quad_data_t *data = (quad_data_t *)quad->p.user_data;
-            
-            double vals[5] = {
-                data->m_vara.cell(idMass),
-                data->m_vara.cell(idTotalEnergy_lag),
-                data->m_vara.cell(idDensity_lag),
-                data->m_vara.cell_vector(idCentroidVelo_lag).x + data->m_vara.cell_vector(idCentroidVelo_lag).y,
-                data->m_vara.cell(idTotalWork)
-            };
-            
-            for(int k=0; k<5; ++k) {
-                double y = vals[k] - c[k];
-                double t_val = local_sums[k] + y;
-                c[k] = (t_val - local_sums[k]) - y;
-                local_sums[k] = t_val;
-            }
-        }
-    }
-    
-    double global_sums[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
-    sc_MPI_Reduce(local_sums, global_sums, 5, sc_MPI_DOUBLE, sc_MPI_SUM, 0, p4est->mpicomm);
-    
-    if (p4est->mpirank == 0) {
-        P4EST_GLOBAL_PRODUCTIONF("Checksum [%s]: Mass = %.14e, E = %.14e, Rho = %.14e, V = %.14e, W = %.14e\n", 
-            label, global_sums[0], global_sums[1], global_sums[2], global_sums[3], global_sums[4]);
-    }
-}
-
-static void advance_single_stage(p4est_t * p4est, GhostSession &session)
-{
-	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
 
 
-	Initializer::get_boundary_from_p4est(p4est);
-	p4est_data->dt_iter =
-		StagePolicy::timestep_scale(0) * p4est_data->delta_time;
 
-	HydroController::CalculateHalfTimeVariable(p4est);
-		trace_target_snapshot(p4est, "AFTER_HALF");
-		//StatGlobalFieldChecksum(p4est, "Checkpoint 3: Predict");
-
-
-		HydroController::CalculateCornerRcpLcpNcp(p4est);
-		trace_target_snapshot(p4est, "AFTER_RCP");
-		session.exchange();
-
-
-		AMRCallbacks::Get_AMR_BDY_info(p4est, session);
-		trace_target_snapshot(p4est, "AFTER_AMR_BDY");
-		session.exchange();
-
-
-		const SolverGate::CoordinateType coordinate_type =
-			SolverGate::coordinate_type_from_legacy(p4est_data->coord_type);
-		const SolverGate::SolverType solver_type =
-			SolverGate::solver_type_from_legacy(p4est_data->solver_type);
-		if (SolverGate::should_run_riemann(coordinate_type, solver_type))
-		{
-			HydroController::RiemannSolver(p4est, session);
-		}
-		
-		// Debug step 3 after RiemannSolver
-		if (target_trace_enabled() && p4est_data->current_step == 3) {
-			auto dbg_cb = [](p4est_iter_volume_info_t *info, void *user_data) {
-				quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
-				CVariable *m_vara = &data->m_vara;
-				if (info->p4est->mpisize == 1 && info->quadid == 397) {
-					char fname[256];
-					sprintf(fname, "riemann_dbg_%d.txt", info->p4est->mpisize);
-					FILE* f = fopen(fname, "a");
-					if (f) {
-						fprintf(f, "SERIAL 397 (x=%d, y=%d) corner velocities:\n", info->quad->x, info->quad->y);
-						for (int j = 0; j < P4EST_CHILDREN; j++) {
-							fprintf(f, "  Corner %d: vx=%f, vy=%f\n", j, 
-								m_vara->corner_vector(idcnVelocity_cur, j).x, 
-								m_vara->corner_vector(idcnVelocity_cur, j).y);
-						}
-						fclose(f);
-					}
-				}
-				// In parallel, we don't know quadid. We match by x and y of the serial 397!
-				if (info->p4est->mpisize > 1 && info->quad->x == 134217728 && info->quad->y == 528482304) {
-					char fname[256];
-					sprintf(fname, "riemann_dbg_%d.txt", info->p4est->mpisize);
-					FILE* f = fopen(fname, "a");
-					if (f) {
-						fprintf(f, "PARALLEL MATCH (x=%d, y=%d) corner velocities:\n", info->quad->x, info->quad->y);
-						for (int j = 0; j < P4EST_CHILDREN; j++) {
-							fprintf(f, "  Corner %d: vx=%f, vy=%f\n", j, 
-								m_vara->corner_vector(idcnVelocity_cur, j).x, 
-								m_vara->corner_vector(idcnVelocity_cur, j).y);
-						}
-						fclose(f);
-					}
-				}
-			};
-			p4est_iterate(p4est, session.get(), session.data(), dbg_cb, NULL, NULL);
-		}
-		
-		//StatGlobalFieldChecksum(p4est, "Checkpoint 4: RiemannSolver");
-
-		
-		HydroController::ComputeDivergence(p4est);
-		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 3: Divergence");
-
-		
-		HydroController::ComputeCoordinate(p4est);
-		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 4: Coordinate");
-
-		
-		HydroController::UpdateDensity(p4est);
-		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 5: Density");
-
-		
-		HydroController::UpdateMomentumEquation(p4est);
-		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 6: Momentum");
-
-		
-		HydroController::ComputeWork(p4est);
-		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 7: Work");
-
-		
-		HydroController::UpdateEnergyEquation(p4est);
-		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 8: EnergyEq");
-
-		
-		HydroController::UpdateEquationOfState(p4est);
-		if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
-
-		
-	HydroController::ComputeSoundSpeed(p4est);
-	if (checksum_trace_enabled()) StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
-	//StatGlobalFieldChecksum(p4est, "Checkpoint 5: Update");
-	p4est_data->used_dt = p4est_data->delta_time;
-}
 
 
 
@@ -959,7 +773,7 @@ static void advance_time_step(p4est_t * p4est, double start_time, double end_tim
 		}
 
 		
-		advance_single_stage(p4est, ghost_session);
+		HydroController::advance_single_stage(p4est, ghost_session);
 
 		
 		StatTotalEnergyError(p4est);

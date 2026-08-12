@@ -2,10 +2,52 @@
 #include <p4est.h>
 #include "defines.h"
 #include "variable.h"
+#include "core/trace.h"
 
 // M8.3: IOCallbacks — IO/Diagnostics quadrant callbacks stripped from main.cpp.
 
 namespace IOCallbacks {
+
+// M9.3.3: global field checksum probe (Kahan summation + MPI reduce).
+void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
+    double local_sums[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double c[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+    p4est_tree_t *tree;
+    p4est_quadrant_t *quad;
+    sc_array_t *tquadrants;
+    for (p4est_topidx_t t = p4est->first_local_tree; t <= p4est->last_local_tree; ++t) {
+        tree = p4est_tree_array_index (p4est->trees, t);
+        tquadrants = &tree->quadrants;
+        for (size_t i = 0; i < tquadrants->elem_count; ++i) {
+            quad = p4est_quadrant_array_index (tquadrants, i);
+            quad_data_t *data = (quad_data_t *)quad->p.user_data;
+
+            double vals[5] = {
+                data->m_vara.cell(idMass),
+                data->m_vara.cell(idTotalEnergy_lag),
+                data->m_vara.cell(idDensity_lag),
+                data->m_vara.cell_vector(idCentroidVelo_lag).x + data->m_vara.cell_vector(idCentroidVelo_lag).y,
+                data->m_vara.cell(idTotalWork)
+            };
+
+            for(int k=0; k<5; ++k) {
+                double y = vals[k] - c[k];
+                double t_val = local_sums[k] + y;
+                c[k] = (t_val - local_sums[k]) - y;
+                local_sums[k] = t_val;
+            }
+        }
+    }
+
+    double global_sums[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    sc_MPI_Reduce(local_sums, global_sums, 5, sc_MPI_DOUBLE, sc_MPI_SUM, 0, p4est->mpicomm);
+
+    if (p4est->mpirank == 0) {
+        P4EST_GLOBAL_PRODUCTIONF("Checksum [%s]: Mass = %.14e, E = %.14e, Rho = %.14e, V = %.14e, W = %.14e\n",
+            label, global_sums[0], global_sums[1], global_sums[2], global_sums[3], global_sums[4]);
+    }
+}
 
 
 int convert_user_define_index_to_which_corner(const int &which_corner)

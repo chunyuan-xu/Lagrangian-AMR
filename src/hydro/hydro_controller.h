@@ -12,6 +12,9 @@
 #include "solver/corner_solver.h"
 #include "physics/corner_solve.h"
 #include "physics/timestep_reduction.h"
+#include "physics/stage_policy.h"
+#include "solver/solver_gate.h"
+#include "init/initializer.h"
 #include "io/io_callbacks.h"
 
 // M9.2: HydroController — high-level hydro orchestration shells stripped from main.cpp.
@@ -317,6 +320,117 @@ void ComputeDivergence(p4est_t *p4est)
 void ComputeSoundSpeed(p4est_t *p4est)
 {
 	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_soundspeed_callback);
+}
+
+// M9.2.3: single-stage hydro advance (M9.2.2 skipped item). Orchestrates
+// boundary, half-time, corner matrix/velocity, divergence, coordinate,
+// and conservative-update phases with trace/checksum diagnostics.
+void advance_single_stage(p4est_t * p4est, GhostSession &session)
+{
+	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
+
+
+	Initializer::get_boundary_from_p4est(p4est);
+	p4est_data->dt_iter =
+		StagePolicy::timestep_scale(0) * p4est_data->delta_time;
+
+	HydroController::CalculateHalfTimeVariable(p4est);
+		trace_target_snapshot(p4est, "AFTER_HALF");
+		//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 3: Predict");
+
+
+		HydroController::CalculateCornerRcpLcpNcp(p4est);
+		trace_target_snapshot(p4est, "AFTER_RCP");
+		session.exchange();
+
+
+		AMRCallbacks::Get_AMR_BDY_info(p4est, session);
+		trace_target_snapshot(p4est, "AFTER_AMR_BDY");
+		session.exchange();
+
+
+		const SolverGate::CoordinateType coordinate_type =
+			SolverGate::coordinate_type_from_legacy(p4est_data->coord_type);
+		const SolverGate::SolverType solver_type =
+			SolverGate::solver_type_from_legacy(p4est_data->solver_type);
+		if (SolverGate::should_run_riemann(coordinate_type, solver_type))
+		{
+			HydroController::RiemannSolver(p4est, session);
+		}
+
+		// Debug step 3 after RiemannSolver
+		if (target_trace_enabled() && p4est_data->current_step == 3) {
+			auto dbg_cb = [](p4est_iter_volume_info_t *info, void *user_data) {
+				quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
+				CVariable *m_vara = &data->m_vara;
+				if (info->p4est->mpisize == 1 && info->quadid == 397) {
+					char fname[256];
+					sprintf(fname, "riemann_dbg_%d.txt", info->p4est->mpisize);
+					FILE* f = fopen(fname, "a");
+					if (f) {
+						fprintf(f, "SERIAL 397 (x=%d, y=%d) corner velocities:\n", info->quad->x, info->quad->y);
+						for (int j = 0; j < P4EST_CHILDREN; j++) {
+							fprintf(f, "  Corner %d: vx=%f, vy=%f\n", j,
+								m_vara->corner_vector(idcnVelocity_cur, j).x,
+								m_vara->corner_vector(idcnVelocity_cur, j).y);
+						}
+						fclose(f);
+					}
+				}
+				// In parallel, we don't know quadid. We match by x and y of the serial 397!
+				if (info->p4est->mpisize > 1 && info->quad->x == 134217728 && info->quad->y == 528482304) {
+					char fname[256];
+					sprintf(fname, "riemann_dbg_%d.txt", info->p4est->mpisize);
+					FILE* f = fopen(fname, "a");
+					if (f) {
+						fprintf(f, "PARALLEL MATCH (x=%d, y=%d) corner velocities:\n", info->quad->x, info->quad->y);
+						for (int j = 0; j < P4EST_CHILDREN; j++) {
+							fprintf(f, "  Corner %d: vx=%f, vy=%f\n", j,
+								m_vara->corner_vector(idcnVelocity_cur, j).x,
+								m_vara->corner_vector(idcnVelocity_cur, j).y);
+						}
+						fclose(f);
+					}
+				}
+			};
+			p4est_iterate(p4est, session.get(), session.data(), dbg_cb, NULL, NULL);
+		}
+
+		//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 4: RiemannSolver");
+
+
+		HydroController::ComputeDivergence(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 3: Divergence");
+
+
+		HydroController::ComputeCoordinate(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 4: Coordinate");
+
+
+		HydroController::UpdateDensity(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 5: Density");
+
+
+		HydroController::UpdateMomentumEquation(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 6: Momentum");
+
+
+		HydroController::ComputeWork(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 7: Work");
+
+
+		HydroController::UpdateEnergyEquation(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 8: EnergyEq");
+
+
+		HydroController::UpdateEquationOfState(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
+
+
+	HydroController::ComputeSoundSpeed(p4est);
+	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
+	//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 5: Update");
+	p4est_data->used_dt = p4est_data->delta_time;
 }
 
 } // namespace HydroController
