@@ -433,4 +433,69 @@ void advance_single_stage(p4est_t * p4est, GhostSession &session)
 	p4est_data->used_dt = p4est_data->delta_time;
 }
 
+// M9.2.4: MUSCL gradient estimation shell and PreProcess (default tags).
+void
+Gradient_estimate(p4est_t *p4est, GhostSession &session)
+{
+	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	GhostCallbackContext callback_context = { &session };
+
+	p4est_iterate(p4est,
+		session.get(),
+		(void *)session.data(),
+		HydroCallbacks::quadrant_set_gradient_zero_estimate_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+
+
+	p4est_iterate(p4est,
+		session.get(),
+		&callback_context,
+		NULL,
+		AMRCallbacks::quadrant_edge_minmod_estimate_callback,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+
+	p4est_iterate(p4est,
+		session.get(),
+		&callback_context,
+		NULL,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		HydroCallbacks::quadrant_corner_minmod_estimate_callback);
+
+
+	p4est_iterate(p4est,
+		NULL,
+		(void *)p4est_data,
+		AMRCallbacks::quadrant_cell_minmod_estimate_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+}
+
+void PreProcess(p4est_t *p4est, GhostSession &session)
+{
+
+	HydroController::Gradient_estimate(p4est, session);
+
+	AMRCallbacks::set_default_coarsening_tag(p4est);
+
+
+	AMRCallbacks::set_default_refining_tag(p4est);
+}
+
 } // namespace HydroController

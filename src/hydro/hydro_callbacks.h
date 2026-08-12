@@ -1360,4 +1360,131 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 		}
 	}
 }
+// M9.2.4: MUSCL corner-gradient limiter (zero estimate + corner minmod).
+void
+quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	p4est_data_t		*p4est_data = (p4est_data_t*)info->p4est->user_pointer;
+	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
+	CVariable		*m_vara = (CVariable *)&data->m_vara;
+	p4est_t			*p4est = info->p4est;
+
+	DoubleCellVariableID idCPara;
+	DoubleEdgeVariableID idEPara;
+	DoubleCornerVariableID idCNPara;
+
+	switch (p4est_data->refine_coarsen_enum)
+	{
+	case RefineCriteria::PressureGradient:
+		idCPara = idCPressureGradient;
+		idEPara = idEPressureGradient;
+		idCNPara = idCNPressGradient;
+		break;
+	case RefineCriteria::DensityGradient:
+		idCPara = idCDensityGradient;
+		idEPara = idERhoGradient;
+		idCNPara = idCNRhoGradient;
+		break;
+	case RefineCriteria::Distance:
+		return;
+	default:
+		break;
+	}
+
+
+	m_vara->cell(idCPara) = 0.;
+
+	for (int i = 0; i < CNDIM; i++)
+	{
+		m_vara->edge(idEPara, i) = 0.;
+	}
+
+	for (int i = 0; i < CNDIM; i++)
+	{
+		m_vara->corner(idCNPara, i) = 0.;
+	}
+}
+
+void quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *user_data)
+{
+	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_iter_corner_side_t	*side[CNDIM];
+	sc_array_t	*sides = &(info->sides);
+	int	which_corner, cnid, is_ghost, is_ghost_aside, m_size;
+	int			quadid, quadid_aside;
+	DoubleCellVariableID idCPara;
+	DoubleCornerVariableID idCNPara;
+	quad_data_t		*m_data, *m_data_aside;
+	CVariable		*m_vara, *m_vara_aside;
+	GhostCallbackContext *context =
+		static_cast<GhostCallbackContext *>(user_data);
+	double			ParaGradient;
+
+	switch (p4est_data->refine_coarsen_enum)
+	{
+	case RefineCriteria::PressureGradient:
+		idCPara = idPressure_cur;
+		idCNPara = idCNPressGradient;
+		break;
+	case RefineCriteria::DensityGradient:
+		idCPara = idDensity_cur;
+		idCNPara = idCNRhoGradient;
+		break;
+	case RefineCriteria::Distance:
+		return;
+	default:
+		break;
+	}
+
+	m_size = int(sides->elem_count);
+
+
+	for (int i = 0; i < m_size; i++)
+	{
+
+		side[i] = p4est_iter_cside_array_index_int(sides, i);
+		quadid = side[i]->quadid;
+		which_corner = side[i]->corner;
+		cnid = HydroCallbacks::convert_which_corner_to_user_define_index(which_corner);
+
+
+		is_ghost = side[i]->is_ghost;
+		if (is_ghost)
+		{
+			m_data = (quad_data_t  *)&context->session->remote(quadid);
+		}
+		else
+		{
+			m_data = (quad_data_t  *)side[i]->quad->p.user_data;
+		}
+		m_vara = (CVariable  *)&m_data->m_vara;
+
+		if (!is_ghost) {
+			m_vara->corner(idCNPara, cnid) = 0.;
+		}
+		for (int j = 0; j < m_size; j++)
+		{
+			if (j == i) { continue; }
+			side[j] = p4est_iter_cside_array_index_int(sides, j);
+			quadid_aside = side[j]->quadid;
+			is_ghost_aside = side[j]->is_ghost;
+			if (is_ghost_aside)
+			{
+				m_data_aside = (quad_data_t  *)&context->session->remote(quadid_aside);
+			}
+			else
+			{
+				m_data_aside = (quad_data_t  *)side[j]->quad->p.user_data;
+			}
+			m_vara_aside = (CVariable  *)&m_data_aside->m_vara;
+
+			double m_dist = GeometryAlg::GetPointToPointDistance(
+				m_vara->cell_vector(idCentroidCoord_cur), m_vara_aside->cell_vector(idCentroidCoord_cur));
+			ParaGradient = abs(m_vara->cell(idCPara) - m_vara_aside->cell(idCPara)) / m_dist;
+			if (!is_ghost) {
+				m_vara->corner(idCNPara, cnid) = SC_MAX(m_vara->corner(idCNPara, cnid), ParaGradient);
+			}
+		}
+	}
+}
 } // namespace HydroCallbacks
