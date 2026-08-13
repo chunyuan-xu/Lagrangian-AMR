@@ -195,6 +195,28 @@ M3.4～M3.5 的实践表明，通信语义重构不应按“大功能完成后�
 - 若多个子里程碑在同一会话连续完成，允许合并为一次更新，但每个收口点都应在该次更新中可追踪；
 - 门禁失败或未收口的中间态**不写入** `context.md`，避免把未验证状态固化。
 
+### 2.7 大版本收口后的诊断产物清理规则
+
+每个大版本（如 M9、M10）全部子里程碑收口并提交后，必须清理仓库根目录下未被 git 管理的诊断/调试产物，防止工作区被历史调试文件污染。清理范围：
+
+1. **运行日志**：根目录 `*.log`（如 `anchor_regression_current.log`、`diagnostic_energy_trace_*.log`、`m0_1_g1.log`）；
+2. **诊断输出文件**：`*.plt`（`EnergyError.plt`/`DistanceProfiles.plt`）、`ErrorFile.txt`；
+3. **机器可读摘要**：`serial_golden_summary.json`、`mpi_gate_summary.json`（运行即重新生成）；
+4. **临时调试源码**：`print_size.cpp` 等一次性诊断程序；
+5. **Python 字节码缓存**：未跟踪的 `__pycache__/`；
+6. **历史取证目录**：`.historical-g3-*`、`.tmp/`、`build_*.o` 等孤儿对象文件；
+7. **退役门禁产物**：未跟踪的 `step_tests/`（G2 已 retired 的逐步测试目录）；
+8. **其他未跟踪诊断**：`reference/` 下的 `.log`（保留 `.vtu`/`.pvtu` 黄金参考）。
+
+规则要点：
+
+- **只删未被 git 管理的文件**：先用 `git ls-files --others --exclude-standard` 确认未跟踪，**绝不删除任何已跟踪文件**（`D` 状态表示误删，需 `git checkout --` 恢复）；
+- **已跟踪但属产物/误提交的文件**（如历史误提交的 `__pycache__/*.pyc`）不走本规则，如需清理走正式提交删除，不纳入版本收口自动清理；
+- **保留业务文档与第三方目录**：`prompt/`（论文文稿等非诊断内容）、`libsc-2.8.5/`、`p4est-2.8.5/`、`third_party/`、`.claude/`/`.gemini/`/`.workbuddy/` 等不删；
+- **清理随收口 docs commit 一并提交**，或作为独立清理提交，使每次大版本收口后工作区回到干净状态；
+- **禁止删除黄金参考**：`reference/*.vtu`/`*.pvtu` 是 G3 比对基准，永不清除；
+- 若清理后需要复现历史诊断，git 历史与门禁记录文档（`docs/golden-gates-*.md`）仍是权威证据，重建快照目录无需保留。
+
 ### 2.5 每次提交的边界
 
 每个重构提交应满足：
