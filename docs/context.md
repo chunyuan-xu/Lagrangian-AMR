@@ -39,10 +39,10 @@ main.cpp 从 M8 的 2455 行减至 **346 行**（启动骨架 + `Simulation::run
 
 | 子任务 | 内容 | 状态 |
 |---|---|---|
-| M10.1.1 | ofstream（EnergyFile/DistanceFile/ErrorFile）移出 `p4est_data_t` → `IOCallbacks` 惰性文件管理 | ✅ `待提交` |
-| M10.3.1 | 运行状态迁 `SimulationClock` + 新建 `ReductionContext` | ⏳ 未开始 |
+| M10.1.1 | ofstream（EnergyFile/DistanceFile/ErrorFile）移出 `p4est_data_t` → `IOCallbacks` 惰性文件管理 | ✅ `2a9f6e2` |
+| M10.3.1a | 能量归约量（`total_energy_*`）→ `IOCallbacks::ReductionContext` | ✅ `待提交` |
 | M10.2.1 | 激活 `SimulationConfig`，分小批冻结只读配置 | ⏳ 未开始 |
-| M10.4.1 | `P4estBridge` 取代 `user_pointer` | ⏳ 未开始 |
+| M10.4.1 | `P4estBridge` 取代 `user_pointer`（含 `current_time/step/dt` 族迁移） | ⏳ 未开始 |
 
 **建议顺序**：M10.1.1 → M10.3.1 → M10.2.1 → M10.4.1。
 
@@ -52,6 +52,7 @@ main.cpp 从 M8 的 2455 行减至 **346 行**（启动骨架 + `Simulation::run
 
 - M9 系列：`golden-gates-m9-{1-1,1-2,1-3,1-4,2-2,2-3,2-4,3-1,3-2,3-3,4-1}-*.md`（11 份）
 - `golden-gates-m10-1-1-2026-08-13.md`：M10.1.1
+- `golden-gates-m10-3-1a-2026-08-13.md`：M10.3.1a
 
 每个原子任务固定流程：G0 → G1 → G3 → reference/参数/产物检查 → focused commit → push GitHub → 门禁记录文档。任一失败停留当前项。
 

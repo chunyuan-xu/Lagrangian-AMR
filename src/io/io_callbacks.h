@@ -44,6 +44,20 @@ inline std::ofstream &distance_profile_file()
 	return f;
 }
 
+// M10.3.1a: reduction-context — global per-step energy sums owned here
+// instead of inside p4est_data_t. POD, reset at each StatTotalEnergyError.
+struct ReductionContext {
+	double total_energy_cur;
+	double total_energy_lag;
+	double total_energy_init;
+};
+
+inline ReductionContext &reduction_context()
+{
+	static ReductionContext rc = {0.0, 0.0, 0.0};
+	return rc;
+}
+
 // M9.3.3: global field checksum probe (Kahan summation + MPI reduce).
 void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
     double local_sums[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
@@ -175,10 +189,10 @@ void quadrant_total_energy_error_callback(p4est_iter_volume_info_t *info, void *
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable				*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
 
-	p4est_data->total_energy_lag += m_vara->cell(idMass) * m_vara->cell(idTotalEnergy_lag);
-	p4est_data->total_energy_cur += m_vara->cell(idMass) * m_vara->cell(idTotalEnergy_cur);
+	ReductionContext &reduce = reduction_context();
+	reduce.total_energy_lag += m_vara->cell(idMass) * m_vara->cell(idTotalEnergy_lag);
+	reduce.total_energy_cur += m_vara->cell(idMass) * m_vara->cell(idTotalEnergy_cur);
 
 
 }
@@ -478,8 +492,9 @@ void write_distance_profiles(p4est_t *p4est)
 void StatTotalEnergyError(p4est_t * p4est)
 {
 	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
-	p4est_data->total_energy_cur = 0.;
-	p4est_data->total_energy_lag = 0.;
+	ReductionContext &reduce = reduction_context();
+	reduce.total_energy_cur = 0.;
+	reduce.total_energy_lag = 0.;
 	p4est_iterate(p4est,
 		NULL,
 		(void*)p4est_data,
@@ -491,27 +506,27 @@ void StatTotalEnergyError(p4est_t * p4est)
 #endif
 		NULL);
 
-	double local_energy_cur = p4est_data->total_energy_cur;
-	double local_energy_lag = p4est_data->total_energy_lag;
-	sc_MPI_Allreduce(&local_energy_cur, &p4est_data->total_energy_cur, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
-	sc_MPI_Allreduce(&local_energy_lag, &p4est_data->total_energy_lag, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
+	double local_energy_cur = reduce.total_energy_cur;
+	double local_energy_lag = reduce.total_energy_lag;
+	sc_MPI_Allreduce(&local_energy_cur, &reduce.total_energy_cur, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
+	sc_MPI_Allreduce(&local_energy_lag, &reduce.total_energy_lag, 1, sc_MPI_DOUBLE, sc_MPI_SUM, p4est->mpicomm);
 
 	if (p4est_data->current_step == 1)
 	{
-		p4est_data->total_energy_init = p4est_data->total_energy_cur;
+		reduce.total_energy_init = reduce.total_energy_cur;
 	}
 
 	if (p4est->mpirank == 0) {
 		std::ofstream &energy_file = energy_error_file();
 		energy_file << blank << blank << p4est_data->current_time << blank << blank <<
-			(p4est_data->total_energy_lag - p4est_data->total_energy_cur) /
-			p4est_data->total_energy_cur << endl;
+			(reduce.total_energy_lag - reduce.total_energy_cur) /
+			reduce.total_energy_cur << endl;
 	}
 
-	P4EST_GLOBAL_PRODUCTIONF("the total energy error is %#.16g\n", (p4est_data->total_energy_lag - p4est_data->total_energy_init) /
-		p4est_data->total_energy_init);
-	if (abs((p4est_data->total_energy_lag - p4est_data->total_energy_init) /
-		p4est_data->total_energy_init) > 1e-6)
+	P4EST_GLOBAL_PRODUCTIONF("the total energy error is %#.16g\n", (reduce.total_energy_lag - reduce.total_energy_init) /
+		reduce.total_energy_init);
+	if (abs((reduce.total_energy_lag - reduce.total_energy_init) /
+		reduce.total_energy_init) > 1e-6)
 	{
 		P4EST_GLOBAL_PRODUCTIONF("The total energy is not conservative after time step\n");
 		abort();

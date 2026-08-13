@@ -123,9 +123,7 @@ struct p4est_data_t {
 	int x_tree_number;  
 	int y_tree_number;  
 	double write_interval_time;
-	double total_energy_lag;
-	double total_energy_cur;
-	double total_energy_init;
+	// M10.3.1a: total_energy_cur/lag/init moved to IOCallbacks::ReductionContext.
 	double volume_varation_torelarion;
 	double dt_increase_percent;
 	// M10.1.1: IO handles (EnergyFile/DistanceFile/ErrorFile) removed —
@@ -181,12 +179,10 @@ struct p4est_data_t {
 
 		volume_varation_torelarion = 0.01;
 		dt_increase_percent = 1.001;
-		total_energy_lag = 0.0;
-		total_energy_cur = 0.0;
-		total_energy_init = 0.0;
 		last_output_index = -1;
 		// M10.1.1: EnergyError.plt / DistanceProfiles.plt / ErrorFile.txt
 		// opens moved to IOCallbacks lazy file-handle management.
+		// M10.3.1a: total_energy_* initialized in IOCallbacks::ReductionContext.
 	}
 
 	SimulationModel::SimulationConfig simulation_config() const {
