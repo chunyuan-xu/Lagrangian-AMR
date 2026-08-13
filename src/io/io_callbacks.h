@@ -1,4 +1,5 @@
 #pragma once
+#include <fstream>
 #include <p4est.h>
 #include <p4est_vtk.h>
 #include "defines.h"
@@ -16,6 +17,32 @@
 // M8.3: IOCallbacks — IO/Diagnostics quadrant callbacks stripped from main.cpp.
 
 namespace IOCallbacks {
+
+// M10.1.1: file-handle management. The ofstream handles previously lived
+// inside p4est_data_t (a non-POD god object). Opening them lazily here,
+// only on first write, keeps quad_data_t / p4est_data_t POD-free of
+// streams and avoids file handles being copied/destroyed in MPI contexts.
+inline std::ofstream &energy_error_file()
+{
+	static std::ofstream f("EnergyError.plt");
+	if (!f.is_open()) {
+		f.open("EnergyError.plt");
+	}
+	f.setf(std::ios::fixed, std::ios::floatfield);
+	f.precision(16);
+	return f;
+}
+
+inline std::ofstream &distance_profile_file()
+{
+	static std::ofstream f("DistanceProfiles.plt");
+	if (!f.is_open()) {
+		f.open("DistanceProfiles.plt");
+	}
+	f.setf(std::ios::fixed, std::ios::floatfield);
+	f.precision(16);
+	return f;
+}
 
 // M9.3.3: global field checksum probe (Kahan summation + MPI reduce).
 void StatGlobalFieldChecksum(p4est_t *p4est, const char* label) {
@@ -135,7 +162,8 @@ void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *info, v
 	{
 		distance = fabs(center_point.y);
 	}
-	p4est_data->DistanceFile << blank << blank << distance <<
+	std::ofstream &distance_file = distance_profile_file();
+	distance_file << blank << blank << distance <<
 		blank << blank << m_vara->cell(idDensity_lag) <<
 		blank << blank << m_vara->cell(idPressure_lag) <<
 		blank << blank << m_vara->cell(idInternalEnergy_lag) <<
@@ -474,7 +502,8 @@ void StatTotalEnergyError(p4est_t * p4est)
 	}
 
 	if (p4est->mpirank == 0) {
-		p4est_data->EnergyFile << blank << blank << p4est_data->current_time << blank << blank <<
+		std::ofstream &energy_file = energy_error_file();
+		energy_file << blank << blank << p4est_data->current_time << blank << blank <<
 			(p4est_data->total_energy_lag - p4est_data->total_energy_cur) /
 			p4est_data->total_energy_cur << endl;
 	}

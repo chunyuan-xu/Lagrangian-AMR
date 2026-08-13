@@ -128,9 +128,8 @@ struct p4est_data_t {
 	double total_energy_init;
 	double volume_varation_torelarion;
 	double dt_increase_percent;
-	ofstream EnergyFile;
-	ofstream DistanceFile;
-	ofstream ErrorFile;
+	// M10.1.1: IO handles (EnergyFile/DistanceFile/ErrorFile) removed —
+	// moved to IOCallbacks::energy_error_file()/distance_profile_file().
 
 	p4est_data_t()
 	{
@@ -186,17 +185,8 @@ struct p4est_data_t {
 		total_energy_cur = 0.0;
 		total_energy_init = 0.0;
 		last_output_index = -1;
-		EnergyFile.open("EnergyError.plt");
-		EnergyFile.setf(ios::fixed, ios::floatfield);
-		EnergyFile.precision(16);
-
-		DistanceFile.open("DistanceProfiles.plt");
-		DistanceFile.setf(ios::fixed, ios::floatfield);
-		DistanceFile.precision(16);
-
-		ErrorFile.open("ErrorFile.txt");
-		ErrorFile.setf(ios::fixed, ios::floatfield);
-		ErrorFile.precision(16);
+		// M10.1.1: EnergyError.plt / DistanceProfiles.plt / ErrorFile.txt
+		// opens moved to IOCallbacks lazy file-handle management.
 	}
 
 	SimulationModel::SimulationConfig simulation_config() const {

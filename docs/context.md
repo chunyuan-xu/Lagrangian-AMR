@@ -33,22 +33,29 @@ main.cpp 从 M8 的 2455 行减至 **346 行**（启动骨架 + `Simulation::run
 
 门禁记录：`docs/golden-gates-m9-{1-1,1-2,1-3,1-4,2-2,2-3,2-4,3-1,3-2,3-3,4-1}-*.md`（11 份）。
 
-## 3. 下一步：M10（docs/10.0implementation_plan.md）
+## 3. M10（docs/10.0implementation_plan.md）
 
-**目标**：解构 `p4est_data_t` 上帝对象（defines.h:49 起，约 460 行），配置/状态/IO 读写分离。M10 全程 **header-only**（不新建 `.cpp`，归 M7.3 范围）。
+**目标**：解构 `p4est_data_t` 上帝对象（defines.h:49 起），配置/状态/IO 读写分离。M10 全程 **header-only**（不新建 `.cpp`）。
 
-| 子任务 | 内容 | 要点 |
+| 子任务 | 内容 | 状态 |
 |---|---|---|
-| M10.1.1 | `ofstream`（EnergyFile/DistanceFile/ErrorFile）移出 `p4est_data_t` → `IOCallbacks` 文件管理 | 写入点 `io_callbacks.h:477`（EnergyFile）/`io_callbacks.h:138`（DistanceFile）；`ErrorFile` 只 open 无写，一并清；不建 `.cpp`/不用单例 |
-| M10.3.1 | 运行状态迁 `SimulationClock` + 新建 `ReductionContext` | **优先保障 `local_dt` 归约链**（`accumulate_local_minimum`→`MPI_Allreduce(MIN)`，hydro_controller.h）；同步 `simulation_clock()` 快照 |
-| M10.2.1 | 激活 `SimulationConfig`，分小批冻结只读配置 | **先清 `init/initializer.h:51` 对 `coord_type` 的重写**（每步 p4est 回调触发）；枚举↔int 用 `SolverGate` 转换；枚举迁 `defines_types.h` |
-| M10.4.1 | `P4estBridge` 取代 `user_pointer` | 枚举全部 `p4est_data_t*` 转换点（50+）；`P4estBridge` 含 config/clock/reduce_ctx/边界条件指针；迁移完成后再评估删残留 |
+| M10.1.1 | ofstream（EnergyFile/DistanceFile/ErrorFile）移出 `p4est_data_t` → `IOCallbacks` 惰性文件管理 | ✅ `待提交` |
+| M10.3.1 | 运行状态迁 `SimulationClock` + 新建 `ReductionContext` | ⏳ 未开始 |
+| M10.2.1 | 激活 `SimulationConfig`，分小批冻结只读配置 | ⏳ 未开始 |
+| M10.4.1 | `P4estBridge` 取代 `user_pointer` | ⏳ 未开始 |
 
 **建议顺序**：M10.1.1 → M10.3.1 → M10.2.1 → M10.4.1。
 
-**关键事实（审阅时实测）**：`coord_type` 非只读（initializer.h:51 每步重写、hydro_callbacks.h:626 读）；`p4est_data_t` 含 config+状态+3 ofstream+枚举混合；`SimulationConfig`/`SimulationClock` 已在 `core/simulation_config.h`（字段覆盖大部分目标）。
+**关键事实（实测）**：`coord_type` 非只读（initializer.h:51 每步重写、hydro_callbacks.h:626 读）；`p4est_data_t` 含 config+状态+IO+枚举混合；`SimulationConfig`/`SimulationClock` 已在 `core/simulation_config.h`；M10.1.1 已删 3 个 ofstream，`p4est_data_t` 不再持非 POD 流对象。
 
-## 4. 环境事实（已实测）
+## 4. 门禁记录清单（docs/golden-gates-*）
+
+- M9 系列：`golden-gates-m9-{1-1,1-2,1-3,1-4,2-2,2-3,2-4,3-1,3-2,3-3,4-1}-*.md`（11 份）
+- `golden-gates-m10-1-1-2026-08-13.md`：M10.1.1
+
+每个原子任务固定流程：G0 → G1 → G3 → reference/参数/产物检查 → focused commit → push GitHub → 门禁记录文档。任一失败停留当前项。
+
+## 4.1 环境事实（已实测）
 
 - make：`C:/msys64/usr/bin/make.exe`；g++：`C:/msys64/ucrt64/bin/g++.exe`（Makefile 硬编码）。
 - G0 命令：PowerShell 设 `$env:PATH="C:\msys64\usr\bin;C:\msys64\ucrt64\bin;"+$env:PATH` + 可写 `TEMP/TMP/TMPDIR`，`make clean && make -j8`。
