@@ -48,9 +48,10 @@ void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 	p4est_connectivity_t *connectivity = p4est->connectivity;
 	p4est_data_t			*p4est_data = (p4est_data_t *)p4est->user_pointer;
 
-	p4est_data->coord_type = p4est_data_t::MyCoordType::plane;
-	p4est_data->Scheme_type = p4est_data_t::MySchemeType::ControlVolume;
-
+	// M10.2.1: coord_type / Scheme_type are read-only config set by the
+	// p4est_data_t constructor (both default to plane/ControlVolume). The
+	// per-callback rewrites were redundant writes into config; removed so
+	// the init callback does not mutate frozen configuration.
 
 	int			level = q->level;
 

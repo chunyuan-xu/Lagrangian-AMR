@@ -46,6 +46,19 @@ struct CGlobal_grid_info
 	}
 };
 
+// M10: p4est_data_t is the legacy god-object acting as p4est->user_pointer.
+// It mixes read-only configuration, run-time state, and (formerly) IO
+// handles. M10 progressively dismantles it:
+//   M10.1.1  - ofstream handles removed -> IOCallbacks file management
+//   M10.3.1a - total_energy_* sums removed -> IOCallbacks::ReductionContext
+//   M10.2.1  - config fields (coord_type/Scheme_type/...) treated as
+//              read-only; simulation_config() snapshots them into
+//              SimulationConfig (core/simulation_config.h)
+//   M10.4.1  - current_time/step/dt run-time state migrate to
+//              SimulationClock via P4estBridge; p4est_data_t shrinks to a
+//              thin compatibility carrier
+// Until M10.4.1 the remaining fields below stay POD and are only touched
+// through p4est_data_t (kept POD so MPI/p4est byte-copy semantics hold).
 struct p4est_data_t {
 	enum MyCoordType
 	{
