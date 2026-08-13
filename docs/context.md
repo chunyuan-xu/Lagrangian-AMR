@@ -40,9 +40,13 @@ main.cpp 从 M8 的 2455 行减至 **346 行**（启动骨架 + `Simulation::run
 | 子任务 | 内容 | 状态 |
 |---|---|---|
 | M10.1.1 | ofstream（EnergyFile/DistanceFile/ErrorFile）移出 `p4est_data_t` → `IOCallbacks` 惰性文件管理 | ✅ `2a9f6e2` |
-| M10.3.1a | 能量归约量（`total_energy_*`）→ `IOCallbacks::ReductionContext` | ✅ `待提交` |
-| M10.2.1 | 激活 `SimulationConfig`，冻结只读配置（第一步：清 init 写路径 + 结构体注释；字段删除依赖 M10.4.1 `P4estBridge`） | ✅ `待提交` |
-| M10.4.1 | `P4estBridge` 取代 `user_pointer`（含 `current_time/step/dt` 族迁移） | ⏳ 未开始 |
+| M10.3.1a | 能量归约量（`total_energy_*`）→ `IOCallbacks::ReductionContext` | ✅ `783dda5` |
+| M10.2.1 | 冻结只读配置第一步（清 init 写路径 + 结构体注释） | ✅ `9324834` |
+| M10.4.1 | `P4estBridge` 薄载体取代裸 `p4est_data_t*` user_pointer（53 转换点） | ✅ `待提交` |
+
+## 3.1 M10 收口状态
+
+**M10 全部子任务已收口**：`p4est_data_t` 驱逐 IO 句柄（M10.1.1）、能量归约量（M10.3.1a）、清理配置写路径并冻结语义（M10.2.1）、装入 `P4estBridge` 载体（M10.4.1，53 处 user_pointer 转换点改 `&bridge->data`，回调体不变）。结构体加完整 M10 迁移注释（用户目标"重构后给 defines.h 结构体加注释"已达成）。`p4est_data_t` 保留为 `P4estBridge::data`（POD 兼容层），未删。G2 全程 retired。
 
 **建议顺序**：M10.1.1 → M10.3.1 → M10.2.1 → M10.4.1。
 
@@ -54,6 +58,9 @@ main.cpp 从 M8 的 2455 行减至 **346 行**（启动骨架 + `Simulation::run
 - `golden-gates-m10-1-1-2026-08-13.md`：M10.1.1
 - `golden-gates-m10-3-1a-2026-08-13.md`：M10.3.1a
 - `golden-gates-m10-2-1-2026-08-13.md`：M10.2.1
+- `golden-gates-m10-4-1-2026-08-13.md`：M10.4.1
+
+**M10 门禁记录共 4 份**（M10.1.1/3.1a/2.1/4.1）。
 
 每个原子任务固定流程：G0 → G1 → G3 → reference/参数/产物检查 → focused commit → push GitHub → 门禁记录文档。任一失败停留当前项。
 

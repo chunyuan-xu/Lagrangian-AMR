@@ -27,7 +27,7 @@ void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *info, vo
 	quad_data_t		*data = (quad_data_t *)(info->quad->p.user_data);
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 	CCorner_data	*cndata = (CCorner_data *)&(data->m_cndata);
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int				CoordType = p4est_data->coord_type;
 	int				Scheme_type = p4est_data->Scheme_type;
 	CDoubleVector DeltaU[CNDIM], RcpLcpNcpPc[CNDIM];
@@ -209,7 +209,7 @@ void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, void *use
 
 			m_vara->corner_vector(idcnVelocity_lag, cnid) = m_data->points[cnid].velo_lag;
 		}
-		p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+		p4est_data_t *p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 		if (target_trace_enabled() && p4est_data->current_step == 3 && !is_ghost &&
 			((is_trace_fine(side[i]->quad) && cnid == 2) ||
 			 (is_trace_parent(side[i]->quad) && (cnid == 0 || cnid == 3)))) {
@@ -442,7 +442,7 @@ void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info, void *
 	quad_data_t		*data = (quad_data_t		*)(info->quad->p.user_data);
 	CVariable		*m_vara = (CVariable		*)&data->m_vara;
 	ParentBounInfo	*PCInfo = (ParentBounInfo	*)&data->m_pc_edge_data;
-	p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	CDoubleVector DeltaU[CNDIM], RcpLcpNcpPc[CNDIM];
 	CDoubleMatrix  NcpPlusMatrix, NcpMinusMatrix;
 
@@ -509,7 +509,7 @@ void quadrant_accept_center_solution_callback(p4est_iter_volume_info_t *info, vo
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable				*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	m_vara->cell_vector(idCentroidCoord_cur) = m_vara->cell_vector(idCentroidCoord_lag);
 	m_vara->cell_vector(idCentroidVelo_cur) = m_vara->cell_vector(idCentroidVelo_lag);
 	m_vara->cell(idDensity_cur) = m_vara->cell(idDensity_lag);
@@ -541,7 +541,7 @@ void quadrant_compute_corner_force_callback(p4est_iter_volume_info_t *info, void
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable				*m_vara = (CVariable *)&data->m_vara;
 	ParentBounInfo		*PCInfo = (ParentBounInfo  *)&data->m_pc_edge_data;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int					Scheme_type = p4est_data->Scheme_type;
 	CCorner_data		*cndata = (CCorner_data *)&data->m_cndata;
 	CHalf_edge_data		*m_plus, *m_minus;
@@ -603,7 +603,7 @@ void quadrant_compute_RcpLcpNcp_callback(p4est_iter_volume_info_t *info, void *u
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 	CCorner_data	*cndata = (CCorner_data *)&data->m_cndata;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int				CoordType = p4est_data->coord_type;
 	int				SolverType = p4est_data->solver_type;
 	CHalf_edge_data	*m_plus, *m_minus;
@@ -657,7 +657,7 @@ void quadrant_compute_relaxed_info_callback(p4est_iter_volume_info_t *info, void
 	
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int				CoordType = p4est_data->coord_type;
 	int				SolverType = p4est_data->solver_type;
 	p4est_qcoord_t	qx = info->quad->x;
@@ -675,7 +675,7 @@ void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *info, void
 	GhostCallbackContext *context =
 		static_cast<GhostCallbackContext *>(user_data);
 	p4est_t			*p4est = info->p4est;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
 	const CVariable	*m_child1_read_vara, *m_child2_read_vara, *m_parent_read_vara;
@@ -841,7 +841,7 @@ void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *info, void
 void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	CCorner_data	*cndata = (CCorner_data *)&data->m_cndata;
 	CEdge_data		*edata = (CEdge_data *)&data->m_edata;
 	p4est_t			*p4est = info->p4est;
@@ -963,7 +963,7 @@ void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t *info, 
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	double				delta_time = p4est_data->dt_iter;
 	for (int k = 0; k < CNDIM; k++)  
 	{
@@ -1178,7 +1178,7 @@ void
 quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, void *user_data)
 {
 	p4est_t			*p4est = info->p4est;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	GhostCallbackContext *context =
 		static_cast<GhostCallbackContext *>(user_data);
 	quad_data_t		*m_quad_data, *m_quad_data_aside, *m_quad_data_full;
@@ -1364,7 +1364,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 void
 quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	p4est_data_t		*p4est_data = (p4est_data_t*)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 	p4est_t			*p4est = info->p4est;
@@ -1407,7 +1407,7 @@ quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, voi
 
 void quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, void *user_data)
 {
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	p4est_iter_corner_side_t	*side[CNDIM];
 	sc_array_t	*sides = &(info->sides);
 	int	which_corner, cnid, is_ghost, is_ghost_aside, m_size;

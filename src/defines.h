@@ -288,6 +288,16 @@ struct p4est_data_t {
 	}
 };
 
+// M10.4.1: P4estBridge — thin carrier installed as p4est->user_pointer.
+// Wraps the legacy p4est_data_t payload (kept POD) plus a read-only
+// pointer to the frozen SimulationConfig snapshot. Callbacks that need
+// the legacy fields cast via bridge->data; config consumers can read
+// bridge->config without touching the mutable payload.
+struct P4estBridge {
+	p4est_data_t data;
+	const SimulationModel::SimulationConfig *config;
+};
+
 
 struct CPointBounInfo
 {

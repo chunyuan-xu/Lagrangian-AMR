@@ -15,7 +15,7 @@ namespace Initializer {
 
 void get_boundary_from_p4est(p4est_t *p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 
 	PhysicalAlg::InitBoundaryCondition(p4est_data->which_case,
 		p4est_data->coord_type,
@@ -46,7 +46,8 @@ void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 	quad_data_t		*data = (quad_data_t *)q->p.user_data;
 	CVariable	*m_vara = (CVariable *)&data->m_vara;
 	p4est_connectivity_t *connectivity = p4est->connectivity;
-	p4est_data_t			*p4est_data = (p4est_data_t *)p4est->user_pointer;
+	// M10.4.1: user_pointer is a P4estBridge carrier; unpack the payload.
+	p4est_data_t			*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 
 	// M10.2.1: coord_type / Scheme_type are read-only config set by the
 	// p4est_data_t constructor (both default to plane/ControlVolume). The

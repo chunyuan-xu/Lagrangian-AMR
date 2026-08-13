@@ -34,7 +34,7 @@ void quadrant_predict_timestep_callback(p4est_iter_volume_info_t *info, void *us
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 
 	CDoubleVector corner_coords[CNDIM];
 	for (int cnid = 0; cnid < CNDIM; cnid++)
@@ -225,7 +225,7 @@ void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info, void *
 	GhostCallbackContext *context =
 		static_cast<GhostCallbackContext *>(user_data);
 	p4est_t			*p4est = info->p4est;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
 	const CVariable		*m_child1_read_vara, *m_child2_read_vara, *m_parent_read_vara;
 	CVariable		*m_child1_write_vara = NULL, *m_child2_write_vara = NULL, *m_parent_write_vara = NULL;
@@ -444,7 +444,7 @@ void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info, void *
 }
 void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*data=(quad_data_t		*)info->quad->p.user_data;
 	CVariable		*m_vara=(CVariable		*)&data->m_vara;
 	p4est_t			*p4est = info->p4est;
@@ -485,7 +485,7 @@ void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *info, void
 void quadrant_whether_allowing_coarsening_from_edge_callback(p4est_iter_face_info_t *info, void *user_data)
 {
 	p4est_t			*p4est = info->p4est;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*m_parent_data;
 	CVariable		*m_parent_vara;
 	CCorner_data	*m_parent_cndata;
@@ -538,7 +538,7 @@ void quadrant_update_after_balance_callback(p4est_iter_face_info_t *info, void *
 	GhostCallbackContext *context =
 		static_cast<GhostCallbackContext *>(user_data);
 	p4est_t			*p4est = info->p4est;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*m_child1_data, *m_child2_data, *m_parent_data;
 	CVariable		*m_child1_vara, *m_child2_vara, *m_parent_vara;
 	CCorner_data	*m_child1_cndata, *m_child2_cndata, *m_parent_cndata;
@@ -863,7 +863,7 @@ void quadrant_set_init_parent_edge_callback(p4est_iter_face_info_t *info, void *
 void
 quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info_t *info, void *user_data)
 {
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	GhostCallbackContext *context =
 		static_cast<GhostCallbackContext *>(user_data);
 	sc_array_t	*sides = &(info->sides);
@@ -911,7 +911,7 @@ quadrant_whether_allowing_coarsening_from_corner_callback(p4est_iter_corner_info
 void
 quadrant_set_default_coarsening_tag_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	
 	
@@ -923,7 +923,7 @@ quadrant_set_default_coarsening_tag_callback(p4est_iter_volume_info_t *info, voi
 void
 quadrant_set_default_refining_tag_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 
@@ -1218,7 +1218,7 @@ quadrant_get_children_hanging_info_callback(p4est_iter_face_info_t *info, void *
 void
 quadrant_reset_hanging_info_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 
 	for (int cnid = 0; cnid < CNDIM; cnid++)
@@ -1248,7 +1248,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 	enum m_which_child {child1, child2, child3, child4};
 	quad_data_t			*parent_data, *child_data, *child_data1, *child_data2, *child_data3, *child_data4;
 	CVariable			*child_vara;
-	p4est_data_t		*p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 
 	if (num_outgoing > 1)
 	{

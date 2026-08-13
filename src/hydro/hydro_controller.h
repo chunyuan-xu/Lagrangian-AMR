@@ -32,7 +32,7 @@ void ComputeCornerAndEdgeForce(p4est_t *p4est);
 void 
 predict_timestep(p4est_t *p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	p4est_data->local_dt = TimestepReduction::initial_local_minimum();
 
 	p4est_iterate(p4est,
@@ -73,7 +73,7 @@ void RiemannSolver(p4est_t * p4est, GhostSession &session)
 
 void MatrixAssemble(p4est_t *p4est, GhostSession &session)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 
 
 	p4est_iterate(p4est,
@@ -106,7 +106,7 @@ void MatrixAssemble(p4est_t *p4est, GhostSession &session)
 
 void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p4est, GhostSession &session)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	GhostCallbackContext callback_context = { &session };
 
 
@@ -166,7 +166,7 @@ void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p
 
 void ComputeCornerNodeVelocity(p4est_t * p4est, GhostSession &session)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 
 	GhostCallbackContext callback_context = { &session };
 	p4est_iterate(p4est,
@@ -194,7 +194,7 @@ void ComputeCornerNodeVelocity(p4est_t * p4est, GhostSession &session)
 
 void ComputeCoordinate(p4est_t * p4est)
 {
-	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	
 	p4est_iterate(p4est,
 		NULL,          
@@ -235,7 +235,7 @@ void UpdateEquationOfState(p4est_t * p4est)
 
 void AcceptNumericalSolution(p4est_t * p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	p4est_iterate(p4est,
 		NULL,          
 		(void*)p4est_data,   
@@ -250,7 +250,7 @@ void AcceptNumericalSolution(p4est_t * p4est)
 
 void ComputeCornerAndEdgeForce(p4est_t * p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	p4est_iterate(p4est,
 		NULL,          
 		(void*)p4est_data,   
@@ -265,7 +265,7 @@ void ComputeCornerAndEdgeForce(p4est_t * p4est)
 
 void FluxRelaxedResetZero(p4est_t *p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 
 	
 	p4est_iterate(p4est,
@@ -282,7 +282,7 @@ void FluxRelaxedResetZero(p4est_t *p4est)
 
 void CalculateHalfTimeVariable(p4est_t *p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 
 
 	p4est_iterate(p4est,
@@ -299,7 +299,7 @@ void CalculateHalfTimeVariable(p4est_t *p4est)
 
 void CalculateCornerRcpLcpNcp(p4est_t *p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	p4est_iterate(p4est,
 		NULL,
 		(void*)p4est_data,
@@ -327,7 +327,7 @@ void ComputeSoundSpeed(p4est_t *p4est)
 // and conservative-update phases with trace/checksum diagnostics.
 void advance_single_stage(p4est_t * p4est, GhostSession &session)
 {
-	p4est_data_t	*p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 
 
 	Initializer::get_boundary_from_p4est(p4est);
@@ -437,7 +437,7 @@ void advance_single_stage(p4est_t * p4est, GhostSession &session)
 void
 Gradient_estimate(p4est_t *p4est, GhostSession &session)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	GhostCallbackContext callback_context = { &session };
 
 	p4est_iterate(p4est,

@@ -23,7 +23,7 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 	double              t = start_time;
 	double              dt = 0.;
 	GhostSession ghost_session;
-	p4est_data_t		*p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	int					recursive = 0;
 	int					allowed_level = p4est_data->max_level;
 	int					callbackorphans = 0;

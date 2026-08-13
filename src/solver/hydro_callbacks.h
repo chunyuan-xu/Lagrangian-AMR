@@ -21,7 +21,7 @@ void quadrant_compute_divergence_callback(p4est_iter_volume_info_t *info, void *
 	
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t	*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	
 	
 	CDoubleVector	cnVelocity[CNDIM];
@@ -48,7 +48,7 @@ void quadrant_update_density_callback(p4est_iter_volume_info_t *info, void *user
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int					coordinate_type = p4est_data->coord_type;
 	CDoubleVector		m_cell_coord[CNDIM];
 	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_lag, i); }
@@ -64,7 +64,7 @@ void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, void *use
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
 	ParentBounInfo		*PCInfo = (ParentBounInfo  *)&data->m_pc_edge_data;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int					coordinate_type = p4est_data->coord_type;
 	int					scheme_type = p4est_data->Scheme_type;
 	CDoubleVector		SumFcp = CDoubleVector(0., 0.);
@@ -114,7 +114,7 @@ void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void *user_d
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable				*m_vara = (CVariable *)&data->m_vara;
 	ParentBounInfo		*PCInfo = (ParentBounInfo  *)&data->m_pc_edge_data;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int					coordinate_type = p4est_data->coord_type;
 	double				m_alpha = 1.;
 	double				m_beta = 1.;
@@ -170,7 +170,7 @@ void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void *user_
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 
 	
 	m_vara->cell(idTotalEnergy_lag) = m_vara->cell(idTotalEnergy_half) - p4est_data->dt_iter * m_vara->cell(idTotalWork) / m_vara->cell(idMass);

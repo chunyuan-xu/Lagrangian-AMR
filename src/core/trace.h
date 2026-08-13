@@ -108,7 +108,7 @@ inline const char *g_trace_snapshot_stage = NULL;
 
 inline void trace_target_snapshot_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	if ((p4est_data->current_step != 2 && p4est_data->current_step != 3) || g_trace_snapshot_stage == NULL ||
 		(!is_trace_fine(info->quad) && !is_trace_parent(info->quad) && !is_trace_refine_parent(info->quad))) {
 		return;
@@ -135,7 +135,7 @@ inline void trace_target_snapshot(p4est_t *p4est, const char *stage)
 	if (!target_trace_enabled()) {
 		return;
 	}
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	if (p4est_data->current_step != 2 && p4est_data->current_step != 3) {
 		return;
 	}

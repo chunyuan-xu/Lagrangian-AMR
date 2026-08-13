@@ -12,7 +12,7 @@ namespace AMRAgorithm {
 
 inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *q)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	quad_data_t  *data = (quad_data_t *)q->p.user_data;
 	CVariable    *m_vara = (CVariable *)&data->m_vara;
 	DoubleCellVariableID idCPara = idCDensityGradient;
@@ -62,7 +62,7 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 
 inline int CoarsenErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *children[])
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	DoubleCellVariableID idCPara = idCDensityGradient;
 	AMRCoarsenPolicy::IndicatorMode mode = AMRCoarsenPolicy::IndicatorMode::Gradient;
 

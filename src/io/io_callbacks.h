@@ -153,7 +153,7 @@ void quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *info, vo
 
 void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	p4est_data_t		*p4est_data = (p4est_data_t *)info->p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 
@@ -467,7 +467,7 @@ void p4est_debug_output_vtu(p4est_t *p4est, const char *prefix, int step, int lo
 // M9.3.3: distance-profile writer (rank-local mkdir + iterate callback).
 void write_distance_profiles(p4est_t *p4est)
 {
-	p4est_data_t		*p4est_data = (p4est_data_t*)p4est->user_pointer;
+	p4est_data_t		*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	int ret;
 #ifdef _WIN32
 	ret = _mkdir("output");
@@ -491,7 +491,7 @@ void write_distance_profiles(p4est_t *p4est)
 // M9.3.3: global total-energy conservation check (MPI Allreduce + abort gate).
 void StatTotalEnergyError(p4est_t * p4est)
 {
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	ReductionContext &reduce = reduction_context();
 	reduce.total_energy_cur = 0.;
 	reduce.total_energy_lag = 0.;

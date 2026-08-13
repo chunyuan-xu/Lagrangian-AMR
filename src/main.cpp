@@ -300,16 +300,20 @@ int main(int argc, char **argv)
 
 	const SimulationModel::SimulationConfig startup_config =
 		ctx.simulation_config();
-	p4est_t *p4est = p4est_new_ext(mpicomm,				 
-		conn,					 
-		1,						 
-		startup_config.mesh.minimum_level,						 
-		1,						 
-		sizeof(quad_data_t), 
+	// M10.4.1: install P4estBridge as the p4est->user_pointer carrier.
+	P4estBridge bridge;
+	bridge.data = ctx;
+	bridge.config = &startup_config;
+	p4est_t *p4est = p4est_new_ext(mpicomm,
+		conn,
+		1,
+		startup_config.mesh.minimum_level,
+		1,
+		sizeof(quad_data_t),
 		Initializer::Lagrangian_init_condition,
-		(void *)(&ctx));          
+		(void *)(&bridge));
 
-	p4est_data_t *p4est_data = (p4est_data_t *)p4est->user_pointer;
+	p4est_data_t *p4est_data = &bridge.data;
 
 	
 	int recursive = 1;
