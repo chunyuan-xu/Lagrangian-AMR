@@ -12,7 +12,16 @@ Lagrangian-AMR 是基于 p4est 四叉树自适应网格的二维拉格朗日流�
 - [`windows-msys2-msmpi-build.md`](windows-msys2-msmpi-build.md)：Windows/MSYS2 UCRT64/MS-MPI 构建、临时目录和 Python/NumPy 环境排障。
 - [`vtu-pvtu-contract.md`](vtu-pvtu-contract.md)：VTU/PVTU XML、piece、字段、对齐和数值比较契约。
 - [`SKILL.md`](SKILL.md)：回归方法论、参数审计和重构工作约束。
-- [`reconstruction.md`](reconstruction.md)：重构阶段、回退锚点和当前历史记录。
+- [`refactoring-playbook.md`](refactoring-playbook.md)：重构方法论与铁律（制定新里程碑计划、推进细粒度重构时查阅）。
+
+## 重构历史（history/）
+
+日常理解项目无需阅读，仅排查历史问题时查阅：
+
+- [`reconstruction.md`](../history/reconstruction.md)：重构阶段、回退锚点和当前历史记录。
+- [`context.md`](../history/context.md)：重构上下文（会话恢复用）。
+- `*implementation_plan.md`（19 份）：各里程碑重构计划。
+- `golden-gates-*.md`（96 份）：历次门禁运行记录。
 
 正式脚本位于 `python/`：
 

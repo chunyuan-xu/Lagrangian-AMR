@@ -1,6 +1,6 @@
 # Lagrangian-AMR 程序重构提纲
 
-> 当前 G0～G3 黄金回退的唯一可执行 SOP 是 [`golden-gates.md`](golden-gates.md)。本文保留重构阶段、回退锚点和历史证据；其中的门禁原则必须与该 SOP 一致，历史 PASS 记录不能替代当前提交的实测 summary。
+> 当前 G0～G3 黄金回退的唯一可执行 SOP 是 [`golden-gates.md`](../docs/golden-gates.md)。本文保留重构阶段、回退锚点和历史证据；其中的门禁原则必须与该 SOP 一致，历史 PASS 记录不能替代当前提交的实测 summary。
 
 > 目标：在不破坏现有数值结果和 p4est/MPI 并行能力的前提下，把当前“以 `src/main.cpp` 和大量 `p4est_iterate` callback 为中心”的实现，逐步重构为职责清晰、通信契约显式、数值内核可单测、串并行可回归的模块化架构。
 >
@@ -180,10 +180,10 @@ M3.4～M3.5 的实践表明，通信语义重构不应按“大功能完成后�
 
 ### 2.6 会话上下文持久化规则（resume 保护）
 
-每个子里程碑完成（G0～G3 通过并提交）后，必须同步更新 `docs/context.md`，把本次对话的核心内容固化下来，防止后续会话因 resume 失败丢失上下文。更新内容包括：
+每个子里程碑完成（G0～G3 通过并提交）后，必须同步更新 `context.md`，把本次对话的核心内容固化下来，防止后续会话因 resume 失败丢失上下文。更新内容包括：
 
 1. **进度表**：M9（或当前里程碑）各阶段的状态与收口提交 hash；
-2. **门禁记录索引**：新完成子任务对应的 `docs/golden-gates-*.md` 文件名；
+2. **门禁记录索引**：新完成子任务对应的 `golden-gates-*.md` 文件名；
 3. **剩余任务**：当前里程碑未完成项的准确清单与归属模块（含 main.cpp 残留壳函数行号）；
 4. **环境事实**：本次实测且复现成本高的环境细节（构建命令、PATH、param.ini checksum、门禁耗时等），便于新会话直接复用；
 5. **下一步建议**：明确的后续动作与调用点迁移注意点。
@@ -215,7 +215,7 @@ M3.4～M3.5 的实践表明，通信语义重构不应按“大功能完成后�
 - **保留业务文档与第三方目录**：`prompt/`（论文文稿等非诊断内容）、`libsc-2.8.5/`、`p4est-2.8.5/`、`third_party/`、`.claude/`/`.gemini/`/`.workbuddy/` 等不删；
 - **清理随收口 docs commit 一并提交**，或作为独立清理提交，使每次大版本收口后工作区回到干净状态；
 - **禁止删除黄金参考**：`reference/*.vtu`/`*.pvtu` 是 G3 比对基准，永不清除；
-- 若清理后需要复现历史诊断，git 历史与门禁记录文档（`docs/golden-gates-*.md`）仍是权威证据，重建快照目录无需保留。
+- 若清理后需要复现历史诊断，git 历史与门禁记录文档（`golden-gates-*.md`）仍是权威证据，重建快照目录无需保留。
 
 ### 2.5 每次提交的边界
 
@@ -1019,7 +1019,7 @@ G1 是串行数值回归门槛，G3 是并行收口门槛；二者均不可由�
 - 标记 local、remote snapshot、scratch、owner commit；
 - **专项验收**：每个 `p4est_iterate` 均有条目，漏传 ghost 的接口为零；仅文档/诊断改动仍须 G1。
 
-**完成记录（2026-08-04）**：产出 `docs/communication_audit.md`，盘点全部 51 个 `p4est_iterate` 调用，为 12 个活跃 face/corner callback 建表（类型、行号、调用点、ghost 状态、核心 Reads/Writes、Exchange 供给时序）并标注 local/remote/scratch。审计结论：① **漏传 ghost 的活跃接口为零**——全部活跃 face/corner callback 均以非空 ghost + `ghost_data` 调用；唯一 `NULL ghost` 的 face 调用位于从未执行的 `postprocess_after_coarsening` 死代码内。② **发现 4 个死符号**（仓库内零调用）：`postprocess_after_coarsening`、`quadrant_update_after_coarsening_callback`（且以 `NULL ghost_data` 注册但函数体解引用之）、`quadrant_update_parent_velo_press_callback`、`quadrant_vtk_coord_update_callback`，留待 M3.5/独立清理里程碑删除。③ **跨 rank 隐患（M3.4 依据）**：callback 1/5/7/8/9/11/12 经可写 `quad_data_t*` 修改可能指向 `ghost_data` 的单元，`ghost_exchange_data` 仅 owner→ghost 单向拷贝，ghost mirror 写静默丢失——与 §5.2「禁止把 ghost mirror 当成权威状态写入」一致。④ 完整映射 ghost 生命周期（拓扑变化后重建 + 各 phase 前交换，见文档 §3）。⑤ 附加发现：#7 `quadrant_set_init_parent_edge_callback` 内同一 `user_data` 双强转（`p4est_data_t*`/`quad_data_t*`），误转 inert；#8 `quadrant_get_children_hanging_info_callback` 拷贝的 `delta_u_cp/Uc_cur/Zcp` 在本步尚未刷新，为潜在 stale 隐患。门禁：本子里程碑仅文档改动，未改代码；编译通过，M2.4 的 G1 三黄金基线（`c40e2f2`）继续成立。状态：**完成**。下一子里程碑为 M3.2 `GhostSession` 兼容包装。
+**完成记录（2026-08-04）**：产出 `communication_audit.md`，盘点全部 51 个 `p4est_iterate` 调用，为 12 个活跃 face/corner callback 建表（类型、行号、调用点、ghost 状态、核心 Reads/Writes、Exchange 供给时序）并标注 local/remote/scratch。审计结论：① **漏传 ghost 的活跃接口为零**——全部活跃 face/corner callback 均以非空 ghost + `ghost_data` 调用；唯一 `NULL ghost` 的 face 调用位于从未执行的 `postprocess_after_coarsening` 死代码内。② **发现 4 个死符号**（仓库内零调用）：`postprocess_after_coarsening`、`quadrant_update_after_coarsening_callback`（且以 `NULL ghost_data` 注册但函数体解引用之）、`quadrant_update_parent_velo_press_callback`、`quadrant_vtk_coord_update_callback`，留待 M3.5/独立清理里程碑删除。③ **跨 rank 隐患（M3.4 依据）**：callback 1/5/7/8/9/11/12 经可写 `quad_data_t*` 修改可能指向 `ghost_data` 的单元，`ghost_exchange_data` 仅 owner→ghost 单向拷贝，ghost mirror 写静默丢失——与 §5.2「禁止把 ghost mirror 当成权威状态写入」一致。④ 完整映射 ghost 生命周期（拓扑变化后重建 + 各 phase 前交换，见文档 §3）。⑤ 附加发现：#7 `quadrant_set_init_parent_edge_callback` 内同一 `user_data` 双强转（`p4est_data_t*`/`quad_data_t*`），误转 inert；#8 `quadrant_get_children_hanging_info_callback` 拷贝的 `delta_u_cp/Uc_cur/Zcp` 在本步尚未刷新，为潜在 stale 隐患。门禁：本子里程碑仅文档改动，未改代码；编译通过，M2.4 的 G1 三黄金基线（`c40e2f2`）继续成立。状态：**完成**。下一子里程碑为 M3.2 `GhostSession` 兼容包装。
 
 #### M3.2 引入 `GhostSession` 兼容包装
 
@@ -1267,7 +1267,7 @@ M3.5 只允许在 M3.4 通过当前完整 G0～G3 重跑后启动。清理对象
 - G0：Makefile clean build 与链接通过；
 - G1：Noh Uniform、Sod AMR、Sedov AMR 全部通过，比较容差为 `1e-12`，`param.ini` 逐字节恢复；
 - G3：四进程 Sod AMR、Sedov AMR 均实际执行并通过，solver/compare 退出码均为 `0`，`mpi_gate_summary.json` 状态为 `PASS`，`param_restored` 为 `true`；
-- 每个 B9→B15 通过阶段均有独立源码提交和 `docs/golden-gates-b*.md` 详细记录；
+- 每个 B9→B15 通过阶段均有独立源码提交和 `golden-gates-b*.md` 详细记录；
 - G2 保持 retired；reference 黄金资产未修改，运行输出和构建产物不纳入版本控制。
 
 因此 M3.4 已按当前 B15 代码和机器摘要闭合；后续 M3.5 工作必须继续遵守完整 G0/G1/G3 门禁和失败即停规则。

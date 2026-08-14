@@ -67,7 +67,7 @@
 - 五组候选旧路径无生产源码残留
 - 活动 GhostSession API、ghost allocation/exchange/rebuild、generation/validity、callback context、owner-local 写门禁和 remote 读取均保留
 - 未将 `.o`、`bin/`、`build/`、输出目录、VTU/PVTU、summary JSON 或调试产物加入 Git
-- 用户已有的 `docs/reconstruction.md` 改动未纳入本提交
+- 用户已有的 `reconstruction.md` 改动未纳入本提交
 
 ## M3.5 结论
 

@@ -31,9 +31,9 @@ main.cpp 从 M8 的 2455 行减至 **346 行**（启动骨架 + `Simulation::run
 | M9.3.3 | IO 统计诊断壳 | `361bdda` |
 | M9.4.1 | `Simulation` 编排收官 | `9787c0d` |
 
-门禁记录：`docs/golden-gates-m9-{1-1,1-2,1-3,1-4,2-2,2-3,2-4,3-1,3-2,3-3,4-1}-*.md`（11 份）。
+门禁记录：`golden-gates-m9-{1-1,1-2,1-3,1-4,2-2,2-3,2-4,3-1,3-2,3-3,4-1}-*.md`（11 份）。
 
-## 3. M10（docs/10.0implementation_plan.md）
+## 3. M10（10.0implementation_plan.md）
 
 **目标**：解构 `p4est_data_t` 上帝对象（defines.h:49 起），配置/状态/IO 读写分离。M10 全程 **header-only**（不新建 `.cpp`）。
 
@@ -52,7 +52,7 @@ main.cpp 从 M8 的 2455 行减至 **346 行**（启动骨架 + `Simulation::run
 
 **关键事实（实测）**：`coord_type` 非只读（initializer.h:51 每步重写、hydro_callbacks.h:626 读）；`p4est_data_t` 含 config+状态+IO+枚举混合；`SimulationConfig`/`SimulationClock` 已在 `core/simulation_config.h`；M10.1.1 已删 3 个 ofstream，`p4est_data_t` 不再持非 POD 流对象。
 
-## 4. 门禁记录清单（docs/golden-gates-*）
+## 4. 门禁记录清单（golden-gates-*）
 
 - M9 系列：`golden-gates-m9-{1-1,1-2,1-3,1-4,2-2,2-3,2-4,3-1,3-2,3-3,4-1}-*.md`（11 份）
 - `golden-gates-m10-1-1-2026-08-13.md`：M10.1.1

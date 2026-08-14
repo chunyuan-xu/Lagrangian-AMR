@@ -17,7 +17,7 @@
 
 容差的唯一来源是 `python/gates_common.py` 的 `GATE_TOLERANCE`（当前 `1e-6`）。该值于 2026-08-14 由 `1e-12` 放宽，原因见 [`getting-started.md`](getting-started.md) §10.4：不同机器的 UCRT 数学库（`pow`/`sin`/`cos`）差异带来约 1 float32 ULP（~4.8e-7）的末位舍入，`1e-12` 等价于逐位一致、跨机必失败；`1e-6` 远小于物理误差、足以抓真实回归。改容差只改这一处，不要在各 runner 里散落硬编码。
 
-G2 的退休信息记录在 `python/run_mpi_gates.py` 和 `docs/reconstruction.md`；不要为了“补齐 G2”重新创建旧的阶段性脚本。
+G2 的退休信息记录在 `python/run_mpi_gates.py` 和 `../history/reconstruction.md`；不要为了“补齐 G2”重新创建旧的阶段性脚本。
 
 ## 2. 不可变资产和工作树规则
 
