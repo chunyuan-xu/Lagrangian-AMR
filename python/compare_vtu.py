@@ -12,6 +12,9 @@ import argparse
 import base64
 import xml.etree.ElementTree as ET
 import numpy as np
+
+from gates_common import GATE_TOLERANCE
+
 DEFAULT_FIELDS = ('density', 'Pressure')
 DISCOVERABLE_FIELDS = (
     'density',
@@ -161,7 +164,7 @@ def parse_pvtu_file(pvtu_path):
         'data': all_data
     }
 
-def compare_vtu(target_path, ref_path, tol=1e-12, fields_to_check=DEFAULT_FIELDS,
+def compare_vtu(target_path, ref_path, tol=GATE_TOLERANCE, fields_to_check=DEFAULT_FIELDS,
                 strict_fields=False):
     """
     Compares target_path against ref_path.
@@ -292,8 +295,8 @@ def main():
                         help="Path to newly generated target VTU file")
     parser.add_argument("--ref", type=str, default="reference/SodAMR.vtu",
                         help="Path to reference VTU file")
-    parser.add_argument("--tol", type=float, default=1e-12,
-                        help="Tolerance threshold for floating point field comparison (default: 1e-12)")
+    parser.add_argument("--tol", type=float, default=GATE_TOLERANCE,
+                        help="Tolerance threshold for floating point field comparison (default: gates_common.GATE_TOLERANCE)")
     parser.add_argument("--fields", nargs='+',
                         help="Explicit field list; accepts space- or comma-separated names")
 

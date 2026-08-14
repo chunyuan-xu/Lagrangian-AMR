@@ -70,7 +70,7 @@ main.cpp 从 M8 的 2455 行减至 **346 行**（启动骨架 + `Simulation::run
 - G0 命令：PowerShell 设 `$env:PATH="C:\msys64\usr\bin;C:\msys64\ucrt64\bin;"+$env:PATH` + 可写 `TEMP/TMP/TMPDIR`，`make clean && make -j8`。
 - `param.ini` SHA-256：`55bccddd799b613c2a2ec7d7f31380f66ed7af09ec0365e087d30a78ac0b9a94`（M9 全程未变）。
 - 门禁耗时（2026-08-13 实测）：G1 Noh 19.5s / Sod 78.5s / Sedov 61.2s；G3 Sod 32.9s / Sedov 28.2s。
-- 门禁入口：G1=`python/run_tests.py`（容差 1e-12）；G3=`python/run_mpi_gates.py`（四进程对 `reference/par4_*`）。
+- 门禁入口：G1=`python/run_tests.py`（容差 1e-6）；G3=`python/run_mpi_gates.py`（四进程对 `reference/par4_*`）。
 - 构建依赖链：`third_party/p4est/build/local/{include,lib}`（vendored sc，`-lp4est -lsc`）。**根目录 `libsc-2.8.5`/`p4est-2.8.5` 已删，非依赖。**
 
 ## 5. 已完成的仓库清理（2026-08-13）

@@ -9,11 +9,13 @@
 | 门禁 | 内容 | 当前状态 |
 |---|---|---|
 | G0 | 在规定工具链中清理并完成 `bin/AMR_Solver.exe` 的正式构建 | 必须通过 |
-| G1 | 串行 Noh Uniform、Sod AMR、Sedov AMR，按固定参数运行并与 `.vtu` 黄金文件以 `1e-12` 比较 | 必须通过 |
+| G1 | 串行 Noh Uniform、Sod AMR、Sedov AMR，按固定参数运行并与 `.vtu` 黄金文件以 `1e-6` 比较 | 必须通过 |
 | G2 | 旧的特定步数串行/MPI 一致性检查 | 已退休，不再作为当前门禁 |
-| G3 | 四进程 Sod AMR、Sedov AMR，按固定参数运行并与 `.pvtu` 黄金文件及其 rank pieces 以 `1e-12` 比较 | 必须通过 |
+| G3 | 四进程 Sod AMR、Sedov AMR，按固定参数运行并与 `.pvtu` 黄金文件及其 rank pieces 以 `1e-6` 比较 | 必须通过 |
 
 完整回退只能在 G0、G1、G3 全部通过且 `param.ini` 恢复为运行前字节内容时报告 PASS。首个算例失败后停止，不把后续未执行算例报告为通过。
+
+容差的唯一来源是 `python/gates_common.py` 的 `GATE_TOLERANCE`（当前 `1e-6`）。该值于 2026-08-14 由 `1e-12` 放宽，原因见 [`getting-started.md`](getting-started.md) §10.4：不同机器的 UCRT 数学库（`pow`/`sin`/`cos`）差异带来约 1 float32 ULP（~4.8e-7）的末位舍入，`1e-12` 等价于逐位一致、跨机必失败；`1e-6` 远小于物理误差、足以抓真实回归。改容差只改这一处，不要在各 runner 里散落硬编码。
 
 G2 的退休信息记录在 `python/run_mpi_gates.py` 和 `docs/reconstruction.md`；不要为了“补齐 G2”重新创建旧的阶段性脚本。
 
@@ -190,7 +192,7 @@ runner 按以下顺序执行，并在首项失败后停止：
 每个串行 case 运行前，runner 会清理根目录 `output/`，运行 solver，选择 `p4est_Lagrangian_*_0000.vtu` 的末帧，然后调用：
 
 ```text
-python/compare_vtu.py --target <当前 output 末帧> --ref <reference 文件> --tol 1e-12
+python/compare_vtu.py --target <当前 output 末帧> --ref <reference 文件> --tol 1e-6
 ```
 
 G1 需要同时满足：solver 退出码为 `0`、比较器退出码为 `0`、三个 case 都执行且状态为 `PASS`、`serial_golden_summary.json` 的 schema 为 `lagrangian-amr.serial-golden.v1`、`param_restored` 为 `true`。summary 中的 `failure=solver` 和 `failure=comparison` 必须按不同类别记录。
@@ -242,7 +244,7 @@ G3 需要同时满足：两个 case 的 solver 退出码和比较器退出码均
 - `NumberOfPoints`、`NumberOfCells`、字段 shape 必须一致；
 - 缺字段、NaN、Inf、解析失败和 Global_SFC_ID 集合不一致直接失败；
 - 当两侧都有 `Global_SFC_ID` 时按 ID 排序后比较，只有一侧有该字段时明确提示未对齐；
-- 数值判定为最大绝对差不超过 `1e-12`；比较器成功退出 `0`，失败退出 `1`。
+- 数值判定为最大绝对差不超过 `1e-6`；比较器成功退出 `0`，失败退出 `1`。
 
 手工显式比较示例：
 
@@ -250,7 +252,7 @@ G3 需要同时满足：两个 case 的 solver 退出码和比较器退出码均
 & $py .\python\compare_vtu.py `
   --target .\output\current.vtu `
   --ref .\reference\baseline.vtu `
-  --tol 1e-12 `
+  --tol 1e-6 `
   --fields density Pressure Temperature
 ```
 
@@ -267,7 +269,7 @@ G3 需要同时满足：两个 case 的 solver 退出码和比较器退出码均
 | `NaN`/`Inf` 或负能量保护触发 | 求解器数值阶段 | 记录 rank、step、quad 和诊断环境，区别于 VTU 比较失败 |
 | `.pvtu`/piece 缺失、XML 解析失败 | 输出格式/拓扑 | 检查当前运行与旧输出残留 |
 | 字段缺失、shape 不一致、ID 不一致 | 比较契约 | 检查 writer、piece 和 reference，不重生成 reference 掩盖问题 |
-| 最大绝对差大于 `1e-12` | 数值回归 | 停止，记录字段和最大差值 |
+| 最大绝对差大于 `1e-6` | 数值回归 | 停止，记录字段和最大差值 |
 
 历史版本的 G3 PASS 只能证明历史提交；不能替代当前提交的实测证据。单进程、短时间 smoke、只比较一个字段或被首项失败跳过的 Sedov 都不能报告为完整 G3 PASS。
 
@@ -282,7 +284,7 @@ compiler: <g++ --version>
 python: <python --version>
 numpy: <numpy.__version__>
 mpi: <mpiexec.exe path/version>
-tolerance: 1e-12
+tolerance: 1e-6
 G0: PASS/FAIL
 G1: PASS/FAIL; summary=serial_golden_summary.json
 G2: RETIRED

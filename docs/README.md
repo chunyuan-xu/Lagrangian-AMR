@@ -2,8 +2,12 @@
 
 Lagrangian-AMR 是基于 p4est 四叉树自适应网格的二维拉格朗日流体力学求解器，支持 Windows/MSYS2 UCRT64 和 Microsoft MPI 并行运行。
 
+> **第一次从 GitHub 拉取本项目？** 请从 [`getting-started.md`](getting-started.md) 开始：它一步步带你装好 MSYS2 UCRT64 与所需软件包、Microsoft MPI 运行时，编译 p4est（含禁用 zlib 检测的关键一步）、编译求解器，并跑通串行 / MPI 与黄金门禁。
+
 ## 验证入口
 
+- [`getting-started.md`](getting-started.md)：**新用户从零安装、编译、运行指南**（工具链、MS-MPI 运行时、p4est 编译、串行/MPI 冒烟测试）。
+- [`workflow.md`](workflow.md)：**单人双机协作每日操作手册**（开机 pull、存档/正式提交暗号、收工 push、换机交接、出岔子恢复）。
 - [`golden-gates.md`](golden-gates.md)：G0～G3 黄金回退唯一标准 SOP。
 - [`windows-msys2-msmpi-build.md`](windows-msys2-msmpi-build.md)：Windows/MSYS2 UCRT64/MS-MPI 构建、临时目录和 Python/NumPy 环境排障。
 - [`vtu-pvtu-contract.md`](vtu-pvtu-contract.md)：VTU/PVTU XML、piece、字段、对齐和数值比较契约。
@@ -70,13 +74,13 @@ G0、G1、G3 必须按顺序执行；G2 已退休。两个 runner 都会在结�
 
 ## VTU/PVTU 比较
 
-当前历史门禁固定绝对容差 `1e-12`。默认比较器字段为 `density` 和 `Pressure`，并会自动追加两侧同时存在的已知附加字段；字段名大小写敏感。需要显式验证扩展字段时：
+当前门禁固定绝对容差 `1e-6`，唯一来源是 `python/gates_common.py` 的 `GATE_TOLERANCE`（2026-08-14 由 `1e-12` 放宽，以吸收跨机器约 1 float32 ULP 的末位舍入差异，见 [`getting-started.md`](getting-started.md) §10.4）。默认比较器字段为 `density` 和 `Pressure`，并会自动追加两侧同时存在的已知附加字段；字段名大小写敏感。需要显式验证扩展字段时：
 
 ```powershell
 & $py .\python\compare_vtu.py `
   --target .\output\current.vtu `
   --ref .\reference\baseline.vtu `
-  --tol 1e-12 `
+  --tol 1e-6 `
   --fields density Pressure Temperature
 ```
 

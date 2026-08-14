@@ -1,7 +1,7 @@
 """Canonical serial GOLDEN regression entry point.
 
 Runs Noh Uniform, Sod AMR, and Sedov AMR with the complete frozen GOLDEN
-configuration, compares terminal VTU files at tolerance 1e-12, writes a
+configuration, compares terminal VTU files at tolerance 1e-6, writes a
 machine-readable JSON summary, and restores param.ini byte-for-byte.
 """
 
@@ -13,6 +13,8 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+
+from gates_common import GATE_TOLERANCE
 
 ROOT = Path(__file__).resolve().parent.parent
 PARAM = ROOT / "param.ini"
@@ -140,7 +142,7 @@ def run_case(case, original_param):
             "--ref",
             str(ROOT / "reference" / case["reference"]),
             "--tol",
-            "1e-12",
+            str(GATE_TOLERANCE),
         ],
         cwd=ROOT,
         capture_output=True,
@@ -188,7 +190,7 @@ def main():
     summary = {
         "schema": "lagrangian-amr.serial-golden.v1",
         "started_at": started_at,
-        "tolerance": 1.0e-12,
+        "tolerance": GATE_TOLERANCE,
         "golden_common": GOLDEN_COMMON,
         "param_restored": PARAM.read_bytes() == original_bytes,
         "status": "PASS" if exit_code == 0 else "FAIL",

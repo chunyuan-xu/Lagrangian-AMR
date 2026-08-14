@@ -71,6 +71,28 @@ MS-MPI 的 SDK 头文件、链接库和运行时是三个不同检查项：
 
 编译链接成功不代表 MPI 运行时已经可用，应继续执行最小的 `mpiexec -n 1` 和 `mpiexec -n 4` 验证。
 
+### 3.1 首次编译 p4est（从源码，必须禁用 zlib 检测）
+
+`third_party/p4est` 只提交源码，`build/local` 是编译产物（已 gitignore），新机器需要自己编译。**不要**直接依赖 Makefile 的 `p4est` 目标——它没有带禁用 zlib 的选项，会编译出「VTK 压缩」版的 p4est，使求解器输出压缩 VTU，与仓库里的未压缩参考解不一致，导致门禁对比失败。
+
+在 UCRT64 终端中手动编译，关键是 `-DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=TRUE`：
+
+```bash
+cd third_party/p4est
+cmake -B build -G Ninja \
+  -Dmpi=ON \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=TRUE
+cmake --build build
+cmake --install build --prefix build/local
+```
+
+- `p4est/CMakeLists.txt` 里 `find_package(ZLIB)` 一旦命中 MSYS2 的 zlib，就会在 `P4EST_ENABLE_VTK_COMPRESSION` 开启时输出压缩 VTU；`CMAKE_DISABLE_FIND_PACKAGE_ZLIB` 会阻止该查找，保证未压缩输出。
+- 编译期间 libsc 通过 ExternalProject 从 `https://github.com/zlib-ng/zlib-ng.git` 拉取 zlib-ng（tag `2.0.6`），需要网络；网络受限时该步可能卡住。
+- 禁用 zlib 后，p4est **自测程序**可能报 `undefined reference to adler32` 链接失败；这不影响求解器（求解器 Makefile 显式 `-lz`）。以 `third_party/p4est/build/local/lib/libp4est.a` 是否生成为准。
+
+先手动编译好 p4est，再执行根目录 `make`（`make` 检测到 `libp4est.a` 已存在会跳过内置 `p4est` 目标）。完整的新手流程见 [`getting-started.md`](getting-started.md)。
+
 ## 4. 正式构建
 
 ```powershell

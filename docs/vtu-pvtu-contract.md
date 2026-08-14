@@ -59,7 +59,7 @@
 
 ## 5. 数值比较规则
 
-- 历史 G1/G3 门禁显式使用绝对容差 `1e-12`。
+- G1/G3 门禁使用绝对容差 `1e-6`，唯一来源 `python/gates_common.py` 的 `GATE_TOLERANCE`。
 - 比较器报告每个字段的最大绝对差和相对差。
 - 数组 shape 不一致直接失败。
 - 缺少被请求字段直接失败。
@@ -72,7 +72,7 @@
 python python/compare_vtu.py `
   --target output/current.vtu `
   --ref reference/baseline.vtu `
-  --tol 1e-12
+  --tol 1e-6
 ```
 
 当前默认模式会比较 `density`、`Pressure`，并自动追加 `DISCOVERABLE_FIELDS` 中 target 与 reference 两侧都存在的字段；因此默认字段集合不是固定的“8 个物理场”，会随实际输出字段变化。显式模式只比较列出的字段，不自动追加其它字段；字段名重复或为空会被拒绝。
@@ -83,7 +83,7 @@ python python/compare_vtu.py `
 python python/compare_vtu.py `
   --target output/current.vtu `
   --ref reference/baseline.vtu `
-  --tol 1e-12 `
+  --tol 1e-6 `
   --fields density Pressure Temperature
 ```
 

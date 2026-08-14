@@ -64,7 +64,7 @@ make -j8      # 并行编译（约 30 秒）
 
 | 脚本 | 用途 |
 |---|---|
-| `python/compare_vtu.py` | VTU/PVTU 数值比对（容差 1e-12），支持网格对齐 |
+| `python/compare_vtu.py` | VTU/PVTU 数值比对（容差 1e-6），支持网格对齐 |
 | `python/quick_consistency_test.py` | 任意步数串行/MPI 一致性单命令测试（`--step N --ranks K`） |
 | `python/run_tests.py` | 三个串行锚点（Noh/Sod/Sedov）官方回归 |
 | `python/_anchor_regression.py` | 串行锚点回退执行器（含 PATH/参数/末帧优化，见 `[GOLDEN-PASS]`） |
@@ -104,9 +104,9 @@ powershell -File validate_current.ps1
 2. Noh 32x32 均匀串行算例（无 AMR）
 3. Sod AMR 串行算例
 4. Sedov AMR 串行算例
-5. 每个算例与 `reference/` 比对（容差 1e-12）
+5. 每个算例与 `reference/` 比对（容差 1e-6）
 
-**通过条件**: 所有算例的输出误差 < 1e-12 → 打印 `ALL REGRESSION TESTS PASSED`
+**通过条件**: 所有算例的输出误差 < 1e-6 → 打印 `ALL REGRESSION TESTS PASSED`
 
 ---
 

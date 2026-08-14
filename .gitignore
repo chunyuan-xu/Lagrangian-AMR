@@ -32,7 +32,6 @@ output_*_serial/
 output_*_mpi*/
 output_MPI_diverged/
 step_tests/
-reference/
 
 # Run logs & diagnostics
 *.log
@@ -90,3 +89,8 @@ mpi55_good.txt
 
 # WorkBuddy workspace memory (project data, not source)
 .workbuddy/
+
+# ===== Two-machine workflow scratch (added 2026-08-14) =====
+# GCC 临时目录（docs 里设为 TEMP/TMP/TMPDIR）与本机测试残留，均不进版本库
+.tmp/
+local-repo.git/

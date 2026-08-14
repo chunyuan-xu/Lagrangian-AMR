@@ -14,6 +14,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from gates_common import GATE_TOLERANCE
+
 ROOT = Path(__file__).resolve().parent.parent
 PARAM = ROOT / "param.ini"
 SOLVER = ROOT / "bin" / "AMR_Solver.exe"
@@ -86,7 +88,7 @@ def run_g3(original_text):
         target = OUTPUT / f"p4est_Lagrangian_{case['step']:04d}.pvtu"
         if solver.returncode == 0 and target.exists():
             compare = subprocess.run(
-                [sys.executable, str(COMPARE), "--target", str(target), "--ref", str(case["reference"]), "--tol", "1e-12"],
+                [sys.executable, str(COMPARE), "--target", str(target), "--ref", str(case["reference"]), "--tol", str(GATE_TOLERANCE)],
                 cwd=ROOT, capture_output=True, text=True,
             )
             item["compare_exit_code"] = compare.returncode
