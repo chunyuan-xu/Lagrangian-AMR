@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <p4est.h>
+#include <p4est_iterate.h>
 #include "defines.h"
 #include "core/vector_matrix.h"
 #include "variable.h"

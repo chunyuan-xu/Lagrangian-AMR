@@ -11,6 +11,7 @@ Lagrangian-AMR 是基于 p4est 四叉树自适应网格的二维拉格朗日流�
 - [`golden-gates.md`](golden-gates.md)：G0～G3 黄金回退唯一标准 SOP。
 - [`windows-msys2-msmpi-build.md`](windows-msys2-msmpi-build.md)：Windows/MSYS2 UCRT64/MS-MPI 构建、临时目录和 Python/NumPy 环境排障。
 - [`vtu-pvtu-contract.md`](vtu-pvtu-contract.md)：VTU/PVTU XML、piece、字段、对齐和数值比较契约。
+- [`sedov-amr-efficiency-case.md`](sedov-amr-efficiency-case.md)：Sedov-AMR 效率收益典型算例（L4～L7、Distance 环带、t=1 串行基线）。
 - [`SKILL.md`](SKILL.md)：回归方法论、参数审计和重构工作约束。
 - [`refactoring-playbook.md`](refactoring-playbook.md)：重构方法论与铁律（制定新里程碑计划、推进细粒度重构时查阅）。
 

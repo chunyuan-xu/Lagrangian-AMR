@@ -116,6 +116,9 @@ struct p4est_data_t {
 	double refine_coarsen_time;
 	
 	double shock_velocity;
+	double distance_shock_radius_scale;
+	double distance_shock_radius_exponent;
+	double distance_band_half_width;
 	double used_dt;
 	double local_dt;  
 	double delta_time;  
@@ -130,7 +133,7 @@ struct p4est_data_t {
 	int  refine_period;  
 	int repartition_period; 
 	int last_output_index; 
-	int write_interval_step; 
+	int write_interval_step;
 	int profiletype;  
 	int children_center_type;  
 	int x_tree_number;  
@@ -167,6 +170,9 @@ struct p4est_data_t {
 		write_interval_step = 100;
 
 		shock_velocity = 1.0 / 3.0;
+		distance_shock_radius_scale = shock_velocity;
+		distance_shock_radius_exponent = 1.0;
+		distance_band_half_width = 0.1;
 		children_center_type = center_type::average;
 		profiletype = DistanceProfileType::radiusType;
 		coord_type = plane;
@@ -218,7 +224,10 @@ struct p4est_data_t {
 				coarsen_error,
 				refine_period,
 				repartition_period,
-				refine_coarsen_time},
+				refine_coarsen_time,
+				distance_shock_radius_scale,
+				distance_shock_radius_exponent,
+				distance_band_half_width},
 			SimulationModel::SolverConfig{
 				coord_type,
 				Scheme_type,
@@ -277,6 +286,13 @@ struct p4est_data_t {
 		if (cfg.HasKey("coarsen_error")) coarsen_error = cfg.GetDouble("coarsen_error", coarsen_error);
 		if (cfg.HasKey("refine_period")) refine_period = cfg.GetInt("refine_period", refine_period);
 		if (cfg.HasKey("refine_coarsen_time")) refine_coarsen_time = cfg.GetDouble("refine_coarsen_time", refine_coarsen_time);
+		if (cfg.HasKey("shock_velocity")) {
+			shock_velocity = cfg.GetDouble("shock_velocity", shock_velocity);
+			distance_shock_radius_scale = shock_velocity;
+		}
+		if (cfg.HasKey("distance_shock_radius_scale")) distance_shock_radius_scale = cfg.GetDouble("distance_shock_radius_scale", distance_shock_radius_scale);
+		if (cfg.HasKey("distance_shock_radius_exponent")) distance_shock_radius_exponent = cfg.GetDouble("distance_shock_radius_exponent", distance_shock_radius_exponent);
+		if (cfg.HasKey("distance_band_half_width")) distance_band_half_width = cfg.GetDouble("distance_band_half_width", distance_band_half_width);
 		if (cfg.HasKey("write_interval_time")) write_interval_time = cfg.GetDouble("write_interval_time", write_interval_time);
 		if (cfg.HasKey("write_interval_step")) write_interval_step = cfg.GetInt("write_interval_step", write_interval_step);
 		if (cfg.HasKey("max_time_step")) max_time_step = cfg.GetInt("max_time_step", max_time_step);

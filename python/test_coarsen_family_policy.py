@@ -83,7 +83,7 @@ int main()
 
     auto one_inside = all_outside;
     one_inside[2].value = 0.7;
-    assert(count_permutations(one_inside, distance, true) == 24);
+    assert(count_permutations(one_inside, distance, false) == 24);
 
     std::array<ChildIndicator, 4> all_inside{{
         {6, true, 0.1}, {6, true, 0.2}, {6, true, 0.7}, {6, true, 0.8}
