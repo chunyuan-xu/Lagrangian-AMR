@@ -19,6 +19,9 @@ struct MeshConfig {
 	int refine_period;
 	int repartition_period;
 	double refine_coarsen_time;
+	double distance_shock_radius_scale;
+	double distance_shock_radius_exponent;
+	double distance_band_half_width;
 };
 
 struct SolverConfig {
@@ -74,6 +77,13 @@ inline bool valid(const MeshConfig &config)
 		std::isfinite(config.refine_error) &&
 		std::isfinite(config.coarsen_error) &&
 		std::isfinite(config.refine_coarsen_time) &&
+		std::isfinite(config.distance_shock_radius_scale) &&
+		std::isfinite(config.distance_shock_radius_exponent) &&
+		std::isfinite(config.distance_band_half_width) &&
+		(config.refine_criterion != 5 ||
+			(config.distance_shock_radius_scale > 0.0 &&
+			 config.distance_shock_radius_exponent > 0.0 &&
+			 config.distance_band_half_width >= 0.0)) &&
 		config.x_tree_number > 0 &&
 		config.y_tree_number > 0 &&
 		config.minimum_level >= 0 &&

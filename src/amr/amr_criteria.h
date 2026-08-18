@@ -3,12 +3,44 @@
 #include <cmath>
 #include <p4est.h>
 #include "amr/coarsen_family_policy.h"
+#include "amr/shock_front_policy.h"
 #include "defines.h"
 #include "variable.h"
 #include "physics/eos.h"
 
 namespace AMRAgorithm {
 
+inline double ShockFrontRadius(const p4est_data_t *p4est_data)
+{
+	if (p4est_data->which_case == ProblemNo::SedovCartesian ||
+		p4est_data->which_case == ProblemNo::SedovPolar) {
+		return ShockFrontPolicy::sedov_radius(
+			p4est_data->current_time,
+			p4est_data->distance_shock_radius_scale);
+	}
+	return ShockFrontPolicy::power_law_radius(
+		p4est_data->current_time,
+		p4est_data->distance_shock_radius_scale,
+		p4est_data->distance_shock_radius_exponent);
+}
+
+inline ShockFrontPolicy::RadialBounds CellRadialBounds(
+	const CVariable &vara, VectorCornerVariableID coordinate_id = idcnCoords_cur)
+{
+	std::array<std::array<double, 2>, CNDIM> corners;
+	for (int corner = 0; corner < CNDIM; ++corner) {
+		const CDoubleVector point = vara.corner_vector(coordinate_id, corner);
+		corners[corner] = std::array<double, 2>{{point.x, point.y}};
+	}
+	return ShockFrontPolicy::radial_bounds(corners);
+}
+
+inline bool CellIntersectsShockBand(
+	const CVariable &vara, double front_radius, double half_width)
+{
+	return ShockFrontPolicy::intersects_radial_band(
+		CellRadialBounds(vara), front_radius, half_width);
+}
 
 inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *q)
 {
@@ -27,9 +59,6 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 		idCPara = idCDensityGradient;
 		break;
 	case RefineCriteria::Distance:
-		// idCentroidCoord_cur is a VectorCellVariableID, incompatible with the
-		// DoubleCellVariableID idCPara. The assignment was dead code: the
-		// Distance path returns early below before cell(idCPara) is read.
 		break;
 	default:
 		break;
@@ -43,24 +72,16 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 	}
 
 	if (p4est_data->refine_coarsen_enum == RefineCriteria::Distance) {
-		double dist = std::sqrt(std::pow(m_vara->cell_vector(idCentroidCoord_cur).x, 2) +
-			                    std::pow(m_vara->cell_vector(idCentroidCoord_cur).y, 2));
-		if (std::fabs(dist - p4est_data->shock_velocity * p4est_data->current_time) < p4est_data->refine_err) {
-			return 1;
-		} else {
-			return 0;
-		}
+		return CellIntersectsShockBand(
+			*m_vara, ShockFrontRadius(p4est_data),
+			p4est_data->distance_band_half_width) ? 1 : 0;
 	}
 
-	if (m_vara->cell(idCPara) > p4est_data->refine_err) {
-		return 1;
-	} else {
-		return 0;
-	}
+	return m_vara->cell(idCPara) > p4est_data->refine_err ? 1 : 0;
 }
 
-
-inline int CoarsenErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *children[])
+inline int CoarsenErrorEstimate(
+	p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *children[])
 {
 	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	DoubleCellVariableID idCPara = idCDensityGradient;
@@ -81,22 +102,30 @@ inline int CoarsenErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est
 		break;
 	}
 
+	if (mode == AMRCoarsenPolicy::IndicatorMode::DistanceFromShock) {
+		const double front_radius = ShockFrontRadius(p4est_data);
+		for (int i = 0; i < P4EST_CHILDREN; ++i) {
+			quad_data_t *data = (quad_data_t *)children[i]->p.user_data;
+			if (children[i]->level <= p4est_data->minus_level ||
+				data->m_vara.int_cell(idAllowCoarsening) ==
+					p4est_data_t::CoarseningEnum::CoarsingNotAllowed ||
+				CellIntersectsShockBand(
+					data->m_vara, front_radius,
+					p4est_data->distance_band_half_width)) {
+				return 0;
+			}
+		}
+		return 1;
+	}
+
 	std::array<AMRCoarsenPolicy::ChildIndicator, P4EST_CHILDREN> family;
 	for (int i = 0; i < P4EST_CHILDREN; i++) {
 		quad_data_t *data = (quad_data_t *)children[i]->p.user_data;
-		double indicator = data->m_vara.cell(idCPara);
-		if (mode == AMRCoarsenPolicy::IndicatorMode::DistanceFromShock) {
-			const double dist = std::sqrt(
-				std::pow(data->m_vara.cell_vector(idCentroidCoord_cur).x, 2) +
-				std::pow(data->m_vara.cell_vector(idCentroidCoord_cur).y, 2));
-			indicator = std::fabs(
-				dist - p4est_data->shock_velocity * p4est_data->current_time);
-		}
 		family[i] = AMRCoarsenPolicy::ChildIndicator{
 			children[i]->level,
 			data->m_vara.int_cell(idAllowCoarsening) !=
 				p4est_data_t::CoarseningEnum::CoarsingNotAllowed,
-			indicator
+			data->m_vara.cell(idCPara)
 		};
 	}
 
@@ -109,4 +138,4 @@ inline int CoarsenErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est
 	return AMRCoarsenPolicy::family_allows_coarsening(family, policy) ? 1 : 0;
 }
 
-} 
+} // namespace AMRAgorithm

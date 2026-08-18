@@ -2,7 +2,7 @@
 # 环境: MSYS2 UCRT64 + MS-MPI
 
 CXX       := C:/msys64/ucrt64/bin/g++.exe
-CXXFLAGS  := -O2 -g -Wall -std=c++14
+CXXFLAGS  := -O2 -g -Wall -std=c++14 -MMD -MP
 
 SRCDIR    := src
 BINDIR    := bin
@@ -26,6 +26,7 @@ else
 endif
 
 OBJS := $(OBJDIR)/main.o $(OBJDIR)/alg.o $(OBJDIR)/config_parser.o
+DEPS := $(OBJS:.o=.d)
 EXE  := $(BINDIR)/AMR_Solver$(EXEEXT)
 
 .PHONY: all p4est run clean cleanall
@@ -57,6 +58,8 @@ $(OBJDIR)/alg.o: $(SRCDIR)/alg.cpp $(SRCDIR)/alg.h $(SRCDIR)/defines.h | $(OBJDI
 
 $(OBJDIR)/config_parser.o: $(SRCDIR)/io/config_parser.cpp $(SRCDIR)/io/config_parser.h | $(OBJDIR)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+
+-include $(DEPS)
 
 run: $(EXE)
 	"$(PROGRAMFILES)/Microsoft MPI/Bin/mpiexec" -n 1 $(EXE)

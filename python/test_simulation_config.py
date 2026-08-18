@@ -27,6 +27,10 @@ int main()
     legacy.max_level = 8;
     legacy.write_interval_time = 0.2;
     legacy.write_interval_step = 10;
+    legacy.refine_coarsen_enum = RefineCriteria::Distance;
+    legacy.distance_shock_radius_scale = 0.83;
+    legacy.distance_shock_radius_exponent = 0.5;
+    legacy.distance_band_half_width = 0.22;
 
     const SimulationModel::SimulationConfig config =
         legacy.simulation_config();
@@ -36,6 +40,9 @@ int main()
     if (config.problem != legacy.which_case ||
         config.mesh.minimum_level != legacy.minus_level ||
         config.mesh.maximum_level != legacy.max_level ||
+        config.mesh.distance_shock_radius_scale != legacy.distance_shock_radius_scale ||
+        config.mesh.distance_shock_radius_exponent != legacy.distance_shock_radius_exponent ||
+        config.mesh.distance_band_half_width != legacy.distance_band_half_width ||
         config.output.write_interval_step != legacy.write_interval_step ||
         config.solver.solver_type != legacy.solver_type) {
         return 1;
@@ -66,6 +73,11 @@ int main()
     if (SimulationModel::valid(invalid)) {
         return 6;
     }
+    invalid = config;
+    invalid.mesh.distance_shock_radius_scale = 0.0;
+    if (SimulationModel::valid(invalid)) {
+        return 66;
+    }
 
     legacy.write_interval_step = 0;
     if (legacy.has_valid_simulation_settings()) {
@@ -82,6 +94,9 @@ int main()
     IOAlgorithm::ConfigParser parser("typed_config_test.ini");
     loaded.load_from_config(parser);
     if (loaded.start_time != 0.75 || loaded.current_time != 0.75 ||
+        loaded.distance_shock_radius_scale != 0.83 ||
+        loaded.distance_shock_radius_exponent != 0.5 ||
+        loaded.distance_band_half_width != 0.22 ||
         !loaded.has_valid_simulation_settings()) {
         return 9;
     }
@@ -97,7 +112,13 @@ def main() -> int:
         executable = Path(directory) / "test.exe"
         source.write_text(SOURCE, encoding="utf-8")
         config = Path(directory) / "typed_config_test.ini"
-        config.write_text("start_time = 0.75\nend_time = 1.25\n", encoding="utf-8")
+        config.write_text(
+            "start_time = 0.75\nend_time = 1.25\n"
+            "refine_coarsen_enum = 5\n"
+            "distance_shock_radius_scale = 0.83\n"
+            "distance_shock_radius_exponent = 0.5\n"
+            "distance_band_half_width = 0.22\n",
+            encoding="utf-8")
         environment = dict(os.environ)
         environment["PATH"] = os.pathsep.join([
             "C:/msys64/usr/bin",

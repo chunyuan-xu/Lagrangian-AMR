@@ -54,6 +54,17 @@ inline bool family_allows_coarsening(
         }
     }
 
+    if (policy.mode == IndicatorMode::DistanceFromShock) {
+        // Preserve the refinement band: coarsen only after every child
+        // has left the configured distance from the shock front.
+        for (const ChildIndicator& child : children) {
+            if (!child_satisfies_indicator(policy.mode, child.value, policy.threshold)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     for (const ChildIndicator& child : children) {
         if (child_satisfies_indicator(policy.mode, child.value, policy.threshold)) {
             return true;
