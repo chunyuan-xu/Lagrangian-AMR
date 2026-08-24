@@ -83,7 +83,14 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 
 		if (ghost_session.empty())
 		{
-			ghost_session.initialize(p4est, P4EST_CONNECT_FULL);
+			if (memory_probe.enabled()) {
+				memory_probe.context()->origin = Diagnostics::ExchangeOrigin::Rebuild;
+				Diagnostics::initialize_selected(
+					ghost_session, p4est, P4EST_CONNECT_FULL);
+			}
+			else {
+				ghost_session.initialize(p4est, P4EST_CONNECT_FULL);
+			}
 		}
 
 
