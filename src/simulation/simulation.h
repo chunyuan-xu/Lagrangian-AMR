@@ -11,6 +11,7 @@
 #include "io/output_stamp.h"
 #include "diagnostics/ghost_exchange_observer.h"
 #include "diagnostics/memory_probe_observer.h"
+#include "diagnostics/memory_probe_output.h"
 #include "diagnostics/state_invariant_checker.h"
 
 // M7.4: Simulation — high-level orchestration. main.cpp only performs
@@ -162,6 +163,10 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 			p4est_data->current_step, p4est_data->delta_time, p4est_data->current_time);
 	}
 	IOCallbacks::write_distance_profiles(p4est);
+	if (memory_probe.enabled()) {
+		Diagnostics::write_memory_high_water_rank_output(
+			p4est->mpirank, p4est->mpisize, *memory_probe.context());
+	}
 	ghost_session.destroy();
 }
 

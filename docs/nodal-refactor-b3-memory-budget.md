@@ -95,9 +95,44 @@ per leaf/ghost.
 4. The final layout may be smaller, but the first double-layout milestone
    must not exceed this projection before a focused memory measurement.
 
+## Measured dynamic high-water (B3b3)
+
+Versioned per-rank JSON and aggregate JSON are written only when
+`LAGRANGIAN_MEMORY_HIGH_WATER=1`; canonical runners scrub the variable.
+Measured maxima below are the aggregate values recorded by
+`B3B3-ENABLED` on 2026-08-25.  `coverage_union_bits=7` in all runs,
+meaning initial, ordinary, and rebuild exchange categories were observed.
+
+| Configuration | Max local leaves | Max ghost leaves | Max local payload | Max ghost payload | Max send / receive payload |
+|---|---:|---:|---:|---:|---:|
+| Serial Noh Uniform | 1024 | 0 | 6.0 MB | 0 | 0 / 0 |
+| Serial Sod AMR | 4678 | 0 | 27.6 MB | 0 | 0 / 0 |
+| Serial Sedov AMR | 5518 | 0 | 32.5 MB | 0 | 0 / 0 |
+| 4-rank Sod AMR | 1266 | 169 | 7.5 MB | 1.0 MB | 1.0 MB / 1.0 MB |
+| 4-rank Sedov AMR | 1420 | 218 | 8.4 MB | 1.3 MB | 1.3 MB / 1.3 MB |
+
+The serial values match the double-layout projection closely enough to keep
+the proposed 7072-byte record below the 8192-byte ceiling: the largest
+observed serial local payload is about 32.5 MB (5518 leaves), and the
+four-rank Sedov per-rank payload is about 8.4 MB.  The cumulative send and
+receive bytes recorded for the enabled four-rank runs are the sum of the
+per-rank cumulative counters and are not a per-step peak.
+
 ## Status
 
 **B3a status:** the current and projected layouts have been measured with the
+production compiler, the field-level projection is recorded, and the proposed
+record size is 7072 bytes, 1120 bytes below the hard ceiling.  B3a does not
+freeze the final operational budget.
+
+**B3b status:** the opt-in read-only high-water instrumentation is connected
+to initial, ordinary, and rebuild exchange categories and writes versioned
+per-rank JSON plus an aggregate JSON for serial and four-rank Sod/Sedov.
+`B3B3-DEFAULT` and `B3B3-ENABLED` both passed G0/G1/G3; the enabled gate
+recorded the table above.  B3b is closed.  B3c remains to freeze the budget
+from these measured results and retain or remove the probe behind a disabled
+diagnostic switch.
+ the current and projected layouts have been measured with the
 production compiler, the field-level projection is recorded, and the proposed
 record size is 7072 bytes, 1120 bytes below the hard ceiling.  B3a does not
 freeze the final operational budget.

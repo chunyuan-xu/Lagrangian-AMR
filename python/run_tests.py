@@ -8,6 +8,7 @@ machine-readable JSON summary, and restores param.ini byte-for-byte.
 import argparse
 import json
 import os
+import aggregate_memory_high_water as memory_aggregator
 import re
 import subprocess
 import sys
@@ -136,6 +137,17 @@ def run_case(case, original_param, memory_high_water=False):
         result["failure"] = "solver"
         result["stderr_tail"] = solver.stderr[-1000:]
         return result
+
+    if memory_high_water:
+        try:
+            aggregate = memory_aggregator.aggregate(
+                OUTPUT, expected_ranks=1, expected_size=1)
+            result["memory_high_water_aggregate"] = aggregate
+            result["memory_high_water_status"] = "PASS"
+        except Exception as error:
+            result["failure"] = "memory_high_water_aggregate"
+            result["aggregate_error"] = str(error)
+            return result
 
     target = terminal_vtu()
     compare = subprocess.run(

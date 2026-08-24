@@ -352,6 +352,11 @@ their change axes:
 6. **B3b3:** add versioned per-rank CSV/JSON output and final MPI aggregation,
    then run serial and four-rank Sod/Sedov through dynamic AMR.
 
+B3b3 closure evidence: `B3B3-DEFAULT` and `B3B3-ENABLED` gate artifacts both
+PASS on 2026-08-25.  The enabled gate records versioned per-rank JSON plus an
+aggregate JSON for serial and four-rank Sod/Sedov; measured maxima are recorded
+in `docs/nodal-refactor-b3-memory-budget.md`.  B3b is closed; B3c remains.
+
 The first combined B3b2 attempt is retained as a failed artifact at
 `.tmp/gates/B3B2-20260824-023430-543ab90a61b9463db2499e5c7c1541ca`.
 G0/G1 and four-rank Sod passed, but four-rank Sedov ended at step 4017 instead

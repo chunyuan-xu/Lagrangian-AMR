@@ -5,7 +5,9 @@ committed parallel references. G2 (specific-step serial/MPI consistency
 at steps 3/4/10/50/54) was retired on 2026-08-04.
 """
 
+import argparse
 import json
+import aggregate_memory_high_water as memory_aggregator
 import os
 import re
 import subprocess
@@ -36,7 +38,7 @@ PARALLEL_CASES = [
 ]
 
 
-def environment():
+def environment(memory_high_water=False):
     env = dict(os.environ)
     env["PATH"] = os.pathsep.join(MSYS_PATHS + [env.get("PATH", "")])
     for key in (
@@ -44,9 +46,12 @@ def environment():
         "LAGRANGIAN_TRACE_REFINE",
         "LAGRANGIAN_VERBOSE_AMR",
         "LAGRANGIAN_TRACE_CHECKSUM",
-        "LAGRANGIAN_MEMORY_HIGH_WATER",
     ):
         env.pop(key, None)
+    if memory_high_water:
+        env["LAGRANGIAN_MEMORY_HIGH_WATER"] = "1"
+    else:
+        env.pop("LAGRANGIAN_MEMORY_HIGH_WATER", None)
     return env
 
 
@@ -64,7 +69,7 @@ def ensure_output():
     OUTPUT.mkdir(exist_ok=True)
 
 
-def run_g3(original_text):
+def run_g3(original_text, memory_high_water=False):
     results = []
     common = {
         "enable_amr": "true", "minus_level": 5, "max_level": 7,
@@ -79,7 +84,7 @@ def run_g3(original_text):
         ensure_output()
         started = time.perf_counter()
         solver = subprocess.run(
-            [str(MPIEXEC), "-n", "4", str(SOLVER)], cwd=ROOT, env=environment(),
+            [str(MPIEXEC), "-n", "4", str(SOLVER)], cwd=ROOT, env=environment(memory_high_water),
             capture_output=True, text=True,
         )
         item = {
@@ -87,6 +92,18 @@ def run_g3(original_text):
             "seconds": round(time.perf_counter() - started, 3), "status": "FAIL",
         }
         target = OUTPUT / f"p4est_Lagrangian_{case['step']:04d}.pvtu"
+        if solver.returncode == 0 and memory_high_water:
+            try:
+                aggregate = memory_aggregator.aggregate(
+                    OUTPUT, expected_ranks=4, expected_size=4)
+                item["memory_high_water_aggregate"] = aggregate
+                item["memory_high_water_status"] = "PASS"
+            except Exception as error:
+                item["memory_high_water_status"] = "FAIL"
+                item["aggregate_error"] = str(error)
+                results.append(item)
+                print(f"G3 {case['name']}: FAIL (aggregate)", flush=True)
+                break
         if solver.returncode == 0 and target.exists():
             compare = subprocess.run(
                 [sys.executable, str(COMPARE), "--target", str(target), "--ref", str(case["reference"]), "--tol", str(GATE_TOLERANCE)],
@@ -116,8 +133,16 @@ def main():
     g3_results = []
     status = "FAIL"
     return_code = 1
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--memory-high-water",
+        action="store_true",
+        help="enable memory high-water observation and aggregation",
+    )
+    args = parser.parse_args()
+
     try:
-        g3_results = run_g3(original_text)
+        g3_results = run_g3(original_text, args.memory_high_water)
         if all(item["status"] == "PASS" for item in g3_results) and len(g3_results) == len(PARALLEL_CASES):
             return_code = 0
         status = "PASS" if return_code == 0 else "FAIL"
@@ -133,6 +158,7 @@ def main():
         "schema": "lagrangian-amr.mpi-gates.v1",
         "started_at": datetime.now().astimezone().isoformat(),
         "status": status,
+        "memory_high_water": args.memory_high_water,
         "param_restored": PARAM.read_bytes() == original_bytes,
         "g3": g3_results,
     }
