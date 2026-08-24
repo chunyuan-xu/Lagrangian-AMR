@@ -355,7 +355,7 @@ their change axes:
 B3b3 closure evidence: `B3B3-DEFAULT` and `B3B3-ENABLED` gate artifacts both
 PASS on 2026-08-25.  The enabled gate records versioned per-rank JSON plus an
 aggregate JSON for serial and four-rank Sod/Sedov; measured maxima are recorded
-in `docs/nodal-refactor-b3-memory-budget.md`.  B3b is closed; B3c remains.
+in `docs/nodal-refactor-b3-memory-budget.md`.  B3b is closed.
 
 The first combined B3b2 attempt is retained as a failed artifact at
 `.tmp/gates/B3B2-20260824-023430-543ab90a61b9463db2499e5c7c1541ca`.
@@ -426,6 +426,11 @@ rerun an unchanged failed state as evidence.
 **Submilestone B3c:** freeze the budget from measured high-water results and
 remove the temporary probe or retain it behind a disabled diagnostic switch;
 G0/G1/G3.
+
+B3c closure: `docs/nodal-refactor-b3-memory-budget.md` now records the frozen
+operational budget (`sizeof(quad_data_t) <= 8192` bytes) and retains the
+high-water probe behind the disabled-by-default `LAGRANGIAN_MEMORY_HIGH_WATER`
+switch.  `B3B3-DOC` passed G0/G1/G3.  B3c is closed; B3 is complete.
 
 **Hard limit:** proposed `sizeof(quad_data_t) <= 8192` bytes.  Exceeding it
 requires explicit review and a split payload plan, not an automatic exception.
@@ -1056,7 +1061,7 @@ changes that must be preserved.
 | B0 | G0/G1 PASS once and complete G3 PASS three times on current main | useful evidence, but the strengthened taskbook requires the full G0/G1/G3 sequence three times; recertify B0 |
 | B1 | contract document present; G0/G1/G3 observed PASS | preserve document; create durable milestone record before next code change |
 | B2 | lifecycle audit present; G0/G1/G3 observed PASS | preserve corrected audit; create durable milestone record |
-| B3 | size projection present; G0/G1 PASS, but G3 was interrupted | **NOT CLOSED**; after recertifying B0 and recording B1/B2, restart B3a/B3b/B3c with dynamic high-water measurement |
+| B3 | B3a/B3b/B3c gate artifacts and measured high-water evidence | CLOSED on 2026-08-25 |
 | T1 onward | not started | follow this taskbook in order |
 
 The interrupted B3 G3 left `param.ini` temporarily changed.  It has been

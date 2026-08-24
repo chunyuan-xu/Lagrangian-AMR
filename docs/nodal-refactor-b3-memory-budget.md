@@ -129,16 +129,11 @@ freeze the final operational budget.
 to initial, ordinary, and rebuild exchange categories and writes versioned
 per-rank JSON plus an aggregate JSON for serial and four-rank Sod/Sedov.
 `B3B3-DEFAULT` and `B3B3-ENABLED` both passed G0/G1/G3; the enabled gate
-recorded the table above.  B3b is closed.  B3c remains to freeze the budget
-from these measured results and retain or remove the probe behind a disabled
-diagnostic switch.
- the current and projected layouts have been measured with the
-production compiler, the field-level projection is recorded, and the proposed
-record size is 7072 bytes, 1120 bytes below the hard ceiling.  B3a does not
-freeze the final operational budget.
+recorded the table above.  B3b is closed.
 
-This projection uses final reference VTU cell counts only.  It does not measure
-dynamic-AMR peak local leaves, ghost leaves, or exchange bytes, so B3 is not
-closed.  B3b must add opt-in read-only high-water instrumentation and run
-serial/four-rank Sod and Sedov before the 8192-byte ceiling is frozen.  No
-production code was changed by this provisional estimate.
+**B3c status:** the operational budget is frozen from the measured B3b3
+results: `sizeof(quad_data_t) <= 8192` bytes, with the current measured record
+at 5896 bytes and the first double-layout projection at 7072 bytes.  The
+temporary high-water probe is retained behind the disabled-by-default
+`LAGRANGIAN_MEMORY_HIGH_WATER` diagnostic switch and never writes output in
+canonical runs.  B3c is closed; B3 is complete.
