@@ -64,6 +64,9 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 			&& p4est_data->current_time>p4est_data->refine_coarsen_time)
 
 		{
+						if (memory_probe.enabled()) {
+						    memory_probe.context()->origin = Diagnostics::ExchangeOrigin::Rebuild;
+						}
 						AMRController::execute_amr(p4est, ghost_session,
 				recursive, allowed_level, callbackorphans,
 				AMRCallbacks::Lagrangian_refine_err_estimate, AMRCallbacks::Lagrangian_coarsen_err_estimate,

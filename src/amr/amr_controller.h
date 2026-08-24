@@ -2,6 +2,7 @@
 #include <p4est.h>
 #include <p4est_extended.h>
 #include "mesh/ghost_session.h"
+#include "diagnostics/ghost_exchange_observer.h"
 
 // M4.4: AMRController — extracts the AMR stage orchestration from the main
 // time loop. Stage order and p4est parameters are identical to the original
@@ -26,7 +27,7 @@ inline void execute_amr(p4est_t *p4est, GhostSession &session,
 		refine_cb, NULL, replace_cb);
 
 	session.invalidate_after_topology_change();
-	session.rebuild(p4est, P4EST_CONNECT_FULL);
+	Diagnostics::rebuild_selected(session, p4est, P4EST_CONNECT_FULL);
 
 	tag_cb(p4est, session);
 
