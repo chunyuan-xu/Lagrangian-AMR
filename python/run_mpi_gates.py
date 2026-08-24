@@ -44,6 +44,7 @@ def environment():
         "LAGRANGIAN_TRACE_REFINE",
         "LAGRANGIAN_VERBOSE_AMR",
         "LAGRANGIAN_TRACE_CHECKSUM",
+        "LAGRANGIAN_MEMORY_HIGH_WATER",
     ):
         env.pop(key, None)
     return env

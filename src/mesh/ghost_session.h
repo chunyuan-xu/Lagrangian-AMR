@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <p4est.h>
 #include <p4est_ghost.h>
 #include "defines.h"
@@ -22,13 +23,40 @@
 // sites onto session methods is M3.3. `remote()` is the read-only remote
 // snapshot accessor that M3.4 will route callbacks through.
 
+struct GhostExchangeObservation {
+	std::uint64_t generation;
+	std::uint64_t local_leaves;
+	std::uint64_t ghost_leaves;
+	std::uint64_t mirror_leaves;
+	std::uint64_t logical_send_entries;
+	std::uint64_t payload_bytes;
+	std::uint64_t p4est_reported_ghost_bytes;
+};
+
+typedef void (*GhostExchangeObserver)(void *context,
+	const GhostExchangeObservation &observation);
+
 class GhostSession {
 public:
 	GhostSession()
 		: forest_(NULL), ghost_(NULL), data_(NULL),
-		  generation_(0), topology_version_(0), valid_(false)
+		  generation_(0), topology_version_(0), valid_(false),
+		  exchange_observer_(NULL), exchange_observer_context_(NULL)
 	{
 	}
+
+	// The observer and context are borrowed. destroy/rebuild do not own or
+	// clear them. Do not mutate the binding during a selected wrapper call.
+	// Legacy exchange() never reads the binding.
+	void set_exchange_observer(GhostExchangeObserver observer, void *context)
+	{
+		exchange_observer_ = observer;
+		exchange_observer_context_ = context;
+	}
+
+	bool has_exchange_observer() const { return exchange_observer_ != NULL; }
+	GhostExchangeObserver exchange_observer() const { return exchange_observer_; }
+	void *exchange_observer_context() const { return exchange_observer_context_; }
 
 	// Build a fresh ghost of the given connectivity plus a user-data buffer
 	// of elem_count quad_data_t, then exchange once.
@@ -125,4 +153,6 @@ private:
 	size_t generation_;
 	size_t topology_version_;
 	bool valid_;
+	GhostExchangeObserver exchange_observer_;
+	void *exchange_observer_context_;
 };

@@ -29,6 +29,7 @@ def solver_env():
     env = dict(os.environ)
     cur = env.get("PATH", "")
     env["PATH"] = os.pathsep.join(MSYS_PATHS + [cur])
+    env.pop("LAGRANGIAN_MEMORY_HIGH_WATER", None)
     return env
 
 

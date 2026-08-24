@@ -266,7 +266,5 @@ public:
 		return IntCData[id];
 	}
 
-	CVariable();
-	~CVariable();
 	void CVariableRisize();
 };

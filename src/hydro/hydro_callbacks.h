@@ -5,6 +5,7 @@
 #include "variable.h"
 #include "mesh/ghost_context.h"
 #include "physics/corner_solve.h"
+#include "hydro/parent_edge_force.h"
 
 // M8.2: HydroCallbacks — hydro-domain quadrant callbacks stripped from main.cpp.
 
@@ -574,14 +575,11 @@ void quadrant_compute_corner_force_callback(p4est_iter_volume_info_t *info, void
 
 	for (int eind = 0; eind < CNDIM; eind++)
 	{
-		CDoubleVector DeltaU, McpDeltaUc, LcpNcpPc;
-		DeltaU = PCInfo[eind].Hanging_velocity
-			- m_vara->corner_vector(idReconstructVelocity, eind);
-		LcpNcpPc = (PCInfo[eind].Lcp[0] * PCInfo[eind].Ncp[0] + PCInfo[eind].Lcp[1] * PCInfo[eind].Ncp[1])*
-			m_vara->corner(idReconstructPressure, eind);
-		McpDeltaUc = GeometryAlg::MatrixDotVector(m_vara->MarCnData[ideMcp][eind], DeltaU);
-		m_vara->corner_vector(ideFcp, eind) = (PCInfo[eind].Lcp[0] * PCInfo[eind].Ncp[0] + PCInfo[eind].Lcp[1] * PCInfo[eind].Ncp[1])*
-			m_vara->corner(idReconstructPressure, eind) - McpDeltaUc;
+		m_vara->corner_vector(ideFcp, eind) = ParentEdgeForce::evaluate(
+			PCInfo[eind],
+			m_vara->corner_vector(idReconstructVelocity, eind),
+			m_vara->corner(idReconstructPressure, eind),
+			m_vara->MarCnData[ideMcp][eind]);
 	}
 }
 void quadrant_flux_relaxed_reset_callback(p4est_iter_volume_info_t *info, void *user_data)

@@ -12,8 +12,6 @@ SOURCE = r'''
 #include <type_traits>
 #include "variable.h"
 
-CVariable::CVariable() {}
-CVariable::~CVariable() {}
 void CVariable::CVariableRisize() {}
 
 int main()

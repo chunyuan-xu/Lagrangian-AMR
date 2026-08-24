@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 430" role="img" aria-labelledby="title desc">
+  <title id="title">Corner half-edge geometry</title>
+  <desc id="desc">A four-cell quadrilateral patch showing the selected lower-left cell Omega c, its focal node p, adjacent nodes p plus and p minus, two outward normals, and half-edge lengths.</desc>
+  <defs>
+    <marker id="black-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#111111"/>
+    </marker>
+    <marker id="gray-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#a6a6a6"/>
+    </marker>
+    <style>
+      .cell { fill: #ffffff; stroke: #111111; stroke-width: 2.2; }
+      .node { fill: #1359d6; }
+      .node-label { fill: #1359d6; font: italic 24px Georgia, 'Times New Roman', serif; }
+      .math { fill: #151515; font: italic 22px Georgia, 'Times New Roman', serif; }
+      .normal { fill: #151515; font: italic bold 22px Georgia, 'Times New Roman', serif; }
+      .pressure { fill: #1359d6; font: italic 20px Georgia, 'Times New Roman', serif; }
+      .dimension { fill: #888888; font: italic 19px Georgia, 'Times New Roman', serif; }
+    </style>
+  </defs>
+
+  <rect x="180" y="70" width="130" height="130" class="cell"/>
+  <rect x="310" y="70" width="130" height="130" class="cell"/>
+  <rect x="180" y="200" width="130" height="130" class="cell"/>
+  <rect x="310" y="200" width="130" height="130" class="cell"/>
+
+  <text x="221" y="282" class="math">Ω<tspan baseline-shift="sub" font-size="14">c</tspan></text>
+
+  <circle cx="310" cy="200" r="5" class="node"/>
+  <circle cx="180" cy="200" r="5" class="node"/>
+  <circle cx="310" cy="330" r="5" class="node"/>
+  <text x="319" y="190" class="node-label">p</text>
+  <text x="188" y="190" class="node-label">p<tspan baseline-shift="super" font-size="14">+</tspan></text>
+  <text x="319" y="324" class="node-label">p<tspan baseline-shift="super" font-size="14">−</tspan></text>
+
+  <rect x="291" y="213" width="7" height="7" class="node"/>
+  <rect x="302" y="224" width="7" height="7" class="node"/>
+
+  <line x1="245" y1="200" x2="245" y2="157" stroke="#111111" stroke-width="2" marker-end="url(#black-arrow)"/>
+  <text x="212" y="144" class="normal">N<tspan baseline-shift="super" font-size="14">c</tspan><tspan baseline-shift="sub" font-size="14">p</tspan></text>
+
+  <line x1="310" y1="265" x2="353" y2="265" stroke="#111111" stroke-width="2" marker-end="url(#black-arrow)"/>
+  <text x="365" y="260" class="normal">N<tspan baseline-shift="super" font-size="14">c</tspan><tspan baseline-shift="sub" font-size="14">p</tspan></text>
+
+  <line x1="245" y1="187" x2="307" y2="187" stroke="#a6a6a6" stroke-width="1.3" marker-start="url(#gray-arrow)" marker-end="url(#gray-arrow)"/>
+  <text x="264" y="177" class="dimension">L<tspan baseline-shift="super" font-size="13">c</tspan><tspan baseline-shift="sub" font-size="13">p</tspan></text>
+
+  <line x1="323" y1="265" x2="323" y2="203" stroke="#a6a6a6" stroke-width="1.3" marker-start="url(#gray-arrow)" marker-end="url(#gray-arrow)"/>
+  <text x="330" y="239" class="dimension">L<tspan baseline-shift="super" font-size="13">c</tspan><tspan baseline-shift="sub" font-size="13">p</tspan></text>
+
+  <text x="270" y="220" class="pressure">Π<tspan baseline-shift="super" font-size="13">c</tspan><tspan baseline-shift="sub" font-size="13">p</tspan></text>
+  <text x="285" y="242" class="pressure">Π<tspan baseline-shift="super" font-size="13">c</tspan><tspan baseline-shift="sub" font-size="13">p</tspan></text>
+</svg>

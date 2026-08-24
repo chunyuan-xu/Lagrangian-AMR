@@ -9,6 +9,8 @@
 #include "hydro/hydro_controller.h"
 #include "io/io_callbacks.h"
 #include "io/output_stamp.h"
+#include "diagnostics/ghost_exchange_observer.h"
+#include "diagnostics/memory_probe_observer.h"
 #include "diagnostics/state_invariant_checker.h"
 
 // M7.4: Simulation — high-level orchestration. main.cpp only performs
@@ -24,13 +26,21 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 	double              dt = 0.;
 	GhostSession ghost_session;
 	p4est_data_t		*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
+	Diagnostics::MemoryProbeOwner memory_probe(&p4est_data->current_step);
+	memory_probe.bind(ghost_session);
 	int					recursive = 0;
 	int					allowed_level = p4est_data->max_level;
 	int					callbackorphans = 0;
 	int					allowcoarsening = 1;
 
 
-	ghost_session.initialize(p4est, P4EST_CONNECT_FULL);
+	if (memory_probe.enabled()) {
+		Diagnostics::initialize_selected(
+			ghost_session, p4est, P4EST_CONNECT_FULL);
+	}
+	else {
+		ghost_session.initialize(p4est, P4EST_CONNECT_FULL);
+	}
 
 	for (t = start_time; t < end_time; t += p4est_data->delta_time)
 	{
@@ -93,7 +103,13 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 		}
 		trace_target_snapshot(p4est, "AFTER_AMR_REFRESH");
 
-		ghost_session.exchange();
+		if (memory_probe.enabled()) {
+			memory_probe.context()->origin = Diagnostics::ExchangeOrigin::Ordinary;
+			Diagnostics::exchange_selected(ghost_session, p4est);
+		}
+		else {
+			ghost_session.exchange();
+		}
 
 
 		if (p4est_data->equal_dt == false) { HydroController::predict_timestep(p4est); }

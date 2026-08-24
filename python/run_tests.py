@@ -5,6 +5,7 @@ configuration, compares terminal VTU files at tolerance 1e-6, writes a
 machine-readable JSON summary, and restores param.ini byte-for-byte.
 """
 
+import argparse
 import json
 import os
 import re
@@ -66,9 +67,13 @@ CASES = [
 ]
 
 
-def solver_env():
+def solver_env(memory_high_water=False):
     environment = dict(os.environ)
     environment["PATH"] = os.pathsep.join(MSYS_PATHS + [environment.get("PATH", "")])
+    if memory_high_water:
+        environment["LAGRANGIAN_MEMORY_HIGH_WATER"] = "1"
+    else:
+        environment.pop("LAGRANGIAN_MEMORY_HIGH_WATER", None)
     return environment
 
 
@@ -98,7 +103,7 @@ def terminal_vtu():
     return outputs[-1]
 
 
-def run_case(case, original_param):
+def run_case(case, original_param, memory_high_water=False):
     updates = {
         "which_case": case["which_case"],
         "end_time": case["end_time"],
@@ -115,7 +120,7 @@ def run_case(case, original_param):
     print(f"\n{'=' * 50}\nRunning {case['name']}\n{'=' * 50}", flush=True)
     started = time.perf_counter()
     solver = subprocess.run(
-        [str(SOLVER)], cwd=ROOT, env=solver_env(), capture_output=True, text=True
+        [str(SOLVER)], cwd=ROOT, env=solver_env(memory_high_water), capture_output=True, text=True
     )
     elapsed = time.perf_counter() - started
     result = {
@@ -161,6 +166,14 @@ def run_case(case, original_param):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--memory-high-water",
+        action="store_true",
+        help="enable the external memory high-water observation path",
+    )
+    args = parser.parse_args()
+
     if not SOLVER.exists():
         print(f"ERROR: solver not found: {SOLVER}", file=sys.stderr)
         return 2
@@ -172,7 +185,7 @@ def main():
     exit_code = 1
     try:
         for case in CASES:
-            result = run_case(case, original_param)
+            result = run_case(case, original_param, args.memory_high_water)
             results.append(result)
             if result["status"] != "PASS":
                 print(f"FAIL: {case['name']} ({result.get('failure')})", file=sys.stderr)
@@ -192,6 +205,7 @@ def main():
         "started_at": started_at,
         "tolerance": GATE_TOLERANCE,
         "golden_common": GOLDEN_COMMON,
+        "memory_high_water": args.memory_high_water,
         "param_restored": PARAM.read_bytes() == original_bytes,
         "status": "PASS" if exit_code == 0 else "FAIL",
         "cases": results,

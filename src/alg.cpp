@@ -354,6 +354,7 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			CDoubleVector center_point;
 			center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
 			CentroidCoordCur = center_point;
+			CentroidCoordLag = CentroidCoordCur;
 			CentroidVeloCur = CDoubleVector(0., 0.);
 			CentroidVeloLag = CentroidVeloCur;
 
@@ -396,6 +397,7 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			CDoubleVector center_point;
 			center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
 			CentroidCoordCur = center_point;
+			CentroidCoordLag = CentroidCoordCur;
 			CentroidVeloCur = CDoubleVector(0., 0.);
 			gamma = 1.4;
 			if (CentroidCoordCur.x < 0.5 && CentroidCoordCur.y < 0.5) 
@@ -482,6 +484,7 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			CDoubleVector center_point;
 			center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
 			CentroidCoordCur = center_point;
+			CentroidCoordLag = CentroidCoordCur;
 			CentroidVeloCur = CDoubleVector(0., 0.);
 			CentroidVeloLag = CentroidVeloCur;
 
@@ -530,6 +533,7 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			CDoubleVector center_point;
 			center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
 			CentroidCoordCur = center_point;
+			CentroidCoordLag = CentroidCoordCur;
 			CentroidVeloCur = CDoubleVector(0., 0.);
 			CentroidVeloLag = CentroidVeloCur;
 
@@ -589,6 +593,7 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			CDoubleVector center_point;
 			center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
 			CentroidCoordCur = center_point;
+			CentroidCoordLag = CentroidCoordCur;
 			double center_radius = sqrt(pow(center_point.x, 2) + pow(center_point.y, 2));
 			if (center_radius > m_eps)
 			{
@@ -671,6 +676,7 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			CDoubleVector center_point;
 			center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
 			CentroidCoordCur = center_point;
+			CentroidCoordLag = CentroidCoordCur;
 			double center_radius = sqrt(pow(center_point.x, 2) + pow(center_point.y, 2));
 			if (center_radius > m_eps)
 			{
@@ -713,6 +719,7 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = CoordCur[i]; }
 			CDoubleVector center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
 			CentroidCoordCur = center_point;
+			CentroidCoordLag = CentroidCoordCur;
 			CentroidVeloCur = CDoubleVector(0., 0.);
 			CentroidVeloLag = CentroidVeloCur;
 			if (center_point.x < 1.)
@@ -773,6 +780,7 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			}
 			CDoubleVector center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
 			CentroidCoordCur = center_point;
+			CentroidCoordLag = CentroidCoordCur;
 			CentroidVeloCur = CDoubleVector(sin(M_PI*CentroidCoordCur.x)*cos(M_PI*CentroidCoordCur.y),
 				-cos(M_PI*CentroidCoordCur.x)*sin(M_PI*CentroidCoordCur.y));
 			CentroidVeloLag = CentroidVeloCur;
@@ -817,6 +825,7 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			CDoubleVector center_point;
 			center_point  = GeometryAlg::GetPolyCenter(m_cell_coord);
 			CentroidCoordCur = center_point;
+			CentroidCoordLag = CentroidCoordCur;
 			double center_radius = sqrt(pow(center_point.x, 2) + pow(center_point.y, 2));
 
 			if (center_radius <0.5)

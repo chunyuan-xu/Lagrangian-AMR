@@ -15,6 +15,8 @@ SOURCE = r'''
 #include <cmath>
 #include <string>
 #include <vector>
+#include <p4est.h>
+#include <p4est_iterate.h>
 #include "diagnostics/state_invariant_checker.h"
 
 namespace GeometryAlg {
@@ -23,8 +25,6 @@ CDoubleVector GetPolyCenter(const CDoubleVector coord[4]) {
 }
 }
 
-CVariable::CVariable() {}
-CVariable::~CVariable() {}
 void CVariable::CVariableRisize() {}
 
 static void set_valid_state(CVariable &v)

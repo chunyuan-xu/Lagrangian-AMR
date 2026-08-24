@@ -3,6 +3,7 @@
 #include "defines.h"
 #include "variable.h"
 #include "alg.h"
+#include "init/initial_geometry.h"
 #include "hydro/hydro_callbacks.h"
 #include "solver/hydro_callbacks.h"
 
@@ -82,6 +83,9 @@ void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 		m_vara->corner_vector(idcnVelocity_cur, i) = CDoubleVector(0.0, 0.0);
 		m_vara->corner_vector(idcnVelocity_lag, i) = CDoubleVector(0.0, 0.0);
 	}
+	InitialGeometry::seed_lag_corners(
+		m_vara->VecCnData[idcnCoords_cur],
+		m_vara->VecCnData[idcnCoords_lag]);
 
 	CDoubleVector cnCoordCur[CNDIM], cnCoordLag[CNDIM], cnVeloCur[CNDIM], cnVeloLag[CNDIM];
 	for (int i = 0; i < CNDIM; i++)

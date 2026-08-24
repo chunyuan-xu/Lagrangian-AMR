@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 780" role="img" aria-labelledby="title desc">
+  <title id="title">Master-node and hanging-node closures on a non-conforming patch</title>
+  <desc id="desc">A non-conforming quadrilateral patch with adjacent master nodes a and b and hanging node h. Uppercase Pi denotes the master-node half-edge pressure, lowercase pi denotes the hanging-node half-edge pressure, and the hanging-node velocity is the average of the two master-node velocities.</desc>
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#245b88"/>
+    </marker>
+    <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#737b83"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c43d3d"/>
+    </marker>
+    <style>
+      .mesh { fill: none; stroke: #20252a; stroke-width: 2.2; }
+      .incident-a { fill: #edf4fb; stroke: #20252a; stroke-width: 2.2; }
+      .incident-b { fill: #f8f1df; stroke: #20252a; stroke-width: 2.2; }
+      .selected { fill: #e8f3ef; stroke: #20252a; stroke-width: 2.2; }
+      .other { fill: #f5f6f7; stroke: #20252a; stroke-width: 2.2; }
+      .interface { stroke: #c43d3d; stroke-width: 3.2; }
+      .half-edge { stroke: #7b2cbf; stroke-width: 7; stroke-linecap: round; }
+      .h-half-edge { stroke: #c43d3d; stroke-width: 6; stroke-linecap: round; }
+      .transfer { fill: none; stroke: #c43d3d; stroke-width: 2.2; stroke-dasharray: 7 5; marker-end: url(#arrow-red); }
+      .normal { stroke: #245b88; stroke-width: 2.4; marker-end: url(#arrow-blue); }
+      .dimension { stroke: #737b83; stroke-width: 1.5; marker-start: url(#arrow-gray); marker-end: url(#arrow-gray); }
+      .extension { stroke: #a7adb3; stroke-width: 1.1; stroke-dasharray: 4 4; }
+      .master { fill: #0b57d0; stroke: #ffffff; stroke-width: 2.5; }
+      .hanging { fill: #ffffff; stroke: #c43d3d; stroke-width: 4; }
+      .regular { fill: #20252a; }
+      .center { fill: #087f5b; stroke: #ffffff; stroke-width: 1.5; }
+      .midpoint { fill: #7b2cbf; }
+      .panel { fill: #fbfbfa; stroke: #c7cbd0; stroke-width: 1.5; }
+      .divider { stroke: #d5d8db; stroke-width: 1.3; }
+      .label { fill: #20252a; font: 20px Georgia, 'Times New Roman', serif; }
+      .small { fill: #4e555c; font: 17px Arial, sans-serif; }
+      .math { fill: #20252a; font: italic 21px Georgia, 'Times New Roman', serif; }
+      .math-small { fill: #20252a; font: italic 18px Georgia, 'Times New Roman', serif; }
+      .node-label { fill: #0b57d0; font: italic bold 24px Georgia, 'Times New Roman', serif; }
+      .h-label { fill: #c43d3d; font: italic bold 23px Georgia, 'Times New Roman', serif; }
+      .pressure { fill: #7b2cbf; font: italic bold 20px Georgia, 'Times New Roman', serif; }
+      .h-pressure { fill: #c43d3d; font: italic bold 20px Georgia, 'Times New Roman', serif; }
+      .weight { fill: #c43d3d; font: bold 18px Georgia, 'Times New Roman', serif; }
+      .normal-label { fill: #245b88; font: italic bold 19px Georgia, 'Times New Roman', serif; }
+      .panel-title { fill: #20252a; font: bold 20px Arial, sans-serif; }
+      .step { fill: #ffffff; stroke: #596168; stroke-width: 1.4; }
+      .step-text { fill: #30363b; font: bold 15px Arial, sans-serif; text-anchor: middle; dominant-baseline: middle; }
+      .caption { fill: #4e555c; font: 16px Arial, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Four cells incident to a, plus fine cells incident only to h. -->
+  <rect x="70" y="80" width="360" height="250" class="incident-a"/>
+  <rect x="430" y="80" width="330" height="250" class="incident-a"/>
+  <rect x="250" y="330" width="180" height="160" class="selected"/>
+  <rect x="250" y="490" width="180" height="170" class="other"/>
+  <rect x="70" y="330" width="180" height="160" class="other"/>
+  <rect x="70" y="490" width="180" height="170" class="other"/>
+  <rect x="430" y="330" width="330" height="330" class="incident-b"/>
+
+  <line x1="430" y1="330" x2="430" y2="660" class="interface"/>
+  <text x="622" y="505" class="math">Ω<tspan baseline-shift="sub" font-size="14">parent</tspan></text>
+  <text x="538" y="535" class="small">coarse cell</text>
+  <text x="288" y="423" class="math">Ω<tspan baseline-shift="sub" font-size="14">c</tspan></text>
+
+  <!-- Cell centers. -->
+  <rect x="333" y="402" width="14" height="14" class="center"/>
+  <text x="303" y="390" class="math">x<tspan baseline-shift="sub" font-size="13">c</tspan></text>
+
+  <rect x="242" y="198" width="14" height="14" class="center"/>
+  <rect x="588" y="198" width="14" height="14" class="center"/>
+  <rect x="588" y="488" width="14" height="14" class="center"/>
+  <text x="205" y="193" class="math-small">c<tspan baseline-shift="sub" font-size="12">1</tspan></text>
+  <text x="608" y="193" class="math-small">c<tspan baseline-shift="sub" font-size="12">2</tspan></text>
+  <text x="608" y="482" class="math-small">c<tspan baseline-shift="sub" font-size="12">3</tspan></text>
+
+  <!-- Master, hanging, and regular nodes on the non-conforming edge. -->
+  <circle cx="430" cy="330" r="10" class="master"/>
+  <circle cx="430" cy="490" r="9" class="hanging"/>
+  <circle cx="430" cy="660" r="10" class="master"/>
+  <text x="441" y="318" class="node-label">a</text>
+  <text x="443" y="485" class="h-label">h</text>
+  <text x="443" y="684" class="node-label">b</text>
+
+  <!-- Representative master-node half-edge pair belonging to cell c at a. -->
+  <line x1="340" y1="330" x2="424" y2="330" class="half-edge"/>
+  <line x1="430" y1="336" x2="430" y2="410" class="half-edge"/>
+  <circle cx="340" cy="330" r="5" class="midpoint"/>
+  <circle cx="430" cy="410" r="5" class="midpoint"/>
+
+  <line x1="380" y1="327" x2="380" y2="269" class="normal"/>
+  <text x="347" y="255" class="normal-label">n<tspan baseline-shift="sub" font-size="13">ca</tspan><tspan baseline-shift="super" font-size="13">+</tspan></text>
+  <line x1="433" y1="372" x2="491" y2="372" class="normal"/>
+  <text x="497" y="378" class="normal-label">n<tspan baseline-shift="sub" font-size="13">ca</tspan><tspan baseline-shift="super" font-size="13">−</tspan></text>
+
+  <text x="356" y="359" class="pressure">Π<tspan baseline-shift="sub" font-size="13">ca</tspan></text>
+  <text x="389" y="397" class="pressure">Π<tspan baseline-shift="sub" font-size="13">ca</tspan></text>
+
+  <!-- Representative hanging-node half-edge pair for the same cell c. -->
+  <line x1="340" y1="490" x2="421" y2="490" class="h-half-edge"/>
+  <line x1="430" y1="416" x2="430" y2="481" class="h-half-edge"/>
+  <text x="354" y="480" class="h-pressure">π<tspan baseline-shift="sub" font-size="13">ch</tspan></text>
+  <text x="390" y="456" class="h-pressure">π<tspan baseline-shift="sub" font-size="13">ch</tspan></text>
+
+  <!-- Each branch is transmitted with weight one half and depends only on its own master velocity. -->
+  <path d="M 443 479 C 505 438, 505 384, 444 342" class="transfer"/>
+  <path d="M 443 501 C 505 548, 505 606, 444 650" class="transfer"/>
+  <text x="488" y="410" class="weight">½ π<tspan baseline-shift="sub" font-size="12">ch,a</tspan>(U<tspan baseline-shift="sub" font-size="12">a</tspan>)</text>
+  <text x="488" y="584" class="weight">½ π<tspan baseline-shift="sub" font-size="12">ch,b</tspan>(U<tspan baseline-shift="sub" font-size="12">b</tspan>)</text>
+
+  <!-- Half-edge dimensions. -->
+  <line x1="340" y1="307" x2="340" y2="322" class="extension"/>
+  <line x1="430" y1="307" x2="430" y2="322" class="extension"/>
+  <line x1="343" y1="307" x2="427" y2="307" class="dimension"/>
+  <text x="368" y="295" class="math-small">L<tspan baseline-shift="sub" font-size="12">ca</tspan><tspan baseline-shift="super" font-size="12">+</tspan></text>
+
+  <line x1="448" y1="330" x2="463" y2="330" class="extension"/>
+  <line x1="448" y1="410" x2="463" y2="410" class="extension"/>
+  <line x1="463" y1="333" x2="463" y2="407" class="dimension"/>
+  <text x="471" y="350" class="math-small">L<tspan baseline-shift="sub" font-size="12">ca</tspan><tspan baseline-shift="super" font-size="12">−</tspan></text>
+
+  <!-- Incident-cell brace and topology note. -->
+  <path d="M 89 104 h -18 v 532 h 18" fill="none" stroke="#596168" stroke-width="1.5"/>
+  <text x="36" y="286" class="small" transform="rotate(-90 36 286)">local patch around the master node</text>
+  <text x="92" y="704" class="caption">Highlighted cells touching a form C(a); the lower fine cells touch h but do not enter the solve at a.</text>
+
+  <!-- Weighted hanging-flux condensation panel. -->
+  <rect x="805" y="80" width="420" height="665" rx="4" class="panel"/>
+  <text x="835" y="118" class="panel-title">Flux balance assigned to master a</text>
+  <line x1="835" y1="134" x2="1195" y2="134" class="divider"/>
+
+  <circle cx="842" cy="167" r="15" class="step"/>
+  <text x="842" y="167" class="step-text">1</text>
+  <text x="872" y="173" class="small">Direct master-node flux:</text>
+  <text x="842" y="213" class="math-small">F<tspan baseline-shift="sub" font-size="12">a</tspan><tspan baseline-shift="super" font-size="12">Π</tspan> = Σ<tspan baseline-shift="sub" font-size="12">c∈C(a)</tspan> Π<tspan baseline-shift="sub" font-size="12">ca</tspan> G<tspan baseline-shift="sub" font-size="12">ca</tspan></text>
+  <text x="842" y="248" class="math-small">F<tspan baseline-shift="sub" font-size="12">a</tspan><tspan baseline-shift="super" font-size="12">Π</tspan> = b<tspan baseline-shift="sub" font-size="12">a</tspan> − M<tspan baseline-shift="sub" font-size="12">a</tspan>U<tspan baseline-shift="sub" font-size="12">a</tspan></text>
+
+  <circle cx="842" cy="294" r="15" class="step"/>
+  <text x="842" y="294" class="step-text">2</text>
+  <text x="872" y="300" class="small">Split the linear hanging pressure:</text>
+  <text x="842" y="337" class="math-small">π<tspan baseline-shift="sub" font-size="12">ch,a</tspan> = P<tspan baseline-shift="sub" font-size="12">c</tspan> − Z<tspan baseline-shift="sub" font-size="12">c</tspan>(U<tspan baseline-shift="sub" font-size="12">a</tspan> − U<tspan baseline-shift="sub" font-size="12">c</tspan>) · n<tspan baseline-shift="sub" font-size="12">ch</tspan></text>
+  <text x="842" y="372" class="math-small">π<tspan baseline-shift="sub" font-size="12">ch,b</tspan> = P<tspan baseline-shift="sub" font-size="12">c</tspan> − Z<tspan baseline-shift="sub" font-size="12">c</tspan>(U<tspan baseline-shift="sub" font-size="12">b</tspan> − U<tspan baseline-shift="sub" font-size="12">c</tspan>) · n<tspan baseline-shift="sub" font-size="12">ch</tspan></text>
+  <text x="842" y="407" class="math-small">π<tspan baseline-shift="sub" font-size="12">ch</tspan> = ½π<tspan baseline-shift="sub" font-size="12">ch,a</tspan> + ½π<tspan baseline-shift="sub" font-size="12">ch,b</tspan></text>
+
+  <circle cx="842" cy="456" r="15" class="step"/>
+  <text x="842" y="456" class="step-text">3</text>
+  <text x="872" y="462" class="small">Balance a using only its own velocity:</text>
+  <rect x="842" y="483" width="345" height="58" fill="#ffffff" stroke="#c43d3d" stroke-width="2"/>
+  <text x="856" y="519" class="math">F<tspan baseline-shift="sub" font-size="13">a</tspan><tspan baseline-shift="super" font-size="13">Π</tspan> + ½ Σ<tspan baseline-shift="sub" font-size="13">h∈H(a)</tspan> F<tspan baseline-shift="sub" font-size="13">h,a</tspan><tspan baseline-shift="super" font-size="13">π</tspan> = 0</text>
+
+  <line x1="835" y1="560" x2="1195" y2="560" class="divider"/>
+  <text x="835" y="590" class="panel-title">Independent 2 × 2 solve at a</text>
+  <rect x="842" y="607" width="345" height="72" fill="#ffffff" stroke="#0b57d0" stroke-width="2"/>
+  <text x="866" y="637" class="math-small">(M<tspan baseline-shift="sub" font-size="12">a</tspan> + ½ Σ<tspan baseline-shift="sub" font-size="12">h∈H(a)</tspan>M<tspan baseline-shift="sub" font-size="12">h</tspan>)U<tspan baseline-shift="sub" font-size="12">a</tspan></text>
+  <text x="866" y="667" class="math-small">= b<tspan baseline-shift="sub" font-size="12">a</tspan> + ½ Σ<tspan baseline-shift="sub" font-size="12">h∈H(a)</tspan>b<tspan baseline-shift="sub" font-size="12">h</tspan></text>
+  <text x="842" y="710" class="caption">No velocity from b appears in the solve for a.</text>
+  <text x="842" y="733" class="caption">The two half-branches recover the physical hanging flux.</text>
+
+  <!-- Compact legend. -->
+  <circle cx="100" cy="742" r="8" class="master"/>
+  <text x="118" y="748" class="caption">master a, b</text>
+  <circle cx="225" cy="742" r="8" class="hanging"/>
+  <text x="243" y="748" class="caption">hanging h</text>
+  <line x1="348" y1="742" x2="380" y2="742" class="half-edge"/>
+  <text x="391" y="748" class="caption">Π<tspan baseline-shift="sub" font-size="11">ca</tspan></text>
+  <line x1="448" y1="742" x2="480" y2="742" class="h-half-edge"/>
+  <text x="491" y="748" class="caption">π<tspan baseline-shift="sub" font-size="11">ch</tspan></text>
+</svg>
