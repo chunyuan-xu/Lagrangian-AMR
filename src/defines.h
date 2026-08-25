@@ -4,6 +4,7 @@
 #include "io/config_parser.h"
 #include "core/simulation_config.h"
 #include "Variable.h"
+#include "nodal/nodal_storage.h"
 
 enum ProblemNo
 {
@@ -440,6 +441,7 @@ typedef struct quad_data
 
 	int face_neighbors[2 * CNDIM];    
 	int face_num;
+	Nodal::CellNodalData nodal;
 }quad_data_t;  
 
 

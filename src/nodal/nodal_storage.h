@@ -17,7 +17,7 @@ enum class NodalRole : std::uint8_t {
 	Invalid = 0,
 	Local = 1,
 	Master = 2,
-	Hanging = 3
+	HangingRole = 3
 };
 
 enum class StagePhase : std::uint8_t {
