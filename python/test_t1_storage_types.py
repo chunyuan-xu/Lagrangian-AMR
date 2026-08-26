@@ -29,6 +29,7 @@ static_assert(sizeof(Nodal::Vec2Storage) == 16, "Vec2Storage size");
 static_assert(sizeof(Nodal::Mat2Storage) == 32, "Mat2Storage size");
 static_assert(sizeof(Nodal::StageStamp) == 24, "StageStamp size");
 static_assert(sizeof(Nodal::EdgeSegmentGeometry) == 40, "EdgeSegmentGeometry size");
+static_assert(sizeof(Nodal::BoundaryRecord) == 40, "BoundaryRecord size");
 static_assert(sizeof(Nodal::FaceData) == 88, "FaceData size");
 static_assert(sizeof(Nodal::CellMasterContribution) == 192, "master size");
 static_assert(sizeof(Nodal::CellHangingContribution) == 192, "hanging size");
@@ -36,12 +37,13 @@ static_assert(sizeof(Nodal::AggregatedHangingContribution) == 192, "aggregated s
 static_assert(sizeof(Nodal::CondensedMasterContribution) == 192, "condensed size");
 static_assert(sizeof(Nodal::MasterSolveState) == 64, "solve state size");
 static_assert(sizeof(Nodal::EvaluatedCellFlux) == 160, "evaluated flux size");
-static_assert(sizeof(Nodal::CellNodalData) == 1176, "CellNodalData size");
+static_assert(sizeof(Nodal::CellNodalData) == 1336, "CellNodalData size");
 
 static_assert(RawEligible<Nodal::Vec2Storage>::value, "Vec2Storage raw");
 static_assert(RawEligible<Nodal::Mat2Storage>::value, "Mat2Storage raw");
 static_assert(RawEligible<Nodal::StageStamp>::value, "StageStamp raw");
 static_assert(RawEligible<Nodal::EdgeSegmentGeometry>::value, "segment raw");
+static_assert(RawEligible<Nodal::BoundaryRecord>::value, "BoundaryRecord raw");
 static_assert(RawEligible<Nodal::FaceData>::value, "FaceData raw");
 static_assert(RawEligible<Nodal::CellMasterContribution>::value, "master raw");
 static_assert(RawEligible<Nodal::CellHangingContribution>::value, "hanging raw");

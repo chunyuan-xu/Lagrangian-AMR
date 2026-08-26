@@ -59,7 +59,7 @@ static_assert(sizeof(CCorner_data) == 208, "CCorner_data size changed");
 static_assert(sizeof(CEdge_data) == 4, "CEdge_data size changed");
 static_assert(sizeof(ParentBounInfo) == 104, "ParentBounInfo size changed");
 static_assert(sizeof(CVariable) == 2992, "CVariable size changed");
-static_assert(sizeof(quad_data_t) == 7072, "quad_data_t size changed");
+static_assert(sizeof(quad_data_t) == 7232, "quad_data_t size changed");
 static_assert(alignof(quad_data_t) == 8, "quad_data_t alignment changed");
 
 static_assert(offsetof(quad_data_t, m_cndata) == 0, "m_cndata offset changed");
@@ -94,7 +94,7 @@ def main():
     summary = {
         "schema": "lagrangian-amr.micro-gate.raw-abi.v1",
         "started_at": datetime.now().astimezone().isoformat(),
-        "assertion_count": 31,
+        "assertion_count": 32,
         "fixture_count": 12,
         "negative_fixture_rejected": True,
         "strict_cxx14_raw_storage_lifetime_proved": False,

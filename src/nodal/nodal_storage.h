@@ -56,6 +56,16 @@ struct EdgeSegmentGeometry {
 	double endpoint_weights[2];
 };
 
+struct BoundaryRecord {
+	// Legacy boundary type/value plus deterministic constraint order.
+	std::uint8_t type;
+	std::uint8_t constraint_order[4];
+	std::uint8_t reserved[3];
+	double value;
+	Vec2Storage normal;
+	double length;
+};
+
 struct FaceData {
 	std::uint8_t flags;
 	std::uint8_t reserved[3];
@@ -96,6 +106,7 @@ struct EvaluatedCellFlux {
 struct CellNodalData {
 	StageStamp stage;
 	FaceData faces[4];
+	BoundaryRecord boundaries[4];
 	CellMasterContribution master;
 	CellHangingContribution hanging;
 	CondensedMasterContribution condensed;
@@ -119,6 +130,11 @@ inline void reset_storage(Mat2Storage &value)
 }
 
 inline void reset_storage(EdgeSegmentGeometry &value)
+{
+	std::memset(&value, 0, sizeof(value));
+}
+
+inline void reset_storage(BoundaryRecord &value)
 {
 	std::memset(&value, 0, sizeof(value));
 }
