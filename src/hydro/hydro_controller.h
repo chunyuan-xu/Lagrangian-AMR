@@ -26,6 +26,7 @@ void MatrixAssemble(p4est_t *p4est, GhostSession &session);
 void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p4est, GhostSession &session);
 void ComputeCornerNodeVelocity(p4est_t *p4est, GhostSession &session);
 void ComputeCornerAndEdgeForce(p4est_t *p4est);
+void MirrorNodalBoundary(p4est_t *p4est);
 
 
 
@@ -312,6 +313,21 @@ void CalculateCornerRcpLcpNcp(p4est_t *p4est)
 		NULL);
 }
 
+void MirrorNodalBoundary(p4est_t *p4est)
+{
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
+	p4est_iterate(p4est,
+		NULL,
+		(void*)p4est_data,
+		HydroCallbacks::quadrant_mirror_boundary_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+}
+
 void ComputeDivergence(p4est_t *p4est)
 {
 	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_divergence_callback);
@@ -341,6 +357,7 @@ void advance_single_stage(p4est_t * p4est, GhostSession &session)
 
 		HydroController::CalculateCornerRcpLcpNcp(p4est);
 		trace_target_snapshot(p4est, "AFTER_RCP");
+		HydroController::MirrorNodalBoundary(p4est);
 		session.exchange();
 
 

@@ -6,6 +6,7 @@
 #include "mesh/ghost_context.h"
 #include "physics/corner_solve.h"
 #include "hydro/parent_edge_force.h"
+#include "nodal/boundary_mirror_runtime.h"
 
 // M8.2: HydroCallbacks — hydro-domain quadrant callbacks stripped from main.cpp.
 
@@ -955,6 +956,16 @@ void quadrant_get_BYD_callback(p4est_iter_volume_info_t *info, void *user_data)
 		cndata[2].hdata[CHalf_edge_data::cside::minus].BYDVal = p4est_data->TopBounVal;
 
 		edata[quad_data_t::EnumEdge::UP].EdgeType = p4est_data->TopBoun;
+	}
+}
+void quadrant_mirror_boundary_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	(void)user_data;
+	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
+	Nodal::BoundaryMirrorError err = Nodal::mirror_legacy_boundary_to_faces(*data);
+	if (err.failed) {
+		P4EST_GLOBAL_PRODUCTIONF("ERROR: L2 boundary mirror failed for local leaf: %s\n",
+			err.reason ? err.reason : "unknown");
 	}
 }
 void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t *info, void *user_data)
