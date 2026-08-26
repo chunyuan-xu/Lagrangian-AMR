@@ -28,6 +28,7 @@ void ComputeCornerNodeVelocity(p4est_t *p4est, GhostSession &session);
 void ComputeCornerAndEdgeForce(p4est_t *p4est);
 void MirrorNodalBoundary(p4est_t *p4est);
 void MirrorNodalGeometry(p4est_t *p4est);
+void InvalidateNodalStamps(p4est_t *p4est);
 void StampNodalStage(p4est_t *p4est, GhostSession &session,
 	std::uint16_t sub_stage, Nodal::StagePhase phase);
 
@@ -367,6 +368,21 @@ void StampNodalStage(p4est_t *p4est, GhostSession &session,
 		NULL);
 }
 
+void InvalidateNodalStamps(p4est_t *p4est)
+{
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
+	p4est_iterate(p4est,
+		NULL,
+		(void*)p4est_data,
+		HydroCallbacks::quadrant_invalidate_stage_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+}
+
 void ComputeDivergence(p4est_t *p4est)
 {
 	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_divergence_callback);
@@ -396,6 +412,7 @@ void advance_single_stage(p4est_t * p4est, GhostSession &session)
 
 		HydroController::CalculateCornerRcpLcpNcp(p4est);
 		trace_target_snapshot(p4est, "AFTER_RCP");
+		HydroController::InvalidateNodalStamps(p4est);
 		HydroController::MirrorNodalBoundary(p4est);
 		session.exchange();
 

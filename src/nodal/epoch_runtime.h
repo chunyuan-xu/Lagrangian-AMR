@@ -30,6 +30,11 @@ inline void stamp_stage_reset(quad_data_t &data, const EpochContext &ctx)
 	stamp_current(data.nodal.stage, ctx);
 }
 
+inline void invalidate_stage_reset(quad_data_t &data)
+{
+	invalidate_stamp(data.nodal.stage);
+}
+
 inline EpochError validate_stage_reset(const quad_data_t &data,
 	const EpochContext &ctx)
 {

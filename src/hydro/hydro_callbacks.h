@@ -990,6 +990,12 @@ void quadrant_stage_reset_callback(p4est_iter_volume_info_t *info, void *user_da
 	}
 	Nodal::stamp_stage_reset(*data, context->ctx);
 }
+void quadrant_invalidate_stage_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	(void)user_data;
+	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
+	Nodal::invalidate_stage_reset(*data);
+}
 void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
