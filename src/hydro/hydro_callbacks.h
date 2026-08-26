@@ -1003,6 +1003,20 @@ void quadrant_write_local_master_callback(p4est_iter_volume_info_t *info, void *
 	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
 	Nodal::write_cell_local_master(*data);
 }
+void quadrant_validate_stage_callback(p4est_iter_volume_info_t *info, void *user_data)
+{
+	Nodal::StageResetContext *context = static_cast<Nodal::StageResetContext *>(user_data);
+	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
+	if (context == NULL) {
+		P4EST_GLOBAL_PRODUCTIONF("ERROR: S2c stage validation context missing\n");
+		return;
+	}
+	Nodal::EpochError err = Nodal::validate_stage_reset(*data, context->ctx);
+	if (err.failed) {
+		P4EST_GLOBAL_PRODUCTIONF("ERROR: S2c local stamp invalid after publication: %s\n",
+			err.reason ? err.reason : "unknown");
+	}
+}
 void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;

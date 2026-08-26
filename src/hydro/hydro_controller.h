@@ -30,6 +30,8 @@ void MirrorNodalBoundary(p4est_t *p4est);
 void MirrorNodalGeometry(p4est_t *p4est);
 void WriteNodalLocalMaster(p4est_t *p4est);
 void InvalidateNodalStamps(p4est_t *p4est);
+void ValidateNodalStamps(p4est_t *p4est, GhostSession &session,
+	std::uint16_t sub_stage, Nodal::StagePhase phase);
 void StampNodalStage(p4est_t *p4est, GhostSession &session,
 	std::uint16_t sub_stage, Nodal::StagePhase phase);
 
@@ -399,6 +401,27 @@ void WriteNodalLocalMaster(p4est_t *p4est)
 		NULL);
 }
 
+void ValidateNodalStamps(p4est_t *p4est, GhostSession &session,
+	std::uint16_t sub_stage, Nodal::StagePhase phase)
+{
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
+	Nodal::StageResetContext context;
+	context.ctx = Nodal::make_stage_context(*p4est_data,
+		static_cast<std::uint64_t>(session.generation()),
+		static_cast<std::uint64_t>(session.topology_version()),
+		sub_stage, phase);
+	p4est_iterate(p4est,
+		NULL,
+		&context,
+		HydroCallbacks::quadrant_validate_stage_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+}
+
 void ComputeDivergence(p4est_t *p4est)
 {
 	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_divergence_callback);
@@ -439,6 +462,7 @@ void advance_single_stage(p4est_t * p4est, GhostSession &session)
 		HydroController::WriteNodalLocalMaster(p4est);
 		HydroController::StampNodalStage(p4est, session, 0, Nodal::StagePhase::Assemble);
 		session.exchange();
+		HydroController::ValidateNodalStamps(p4est, session, 0, Nodal::StagePhase::Assemble);
 
 
 		const SolverGate::CoordinateType coordinate_type =
