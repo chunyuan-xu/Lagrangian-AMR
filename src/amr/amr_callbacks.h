@@ -1255,6 +1255,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 
 
 		parent_data = (quad_data_t *)incoming[0]->p.user_data;
+		Nodal::reset_storage(parent_data->nodal);
 		child_data1 = (quad_data_t *)outgoing[0]->p.user_data;
 		child_data2 = (quad_data_t *)outgoing[1]->p.user_data;
 		child_data3 = (quad_data_t *)outgoing[2]->p.user_data;
