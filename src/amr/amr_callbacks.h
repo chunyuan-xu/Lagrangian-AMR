@@ -10,6 +10,7 @@
 #include "amr/amr_transfer.h"
 #include "amr/amr_criteria.h"
 #include "core/trace.h"
+#include "nodal/epoch_runtime.h"
 
 // M8.1: AMRCallbacks — AMR-domain quadrant callbacks stripped from main.cpp.
 // Each is a pure per-quadrant function over the p4est iterate context.
@@ -1256,6 +1257,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 
 		parent_data = (quad_data_t *)incoming[0]->p.user_data;
 		Nodal::reset_storage(parent_data->nodal);
+		Nodal::invalidate_stage_reset(*parent_data);
 		child_data1 = (quad_data_t *)outgoing[0]->p.user_data;
 		child_data2 = (quad_data_t *)outgoing[1]->p.user_data;
 		child_data3 = (quad_data_t *)outgoing[2]->p.user_data;
@@ -1280,6 +1282,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 		{
 			child_data = (quad_data_t *)incoming[i]->p.user_data;
 			Nodal::reset_storage(child_data->nodal);
+			Nodal::invalidate_stage_reset(*child_data);
 
 			p4est_qcoord_t qx = incoming[i]->x;
 			p4est_qcoord_t qy = incoming[i]->y;
