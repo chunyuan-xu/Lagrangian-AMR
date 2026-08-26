@@ -28,6 +28,8 @@ void ComputeCornerNodeVelocity(p4est_t *p4est, GhostSession &session);
 void ComputeCornerAndEdgeForce(p4est_t *p4est);
 void MirrorNodalBoundary(p4est_t *p4est);
 void MirrorNodalGeometry(p4est_t *p4est);
+void StampNodalStage(p4est_t *p4est, GhostSession &session,
+	std::uint16_t sub_stage, Nodal::StagePhase phase);
 
 
 
@@ -344,6 +346,27 @@ void MirrorNodalGeometry(p4est_t *p4est)
 		NULL);
 }
 
+void StampNodalStage(p4est_t *p4est, GhostSession &session,
+	std::uint16_t sub_stage, Nodal::StagePhase phase)
+{
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
+	Nodal::StageResetContext context;
+	context.ctx = Nodal::make_stage_context(*p4est_data,
+		static_cast<std::uint64_t>(session.generation()),
+		static_cast<std::uint64_t>(session.topology_version()),
+		sub_stage, phase);
+	p4est_iterate(p4est,
+		NULL,
+		&context,
+		HydroCallbacks::quadrant_stage_reset_callback,
+		NULL,
+#ifdef  P4_TO_P8
+		NULL,
+
+#endif
+		NULL);
+}
+
 void ComputeDivergence(p4est_t *p4est)
 {
 	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_divergence_callback);
@@ -380,6 +403,7 @@ void advance_single_stage(p4est_t * p4est, GhostSession &session)
 		AMRCallbacks::Get_AMR_BDY_info(p4est, session);
 		trace_target_snapshot(p4est, "AFTER_AMR_BDY");
 		HydroController::MirrorNodalGeometry(p4est);
+		HydroController::StampNodalStage(p4est, session, 0, Nodal::StagePhase::Assemble);
 		session.exchange();
 
 
