@@ -1278,6 +1278,7 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 		for (int i = 0; i < P4EST_CHILDREN; i++)
 		{
 			child_data = (quad_data_t *)incoming[i]->p.user_data;
+			Nodal::reset_storage(child_data->nodal);
 
 			p4est_qcoord_t qx = incoming[i]->x;
 			p4est_qcoord_t qy = incoming[i]->y;
