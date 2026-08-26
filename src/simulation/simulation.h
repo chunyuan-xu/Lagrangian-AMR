@@ -73,6 +73,7 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 				AMRCallbacks::Lagrangian_refine_err_estimate, AMRCallbacks::Lagrangian_coarsen_err_estimate,
 				AMRCallbacks::Lagrangian_replace_quads, AMRCallbacks::set_allowing_coarsening_tag,
 				IOCallbacks::StatTotalEnergyError);
+			HydroController::InvalidateNodalStamps(p4est);
 		}
 		//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");
 
@@ -82,6 +83,7 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 			&& p4est_data->current_time>p4est_data->refine_coarsen_time)
 		{
 			AMRController::execute_partition(p4est, ghost_session, allowcoarsening);
+			HydroController::InvalidateNodalStamps(p4est);
 		}
 
 
@@ -95,10 +97,12 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 			else {
 				ghost_session.initialize(p4est, P4EST_CONNECT_FULL);
 			}
+			HydroController::InvalidateNodalStamps(p4est);
 		}
 
 
 		AMRCallbacks::refresh_after_balance(p4est, ghost_session);
+		HydroController::InvalidateNodalStamps(p4est);
 		if (refresh_idempotence_check_enabled()) {
 			std::vector<unsigned char> first_refresh;
 			std::vector<unsigned char> second_refresh;
