@@ -374,12 +374,12 @@ void advance_single_stage(p4est_t * p4est, GhostSession &session)
 		HydroController::CalculateCornerRcpLcpNcp(p4est);
 		trace_target_snapshot(p4est, "AFTER_RCP");
 		HydroController::MirrorNodalBoundary(p4est);
-		HydroController::MirrorNodalGeometry(p4est);
 		session.exchange();
 
 
 		AMRCallbacks::Get_AMR_BDY_info(p4est, session);
 		trace_target_snapshot(p4est, "AFTER_AMR_BDY");
+		HydroController::MirrorNodalGeometry(p4est);
 		session.exchange();
 
 

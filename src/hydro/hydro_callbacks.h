@@ -973,7 +973,7 @@ void quadrant_mirror_face_geometry_callback(p4est_iter_volume_info_t *info, void
 {
 	(void)user_data;
 	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
-	Nodal::FaceGeometryMirrorError err = Nodal::mirror_legacy_regular_geometry_to_faces(*data);
+	Nodal::FaceGeometryMirrorError err = Nodal::mirror_legacy_geometry_to_faces(*data);
 	if (err.failed) {
 		P4EST_GLOBAL_PRODUCTIONF("ERROR: L3 face geometry mirror failed for local leaf: %s\n",
 			err.reason ? err.reason : "unknown");
