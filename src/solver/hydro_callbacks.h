@@ -7,6 +7,7 @@
 #include "alg.h"
 #include "amr/parent_edge_view.h"
 #include "hydro/divergence_kernel.h"
+#include "hydro/momentum_kernel.h"
 #include "hydro/volume_density_kernel.h"
 #include "physics/eos.h"
 #include "physics/physics_alg.h"
@@ -61,50 +62,13 @@ void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, void *use
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
-	AMRCallbacks::ParentEdgeView	parent_edges(*data);
 	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int					coordinate_type = p4est_data->coord_type;
 	int					scheme_type = p4est_data->Scheme_type;
-	CDoubleVector		SumFcp = CDoubleVector(0., 0.);
-	CDoubleVector		center_point;
-	double				m_alpha = 0.;
-	if (coordinate_type == p4est_data_t::MyCoordType::cylinder
-		&& scheme_type == p4est_data_t::MySchemeType::ControlVolume) {
-		m_alpha = 1.;
-	}
-	CDoubleVector m_baser = CDoubleVector(1., 0.);
-	for (int cnid = 0; cnid < CNDIM; cnid++)
-	{
-		if (scheme_type == p4est_data_t::MySchemeType::ControlVolume) 
-		{
-			SumFcp += m_vara->corner_vector(idcnFcp, cnid) + m_vara->corner_vector(idcnFluxRelaxed, cnid);
-		}
-	}
-
-	for (int eind = 0; eind < CNDIM; eind++)
-	{
-		if (scheme_type == p4est_data_t::MySchemeType::ControlVolume)
-		{
-			if (parent_edges.at(eind).IsParentChildBoun==true)
-			{
-				SumFcp += m_vara->corner_vector(ideFcp, eind) + parent_edges.at(eind).FluxRelaxed;
-			}
-		}
-	}
-
-	if (scheme_type == p4est_data_t::MySchemeType::ControlVolume)
-	{
-		m_vara->cell_vector(idCentroidVelo_lag) = m_vara->cell_vector(idCentroidVelo_half) -
-			p4est_data->dt_iter * SumFcp / m_vara->cell(idMass);
-	}
-	else if (scheme_type == p4est_data_t::MySchemeType::AreaWeighted)
-	{
-		CDoubleVector m_cell_coord[CNDIM];
-		for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_cur, i); }
-		center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
-		m_vara->cell_vector(idCentroidVelo_lag) = m_vara->cell_vector(idCentroidVelo_half) -
-			p4est_data->dt_iter * SumFcp / m_vara->cell(idMass) / center_point.x;
-	}
+	AMRCallbacks::ParentEdgeView	parent_edges(*data);
+	HydroCallbacks::update_momentum(
+		*m_vara, parent_edges, coordinate_type, scheme_type,
+		p4est_data->dt_iter);
 }
 
 void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void *user_data)

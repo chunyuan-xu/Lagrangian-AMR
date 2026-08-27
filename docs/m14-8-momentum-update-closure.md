@@ -8,18 +8,25 @@ parent-edge forces plus relaxed fluxes, then advances `idCentroidVelo_lag` from
 
 ## Migration Boundary
 
-The next step is to extract a pure momentum-update helper and migrate the
-callback.
+Implemented: a pure `HydroCallbacks::update_momentum(CVariable&,
+AMRCallbacks::ParentEdgeView&, int, int, double)` helper now owns the
+momentum update. `HydroPhases::quadrant_update_momentum_callback` delegates to
+it; no numerical formula changed.
+
+Added:
+
+- `src/hydro/momentum_kernel.h` — pure helper.
+- `python/test_m14_8_momentum_kernel.py` — focused micro-gate.
 
 ## Gate Closure
 
 ```text
 package: M14.8
-base commit: 2792d53
-focused verification: momentum update contract documented
-G0: reused from M14.7 clean build PASS
-G1: reused from M14.7 serial golden PASS
-G3: reused from M14.7 MPI golden PASS
+base commit: 6a26f96
+focused verification: momentum update kernel implemented and migrated
+G0: clean build PASS
+G1: serial golden PASS
+G3: MPI golden PASS
 param_restored: true
 reference hash: unchanged
 closure commit: this package's single HEAD commit
