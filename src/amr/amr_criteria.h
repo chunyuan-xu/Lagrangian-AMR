@@ -4,6 +4,7 @@
 #include <p4est.h>
 #include "amr/coarsen_family_policy.h"
 #include "amr/shock_front_policy.h"
+#include "amr/refine_decision_policy.h"
 #include "defines.h"
 #include "variable.h"
 #include "physics/eos.h"
@@ -47,22 +48,10 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	quad_data_t  *data = (quad_data_t *)q->p.user_data;
 	CVariable    *m_vara = (CVariable *)&data->m_vara;
-	DoubleCellVariableID idCPara = idCDensityGradient;
+	DoubleCellVariableID idCPara =
+		AMRCallbacks::refine_gradient_indicator_id(
+			p4est_data->refine_coarsen_enum);
 	int           level = q->level;
-
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idCPressureGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idCDensityGradient;
-		break;
-	case RefineCriteria::Distance:
-		break;
-	default:
-		break;
-	}
 
 	if (level < p4est_data->minus_level) {
 		return 1;

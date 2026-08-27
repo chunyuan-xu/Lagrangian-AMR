@@ -12,6 +12,7 @@
 #include "amr/parent_edge_scratch.h"
 #include "amr/refinement_variable_selector.h"
 #include "amr/gradient_kernels.h"
+#include "amr/refine_decision_policy.h"
 #include "core/trace.h"
 #include "nodal/epoch_runtime.h"
 #include "diagnostics/amr_transfer_trace.h"
@@ -899,14 +900,7 @@ quadrant_set_default_refining_tag_callback(p4est_iter_volume_info_t *info, void 
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 
-	CDoubleVector m_coord[CNDIM];
-	
-	for (int cnid = 0; cnid < CNDIM; cnid++)
-	{
-		m_coord[cnid] = m_vara->corner_vector(idcnCoords_lag, CNDIM - 1 - cnid);
-
-	}
-	int IsConcaveQuad = GeometryAlg::is_concave_quad(m_coord);
+	int IsConcaveQuad = default_refine_tag_value(*m_vara);
 	m_vara->int_cell(idAllowRefining) = IsConcaveQuad;
 
 	if (IsConcaveQuad < 0)
