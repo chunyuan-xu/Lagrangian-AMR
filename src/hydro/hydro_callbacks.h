@@ -7,6 +7,7 @@
 #include "amr/refinement_variable_selector.h"
 #include "physics/corner_solve.h"
 #include "hydro/parent_edge_force.h"
+#include "diagnostics/hydro_trace.h"
 #include "nodal/boundary_mirror_runtime.h"
 #include "nodal/epoch_runtime.h"
 #include "nodal/face_geometry_mirror_runtime.h"
@@ -457,22 +458,7 @@ void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info, void *
 		
 		if (PCInfo[k].IsParentChildBoun == true)
 		{
-			if (target_trace_enabled() && (p4est_data->current_step == 3 || p4est_data->current_step == 4)) {
-				char fname[256];
-				sprintf(fname, "edge_matrix_dbg_%d_%d.txt", info->p4est->mpisize, info->p4est->mpirank);
-				FILE* f_dbg = fopen(fname, "a");
-				if (f_dbg) {
-					if (info->p4est->mpisize == 1 && info->quadid == 397) {
-						fprintf(f_dbg, "STEP %d: SERIAL 397 found! quad->x=%d, quad->y=%d, k=%d, IsParentChildBoun=true\n",
-							p4est_data->current_step, info->quad->x, info->quad->y, k);
-					} else {
-						// For parallel, we just print everything for now to find the matching x and y
-						// Or just let's log any quadrant whose x and y matches a known suspicious value
-						// But for now, just print the serial 397 to see its x and y.
-					}
-					fclose(f_dbg);
-				}
-			}
+			Diagnostics::trace_parent_edge_matrix(info, k);
 			double Divergence = 0.;
 			CDoubleVector	LcpNcpPc, LcpNcp;
 			m_vara->corner(idReconstructDensity, k) = m_vara->cell(idDensity_cur);
