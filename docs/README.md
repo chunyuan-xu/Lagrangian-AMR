@@ -14,6 +14,8 @@ Lagrangian-AMR 是基于 p4est 四叉树自适应网格的二维拉格朗日流�
 - [`sedov-amr-efficiency-case.md`](sedov-amr-efficiency-case.md)：Sedov-AMR 效率收益典型算例（L4～L7、Distance 环带、t=1 串行基线）。
 - [`SKILL.md`](SKILL.md)：回归方法论、参数审计和重构工作约束。
 - [`refactoring-playbook.md`](refactoring-playbook.md)：重构方法论与铁律（制定新里程碑计划、推进细粒度重构时查阅）。
+- [`legacy-optimization-refactor-taskbook.md`](legacy-optimization-refactor-taskbook.md)：当前 legacy 求解器优化重构执行书（M10L～M16，DBGF 路线冻结）。
+- [`nodal-refactor-execution-taskbook.md`](nodal-refactor-execution-taskbook.md)：已暂停的 DBGF 节点求解器迁移任务书，保留供未来版本恢复。
 
 ## 重构历史（history/）
 
