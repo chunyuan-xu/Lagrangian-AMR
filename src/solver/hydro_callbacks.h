@@ -7,6 +7,7 @@
 #include "alg.h"
 #include "amr/parent_edge_view.h"
 #include "hydro/divergence_kernel.h"
+#include "hydro/energy_kernel.h"
 #include "hydro/momentum_kernel.h"
 #include "hydro/volume_density_kernel.h"
 #include "hydro/work_kernel.h"
@@ -87,42 +88,9 @@ void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void *user_
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
 	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
-
-	
-	m_vara->cell(idTotalEnergy_lag) = m_vara->cell(idTotalEnergy_half) - p4est_data->dt_iter * m_vara->cell(idTotalWork) / m_vara->cell(idMass);
-
-
-	double source = 0.;
-	if (p4est_data->which_case == ProblemNo::TaylorGreen)
-	{
-		source = p4est_data->dt_iter * 5.*M_PI / 8.*m_vara->cell(idVolume) *
-			(cos(3.*M_PI*m_vara->cell_vector(idCentroidCoord_lag).x)*cos(M_PI * m_vara->cell_vector(idCentroidCoord_lag).y) -
-				cos(M_PI*m_vara->cell_vector(idCentroidCoord_lag).x)*cos(3.*M_PI*m_vara->cell_vector(idCentroidCoord_lag).y)) / m_vara->cell(idMass);
-	}
-
-	if (m_vara->cell(idTotalEnergy_lag) > m_eps)
-	{
-	}
-	else
-	{
-
-		P4EST_GLOBAL_PRODUCTIONF("the total energy of quad %d is negative!\n", info->quadid);
-		std::abort();
-	}
-
-	
-	m_vara->cell(idInternalEnergy_lag) = m_vara->cell(idInternalEnergy_half) - p4est_data->dt_iter
-		* (m_vara->cell(idTotalWork) - m_vara->cell(idKineticVariation)) / m_vara->cell(idMass);
-	m_vara->cell(idInternalEnergy_lag) += source;
-	if (m_vara->cell(idInternalEnergy_lag) > m_eps)
-	{
-	}
-	else
-	{
-
-		P4EST_GLOBAL_PRODUCTIONF("the total energy of quad %d is negative!\n", info->quadid);
-		std::abort();
-	}
+	HydroCallbacks::update_energy(
+		*m_vara, p4est_data->dt_iter,
+		static_cast<int>(p4est_data->which_case), info->quadid);
 }
 
 void quadrant_update_EOS_callback(p4est_iter_volume_info_t *info, void *user_data)
