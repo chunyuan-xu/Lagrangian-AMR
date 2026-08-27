@@ -15,4 +15,12 @@ inline void reset_point_pi_constrained_parent(quad_data_t &data)
 	}
 }
 
+// M10L.4: transient-state reset for one ParentBounInfo slot. This helper is
+// intentionally not wired into any event yet; it only defines the reset
+// contract for FluxRelaxed so inactive reads are well-defined.
+inline void reset_parent_edge_scratch(ParentBounInfo &info)
+{
+	info.FluxRelaxed = CDoubleVector(0., 0.);
+}
+
 } // namespace AMRCallbacks
