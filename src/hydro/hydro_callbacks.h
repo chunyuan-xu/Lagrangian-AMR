@@ -21,6 +21,17 @@
 
 // M8.2: HydroCallbacks — hydro-domain quadrant callbacks stripped from main.cpp.
 
+// Forward declaration avoids a hydro_callbacks.h <-> amr_callbacks.h include
+// cycle while keeping this header self-contained for the symbols it calls.
+namespace AMRCallbacks {
+void get_hanging_edge_info_from_logical_position(
+	const int which_face, const p4est_qcoord_t qx1, const p4est_qcoord_t qy1,
+	const p4est_qcoord_t qx2, const p4est_qcoord_t qy2,
+	const p4est_qcoord_t length,
+	int which_corner[2], int which_side[2], int master_corner[2],
+	int unconstrained_master_corner[2]);
+}
+
 namespace HydroCallbacks {
 
 
