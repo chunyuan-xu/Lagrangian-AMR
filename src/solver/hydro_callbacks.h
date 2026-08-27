@@ -6,6 +6,7 @@
 #include "variable.h"
 #include "alg.h"
 #include "amr/parent_edge_view.h"
+#include "hydro/divergence_kernel.h"
 #include "physics/eos.h"
 #include "physics/physics_alg.h"
 
@@ -32,7 +33,8 @@ void quadrant_compute_divergence_callback(p4est_iter_volume_info_t *info, void *
 		cnCoord[k] = m_vara->corner_vector(idcnCoords_lag, k);
 		cnVelocity[k] = m_vara->corner_vector(idcnVelocity_lag, k);
 	}
-	m_vara->cell(idDivergence) = PhysicalAlg::CalculateDivergence(p4est_data->coord_type, cnCoord, cnVelocity);
+	m_vara->cell(idDivergence) = HydroCallbacks::compute_divergence(
+		p4est_data->coord_type, cnCoord, cnVelocity);
 }
 
 void quadrant_compute_soundspeed_callback(p4est_iter_volume_info_t *info, void *user_data)
