@@ -162,7 +162,7 @@ void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *info, v
 
 	CDoubleVector center_point;
 	center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
-	double distance;
+	double distance = 0.;
 
 	if (p4est_data->profiletype == p4est_data_t::DistanceProfileType::radiusType)
 	{
@@ -175,6 +175,12 @@ void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *info, v
 	else if (p4est_data->profiletype == p4est_data_t::DistanceProfileType::yType)
 	{
 		distance = fabs(center_point.y);
+	}
+	else
+	{
+		P4EST_GLOBAL_PRODUCTIONF("Unsupported distance profile type %d\n",
+			p4est_data->profiletype);
+		std::abort();
 	}
 	std::ofstream &distance_file = distance_profile_file();
 	distance_file << blank << blank << distance <<

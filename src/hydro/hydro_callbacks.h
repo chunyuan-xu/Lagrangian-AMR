@@ -429,7 +429,7 @@ void quadrant_compute_halftime_variable_callback(p4est_iter_volume_info_t *info,
 	}
 	else
 	{
-		P4EST_GLOBAL_PRODUCTIONF("The half time idinternalenergy is illegal\n", P4EST_DIM);
+		P4EST_GLOBAL_PRODUCTIONF("The half time internal energy is illegal\n");
 		abort();
 	}
 	m_vara->cell(idPressure_half) = PhysicalAlg::EquationOfState(m_vara->cell(idGamma), m_vara->cell(idDensity_half), m_vara->cell(idInternalEnergy_half));
@@ -438,7 +438,7 @@ void quadrant_compute_halftime_variable_callback(p4est_iter_volume_info_t *info,
 	}
 	else
 	{
-		P4EST_GLOBAL_PRODUCTIONF("The half time pressure is illegal\n", P4EST_DIM);
+		P4EST_GLOBAL_PRODUCTIONF("The half time pressure is illegal\n");
 		abort();
 	}
 }
