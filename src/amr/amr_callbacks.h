@@ -13,6 +13,7 @@
 #include "amr/refinement_variable_selector.h"
 #include "core/trace.h"
 #include "nodal/epoch_runtime.h"
+#include "diagnostics/amr_transfer_trace.h"
 
 // M8.1: AMRCallbacks — AMR-domain quadrant callbacks stripped from main.cpp.
 // Each is a pure per-quadrant function over the p4est iterate context.
@@ -1284,28 +1285,23 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 				}
 			}
 
-			FILE *f_dbg = NULL;
 			double px = 0.;
 			double py = 0.;
-			if (refine_trace_enabled()) {
+			Diagnostics::RefineTraceFile refine_trace(
+				p4est, parent_data, p4est_data->current_step);
+			if (refine_trace.enabled()) {
 				px = parent_data->m_vara.cell_vector(idCentroidCoord_cur).x;
 				py = parent_data->m_vara.cell_vector(idCentroidCoord_cur).y;
-				char fname[256];
-				sprintf(fname, "refine_dbg_%d_%d.txt", p4est->mpisize, p4est->mpirank);
-				f_dbg = fopen(fname, "a");
-				if (f_dbg) {
-					fprintf(f_dbg, "REFINE_STEP_%d_PARENT at (%.6f, %.6f): parent SoundSpeed=%e, mass=%e, vol=%e\n",
-						p4est_data->current_step, px, py, parent_data->m_vara.cell(idSoundSpeed), parent_data->m_vara.cell(idMass), parent_data->m_vara.cell(idVolume));
-				}
 			}
 
 			for (int j = 0; j < idDoubleCellVariableNum; j++)
 			{
 
 				child_data->m_vara.cell(static_cast<DoubleCellVariableID>(j)) = parent_data->m_vara.cell(static_cast<DoubleCellVariableID>(j));
-				if (j == idSoundSpeed && f_dbg) {
-					fprintf(f_dbg, "REFINE_STEP_%d_CHILD at (%.6f, %.6f): child SoundSpeed=%e\n",
-						p4est_data->current_step, px, py, child_data->m_vara.cell(idSoundSpeed));
+				if (j == idSoundSpeed && refine_trace.enabled()) {
+					refine_trace.write_child(
+						p4est_data->current_step, px, py,
+						child_data->m_vara.cell(idSoundSpeed));
 				}
 				if (parent_data->m_vara.cell(idInternalEnergy_cur) > m_eps)
 				{
@@ -1315,9 +1311,6 @@ Lagrangian_replace_quads(p4est_t * p4est, p4est_topidx_t which_tree,
 					P4EST_GLOBAL_PRODUCTIONF("The cihldren internal energy is illegal in refining!\n");
 					abort();
 				}
-			}
-			if (f_dbg) {
-				fclose(f_dbg);
 			}
 			for (int j = idReconstructPressure; j < idDoubleCornerVariableNum; j++)
 			{
