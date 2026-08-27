@@ -11,6 +11,7 @@
 #include "hydro/corner_matrix_kernel.h"
 #include "hydro/corner_velocity_kernel.h"
 #include "hydro/parent_edge_matrix_kernel.h"
+#include "hydro/hanging_aggregate_kernel.h"
 #include "diagnostics/hydro_trace.h"
 #include "nodal/boundary_mirror_runtime.h"
 #include "nodal/epoch_runtime.h"
@@ -1225,12 +1226,15 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 			}
 
 
-			MatrixP = m_quad_data->m_vara.MarCnData[idcnMcp][m_which_corner[0]] +
-				m_quad_data_aside->m_vara.MarCnData[idcnMcp][m_which_corner[1]] +
-				m_quad_data_full->m_vara.MarCnData[ideMcp][parent_face_index];
-			RHS = m_quad_data->m_vara.corner_vector(idcnRHS, m_which_corner[0]) +
-				m_quad_data_aside->m_vara.corner_vector(idcnRHS, m_which_corner[1]) +
-				m_quad_data_full->m_vara.corner_vector(ideRHS, parent_face_index);
+			const HangingAggregate aggregate = aggregate_hanging_matrix_rhs(
+				m_quad_data->m_vara.MarCnData[idcnMcp][m_which_corner[0]],
+				m_quad_data->m_vara.corner_vector(idcnRHS, m_which_corner[0]),
+				m_quad_data_aside->m_vara.MarCnData[idcnMcp][m_which_corner[1]],
+				m_quad_data_aside->m_vara.corner_vector(idcnRHS, m_which_corner[1]),
+				m_quad_data_full->m_vara.MarCnData[ideMcp][parent_face_index],
+				m_quad_data_full->m_vara.corner_vector(ideRHS, parent_face_index));
+			MatrixP = aggregate.matrix;
+			RHS = aggregate.rhs;
 			if (target_trace_enabled() && p4est_data->current_step == 3 &&
 				((is_trace_fine(quad) && is_trace_sibling(quad_aside)) ||
 				 (is_trace_sibling(quad) && is_trace_fine(quad_aside)))) {

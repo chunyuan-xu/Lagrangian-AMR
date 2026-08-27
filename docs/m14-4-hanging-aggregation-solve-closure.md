@@ -11,20 +11,30 @@ The hanging aggregation/solve phase includes:
   relaxed corrections;
 - ghost records are read-only inputs after the preceding exchange.
 
-## Migration Boundary
+## Implementation
 
-The next step is to extract the aggregation and constrained-solve algebra into
-pure helpers. This package records the ownership contract.
+Added `src/hydro/hanging_aggregate_kernel.h` with
+`HydroCallbacks::aggregate_hanging_matrix_rhs(...)` and migrated
+`quadrant_hanging_point_matrix_assemble_callback` to use it.
+
+Added `python/test_m14_4_hanging_aggregate_kernel.py` to fixture the kernel.
+
+## Focused Verification
+
+```text
+C:/msys64/ucrt64/bin/python.exe python/test_m14_4_hanging_aggregate_kernel.py --summary .tmp/mg-m14-4-hanging-aggregate-kernel.json
+MG-M14-4 PASS
+```
 
 ## Gate Closure
 
 ```text
 package: M14.4
 base commit: 41c8fcc
-focused verification: hanging aggregation/solve contract documented
-G0: reused from M14.3 clean build PASS
-G1: reused from M14.3 serial golden PASS
-G3: reused from M14.3 MPI golden PASS
+focused verification: MG-M14-4 PASS
+G0: make clean && make -j8 PASS; bin/AMR_Solver.exe present
+G1: serial_golden_summary.json status PASS (Noh, Sod, Sedov)
+G3: mpi_gate_summary.json status PASS (Sod 4-rank, Sedov 4-rank)
 param_restored: true
 reference hash: unchanged
 closure commit: this package's single HEAD commit
