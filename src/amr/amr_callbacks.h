@@ -10,6 +10,7 @@
 #include "amr/amr_transfer.h"
 #include "amr/amr_criteria.h"
 #include "amr/parent_edge_scratch.h"
+#include "amr/refinement_variable_selector.h"
 #include "core/trace.h"
 #include "nodal/epoch_runtime.h"
 
@@ -235,30 +236,16 @@ void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info, void *
 	p4est_iter_face_side_t *side[2];
 	sc_array_t				*sides = &(info->sides);
 	int				which_face;
-	DoubleCellVariableID idCPara;
-	DoubleEdgeVariableID idEPara;
 	int				m_which_corner[2], m_master_corner[2], 
 		m_unconstrained_master_corner[2], m_which_side[2];
 
 	if (sides->elem_count != 2) { return; }
 	P4EST_ASSERT(sides->elem_count == 2);
 
-	
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idPressure_cur;
-		idEPara = idEPressureGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idDensity_cur;
-		idEPara = idERhoGradient;
-		break;
-	case RefineCriteria::Distance:
-		return;
-	default:
-		break;
-	}
+	const RefinementVariableIds ids =
+		refinement_variable_ids(p4est_data->refine_coarsen_enum);
+	const DoubleCellVariableID idCPara = ids.source_cell;
+	const DoubleEdgeVariableID idEPara = ids.edge;
 
 	
 	for (int i = 0; i < 2; i++)
@@ -451,27 +438,10 @@ void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *info, void
 	CVariable		*m_vara=(CVariable		*)&data->m_vara;
 	p4est_t			*p4est = info->p4est;
 
-	DoubleCellVariableID idCPara;
-	DoubleEdgeVariableID idEPara;
-	DoubleCornerVariableID idCNPara;
-	
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idCPressureGradient;
-		idEPara = idEPressureGradient;
-		idCNPara = idCNPressGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idCDensityGradient;
-		idEPara = idERhoGradient;
-		idCNPara = idCNRhoGradient;
-		break;
-	case RefineCriteria::Distance:
-		return;
-	default:
-		break;
-	}
+	const RefinementVariableIds ids =
+		refinement_variable_ids(p4est_data->refine_coarsen_enum);
+	const DoubleCellVariableID idCPara = ids.gradient_cell;
+	const DoubleEdgeVariableID idEPara = ids.edge;
 
 	m_vara->cell(idCPara) = 0.;
 

@@ -4,6 +4,7 @@
 #include "core/trace.h"
 #include "variable.h"
 #include "mesh/ghost_context.h"
+#include "amr/refinement_variable_selector.h"
 #include "physics/corner_solve.h"
 #include "hydro/parent_edge_force.h"
 #include "nodal/boundary_mirror_runtime.h"
@@ -1427,27 +1428,11 @@ quadrant_set_gradient_zero_estimate_callback(p4est_iter_volume_info_t *info, voi
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 	p4est_t			*p4est = info->p4est;
 
-	DoubleCellVariableID idCPara;
-	DoubleEdgeVariableID idEPara;
-	DoubleCornerVariableID idCNPara;
-
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idCPressureGradient;
-		idEPara = idEPressureGradient;
-		idCNPara = idCNPressGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idCDensityGradient;
-		idEPara = idERhoGradient;
-		idCNPara = idCNRhoGradient;
-		break;
-	case RefineCriteria::Distance:
-		return;
-	default:
-		break;
-	}
+	const AMRCallbacks::RefinementVariableIds ids =
+		AMRCallbacks::refinement_variable_ids(p4est_data->refine_coarsen_enum);
+	const DoubleCellVariableID idCPara = ids.gradient_cell;
+	const DoubleEdgeVariableID idEPara = ids.edge;
+	const DoubleCornerVariableID idCNPara = ids.corner;
 
 
 	m_vara->cell(idCPara) = 0.;
@@ -1470,29 +1455,16 @@ void quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, vo
 	sc_array_t	*sides = &(info->sides);
 	int	which_corner, cnid, is_ghost, is_ghost_aside, m_size;
 	int			quadid, quadid_aside;
-	DoubleCellVariableID idCPara;
-	DoubleCornerVariableID idCNPara;
 	quad_data_t		*m_data, *m_data_aside;
 	CVariable		*m_vara, *m_vara_aside;
 	GhostCallbackContext *context =
 		static_cast<GhostCallbackContext *>(user_data);
 	double			ParaGradient;
 
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idPressure_cur;
-		idCNPara = idCNPressGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idDensity_cur;
-		idCNPara = idCNRhoGradient;
-		break;
-	case RefineCriteria::Distance:
-		return;
-	default:
-		break;
-	}
+	const AMRCallbacks::RefinementVariableIds ids =
+		AMRCallbacks::refinement_variable_ids(p4est_data->refine_coarsen_enum);
+	const DoubleCellVariableID idCPara = ids.source_cell;
+	const DoubleCornerVariableID idCNPara = ids.corner;
 
 	m_size = int(sides->elem_count);
 
