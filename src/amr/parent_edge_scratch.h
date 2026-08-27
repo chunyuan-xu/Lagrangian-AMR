@@ -41,4 +41,12 @@ inline void reset_refine_child_parent_edge_scratch(quad_data_t &data)
 	}
 }
 
+// M10L.7: apply the same scratch reset to coarsen-created parents.
+inline void reset_coarsen_parent_parent_edge_scratch(quad_data_t &data)
+{
+	for (int eind = 0; eind < CNDIM; ++eind) {
+		reset_parent_edge_scratch(data.m_pc_edge_data[eind]);
+	}
+}
+
 } // namespace AMRCallbacks
