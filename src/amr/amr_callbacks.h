@@ -447,7 +447,8 @@ void quadrant_cell_minmod_estimate_callback(p4est_iter_volume_info_t *info, void
 	
 	for (int i = 0; i < CNDIM; i++)
 	{
-		m_vara->cell(idCPara) = SC_MAX(m_vara->cell(idCPara), m_vara->edge(idEPara, i));
+		m_vara->cell(idCPara) = reduce_max_edge_to_cell(
+			m_vara->cell(idCPara), m_vara->edge(idEPara, i));
 	}
 
 

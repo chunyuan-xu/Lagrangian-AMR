@@ -24,4 +24,15 @@ inline double hanging_gradient(double parent_para, double child_para,
 	return std::fabs(parent_para - child_para) / dist;
 }
 
+// M13.3: pure max reductions.
+inline double reduce_max_edge_to_cell(double cell, double edge)
+{
+	return edge > cell ? edge : cell;
+}
+
+inline double reduce_max_corner_neighbor(double corner, double neighbor)
+{
+	return neighbor > corner ? neighbor : corner;
+}
+
 } // namespace AMRCallbacks

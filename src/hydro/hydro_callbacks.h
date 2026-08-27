@@ -5,6 +5,7 @@
 #include "variable.h"
 #include "mesh/ghost_context.h"
 #include "amr/refinement_variable_selector.h"
+#include "amr/gradient_kernels.h"
 #include "physics/corner_solve.h"
 #include "hydro/parent_edge_force.h"
 #include "diagnostics/hydro_trace.h"
@@ -1499,7 +1500,8 @@ void quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, vo
 				"AMR corner gradient");
 			ParaGradient = abs(m_vara->cell(idCPara) - m_vara_aside->cell(idCPara)) / m_dist;
 			if (!is_ghost) {
-				m_vara->corner(idCNPara, cnid) = SC_MAX(m_vara->corner(idCNPara, cnid), ParaGradient);
+				m_vara->corner(idCNPara, cnid) = AMRCallbacks::reduce_max_corner_neighbor(
+					m_vara->corner(idCNPara, cnid), ParaGradient);
 			}
 		}
 	}
