@@ -68,7 +68,7 @@ void RiemannSolver(p4est_t * p4est, GhostSession &session)
 
 	for (int iter_num = 0; iter_num < fixed_iter_num; iter_num++)
 	{
-		g_trace_riemann_iter = iter_num;
+		trace_riemann_iter() = iter_num;
 
 		RiemannPhases::run_iteration(p4est, session,
 			MatrixAssemble, ComputeCornerNodeVelocity,

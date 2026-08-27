@@ -106,7 +106,7 @@ void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *info, vo
 		if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_parent(info->quad) && (k == 0 || k == 3)) {
 			FILE *f = open_corner2_trace(info->p4est);
 			if (f) {
-				fprintf(f, "TRACE stage=LOCAL_CORNER iter=%d corner=%d", g_trace_riemann_iter, k);
+				fprintf(f, "TRACE stage=LOCAL_CORNER iter=%d corner=%d", trace_riemann_iter(), k);
 				trace_matrix(f, "idcnMcp", m_vara->MarCnData[idcnMcp][k]);
 				trace_vector(f, "idcnRHS", m_vara->corner_vector(idcnRHS, k));
 				trace_vector(f, "velocity_in", m_vara->corner_vector(idcnVelocity_lag, k));
@@ -221,7 +221,7 @@ void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, void *use
 			 (is_trace_parent(side[i]->quad) && (cnid == 0 || cnid == 3)))) {
 			FILE *f = open_corner2_trace(info->p4est);
 			if (f) {
-				fprintf(f, "TRACE stage=CORNER_SOLVE iter=%d cell=(%d,%d,L%d,c%d) hanging=%d", g_trace_riemann_iter,
+				fprintf(f, "TRACE stage=CORNER_SOLVE iter=%d cell=(%d,%d,L%d,c%d) hanging=%d", trace_riemann_iter(),
 					side[i]->quad->x, side[i]->quad->y, side[i]->quad->level, cnid, m_data->points[cnid].IsHanging ? 1 : 0);
 				trace_matrix(f, "MatrixP", m_data->points[cnid].MatrixP);
 				trace_vector(f, "RHS", m_data->points[cnid].RHS);
@@ -495,7 +495,7 @@ void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info, void *
 			if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_parent(info->quad)) {
 				FILE *f = open_corner2_trace(info->p4est);
 				if (f) {
-					fprintf(f, "TRACE stage=PARENT_EDGE iter=%d face=%d is_pc=%d", g_trace_riemann_iter, k, PCInfo[k].IsParentChildBoun ? 1 : 0);
+					fprintf(f, "TRACE stage=PARENT_EDGE iter=%d face=%d is_pc=%d", trace_riemann_iter(), k, PCInfo[k].IsParentChildBoun ? 1 : 0);
 					trace_vector(f, "hanging_in", PCInfo[k].Hanging_velocity);
 					fprintf(f, " L=(%.17e,%.17e)", PCInfo[k].Lcp[0], PCInfo[k].Lcp[1]);
 					trace_vector(f, "N0", PCInfo[k].Ncp[0]);
@@ -791,7 +791,7 @@ void quadrant_relaxed_hanging_solver_callback(p4est_iter_face_info_t *info, void
 				FILE *f = open_corner2_trace(info->p4est);
 				if (f) {
 					fprintf(f, "TRACE stage=HANGING_OVERRIDE iter=%d child0=(%d,%d,L%d,c%d,g%d) child1=(%d,%d,L%d,c%d,g%d) parent=(%d,%d,L%d,face%d,g%d)",
-						g_trace_riemann_iter, quad_child1->x, quad_child1->y, quad_child1->level, m_which_corner[0], side[i]->is.hanging.is_ghost[0] ? 1 : 0,
+						trace_riemann_iter(), quad_child1->x, quad_child1->y, quad_child1->level, m_which_corner[0], side[i]->is.hanging.is_ghost[0] ? 1 : 0,
 						quad_child2->x, quad_child2->y, quad_child2->level, m_which_corner[1], side[i]->is.hanging.is_ghost[1] ? 1 : 0,
 						quad_parent->x, quad_parent->y, quad_parent->level, parent_face_index, side[full_index]->is.full.is_ghost ? 1 : 0);
 					trace_vector(f, "master0", master_velocity[0]);
@@ -1346,7 +1346,7 @@ quadrant_hanging_point_matrix_assemble_callback(p4est_iter_face_info_t *info, vo
 				FILE *f = open_corner2_trace(info->p4est);
 				if (f) {
 					fprintf(f, "TRACE stage=HANGING_SUM iter=%d fine0=(%d,%d,L%d,c%d,g%d) fine1=(%d,%d,L%d,c%d,g%d) parent=(%d,%d,L%d,face%d,g%d)",
-						g_trace_riemann_iter, quad->x, quad->y, quad->level, m_which_corner[0], side[i]->is.hanging.is_ghost[0] ? 1 : 0,
+						trace_riemann_iter(), quad->x, quad->y, quad->level, m_which_corner[0], side[i]->is.hanging.is_ghost[0] ? 1 : 0,
 						quad_aside->x, quad_aside->y, quad_aside->level, m_which_corner[1], side[i]->is.hanging.is_ghost[1] ? 1 : 0,
 						quad_full->x, quad_full->y, quad_full->level, parent_face_index, side[full_index]->is.full.is_ghost ? 1 : 0);
 					trace_matrix(f, "fine0_M", m_quad_data->m_vara.MarCnData[idcnMcp][m_which_corner[0]]);
