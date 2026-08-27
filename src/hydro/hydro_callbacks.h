@@ -10,6 +10,7 @@
 #include "hydro/parent_edge_force.h"
 #include "hydro/corner_matrix_kernel.h"
 #include "hydro/corner_velocity_kernel.h"
+#include "hydro/parent_edge_matrix_kernel.h"
 #include "diagnostics/hydro_trace.h"
 #include "nodal/boundary_mirror_runtime.h"
 #include "nodal/epoch_runtime.h"
@@ -375,8 +376,6 @@ void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info, void *
 	CVariable		*m_vara = (CVariable		*)&data->m_vara;
 	ParentBounInfo	*PCInfo = (ParentBounInfo	*)&data->m_pc_edge_data;
 	p4est_data_t *p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
-	CDoubleVector DeltaU[CNDIM], RcpLcpNcpPc[CNDIM];
-	CDoubleMatrix  NcpPlusMatrix, NcpMinusMatrix;
 
 	for (int k = 0; k < CNDIM; k++)
 	{
@@ -384,25 +383,7 @@ void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info, void *
 		if (PCInfo[k].IsParentChildBoun == true)
 		{
 			Diagnostics::trace_parent_edge_matrix(info, k);
-			double Divergence = 0.;
-			CDoubleVector	LcpNcpPc, LcpNcp;
-			m_vara->corner(idReconstructDensity, k) = m_vara->cell(idDensity_cur);
-			m_vara->corner(idReconstructPressure, k) = m_vara->cell(idPressure_cur);
-			m_vara->corner_vector(idReconstructVelocity, k) = m_vara->cell_vector(idCentroidVelo_cur);
-			double Tc = 0.;
-			DeltaU[k] = PCInfo[k].Hanging_velocity - m_vara->corner_vector(idReconstructVelocity, k);
-			LcpNcp = PCInfo[k].Lcp[0] * PCInfo[k].Ncp[0] + PCInfo[k].Lcp[1] * PCInfo[k].Ncp[1];
-			LcpNcpPc = LcpNcp * m_vara->corner(idReconstructPressure, k);
-			Divergence = LcpNcpPc ^ DeltaU[k];
-			if (Divergence < -1e-10) { Tc = 1.44; }
-			PCInfo[k].Zcp = m_vara->corner(idReconstructDensity, k) * m_vara->cell(idSoundSpeed);
-			NcpPlusMatrix = GeometryAlg::DyadicProduct(PCInfo[k].Ncp[0], PCInfo[k].Ncp[0]);
-			NcpMinusMatrix = GeometryAlg::DyadicProduct(PCInfo[k].Ncp[1], PCInfo[k].Ncp[1]);
-			m_vara->MarCnData[ideMcp][k] = PCInfo[k].Zcp * PCInfo[k].Lcp[0] * NcpPlusMatrix
-				+ PCInfo[k].Zcp * PCInfo[k].Lcp[1] * NcpMinusMatrix;
-			m_vara->corner_vector(ideMcpUc, k) = GeometryAlg::MatrixDotVector(m_vara->MarCnData[ideMcp][k],
-				m_vara->corner_vector(idReconstructVelocity, k));
-			m_vara->corner_vector(ideRHS, k) = LcpNcpPc + m_vara->corner_vector(ideMcpUc, k);
+			build_parent_edge_matrix_rhs(*m_vara, PCInfo[k], k);
 			if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_parent(info->quad)) {
 				FILE *f = open_corner2_trace(info->p4est);
 				if (f) {
@@ -412,7 +393,6 @@ void quadrant_parent_edge_matrix_callback(p4est_iter_volume_info_t *info, void *
 					trace_vector(f, "N0", PCInfo[k].Ncp[0]);
 					trace_vector(f, "N1", PCInfo[k].Ncp[1]);
 					fprintf(f, " Z=%.17e", PCInfo[k].Zcp);
-					trace_vector(f, "delta_u", DeltaU[k]);
 					trace_matrix(f, "ideMcp", m_vara->MarCnData[ideMcp][k]);
 					trace_vector(f, "ideRHS", m_vara->corner_vector(ideRHS, k));
 					fprintf(f, "\n");

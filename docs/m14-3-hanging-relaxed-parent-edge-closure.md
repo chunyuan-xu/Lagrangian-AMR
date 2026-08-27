@@ -12,21 +12,30 @@ the hanging solve:
   `ideRHS`;
 - ghost children are read-only inputs after the preceding exchange.
 
-## Migration Boundary
+## Implementation
 
-The next step is to extract the parent-edge matrix algebra into a pure
-`build_parent_edge_matrix_rhs(...)` helper. This package records the
-input/output contract.
+Added `src/hydro/parent_edge_matrix_kernel.h` with
+`HydroCallbacks::build_parent_edge_matrix_rhs(...)` and migrated
+`quadrant_parent_edge_matrix_callback` to use it.
+
+Added `python/test_m14_3_parent_edge_matrix_kernel.py` to fixture the kernel.
+
+## Focused Verification
+
+```text
+C:/msys64/ucrt64/bin/python.exe python/test_m14_3_parent_edge_matrix_kernel.py --summary .tmp/mg-m14-3-parent-edge-matrix-kernel.json
+MG-M14-3 PASS
+```
 
 ## Gate Closure
 
 ```text
 package: M14.3
 base commit: f41ec73
-focused verification: hanging relaxed/parent-edge contract documented
-G0: reused from M14.2 clean build PASS
-G1: reused from M14.2 serial golden PASS
-G3: reused from M14.2 MPI golden PASS
+focused verification: MG-M14-3 PASS
+G0: make clean && make -j8 PASS; bin/AMR_Solver.exe present
+G1: serial_golden_summary.json status PASS (Noh, Sod, Sedov)
+G3: mpi_gate_summary.json status PASS (Sod 4-rank, Sedov 4-rank)
 param_restored: true
 reference hash: unchanged
 closure commit: this package's single HEAD commit
