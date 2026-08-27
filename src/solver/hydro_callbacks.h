@@ -7,6 +7,7 @@
 #include "alg.h"
 #include "amr/parent_edge_view.h"
 #include "hydro/divergence_kernel.h"
+#include "hydro/volume_density_kernel.h"
 #include "physics/eos.h"
 #include "physics/physics_alg.h"
 
@@ -53,13 +54,7 @@ void quadrant_update_density_callback(p4est_iter_volume_info_t *info, void *user
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
 	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int					coordinate_type = p4est_data->coord_type;
-	CDoubleVector		m_cell_coord[CNDIM];
-	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_lag, i); }
-
-	m_vara->cell(idVolume) = GeometryAlg::CalculateCellVolume(coordinate_type, m_cell_coord);
-	m_vara->cell(idDensity_lag) = m_vara->cell(idMass) / m_vara->cell(idVolume);
-
-
+	HydroCallbacks::update_volume_density(*m_vara, coordinate_type);
 }
 
 void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, void *user_data)
