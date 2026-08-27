@@ -5,6 +5,7 @@
 #include "defines.h"
 #include "variable.h"
 #include "alg.h"
+#include "amr/parent_edge_view.h"
 #include "physics/eos.h"
 #include "physics/physics_alg.h"
 
@@ -63,7 +64,7 @@ void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, void *use
 {
 	quad_data_t			*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
-	ParentBounInfo		*PCInfo = (ParentBounInfo  *)&data->m_pc_edge_data;
+	AMRCallbacks::ParentEdgeView	parent_edges(*data);
 	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int					coordinate_type = p4est_data->coord_type;
 	int					scheme_type = p4est_data->Scheme_type;
@@ -87,9 +88,9 @@ void quadrant_update_momentum_callback(p4est_iter_volume_info_t *info, void *use
 	{
 		if (scheme_type == p4est_data_t::MySchemeType::ControlVolume)
 		{
-			if (PCInfo[eind].IsParentChildBoun==true)
+			if (parent_edges.at(eind).IsParentChildBoun==true)
 			{
-				SumFcp += m_vara->corner_vector(ideFcp, eind) + PCInfo[eind].FluxRelaxed;
+				SumFcp += m_vara->corner_vector(ideFcp, eind) + parent_edges.at(eind).FluxRelaxed;
 			}
 		}
 	}
