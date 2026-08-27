@@ -9,6 +9,7 @@
 #include "hydro/divergence_kernel.h"
 #include "hydro/momentum_kernel.h"
 #include "hydro/volume_density_kernel.h"
+#include "hydro/work_kernel.h"
 #include "physics/eos.h"
 #include "physics/physics_alg.h"
 
@@ -78,54 +79,7 @@ void quadrant_compute_work_callback(p4est_iter_volume_info_t *info, void *user_d
 	ParentBounInfo		*PCInfo = (ParentBounInfo  *)&data->m_pc_edge_data;
 	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int					coordinate_type = p4est_data->coord_type;
-	double				m_alpha = 1.;
-	double				m_beta = 1.;
-
-	
-	m_vara->cell(idKineticVariation) = 0.;
-	m_vara->cell(idTotalWork) = 0.;
-
-	if (coordinate_type == p4est_data_t::MyCoordType::cylinder)
-	{
-		m_alpha = 2.* M_PI;
-		m_beta = 2. * M_PI * m_vara->cell_vector(idCentroidCoord_cur).y;
-	}
-	CDoubleVector Velo = 0.5 * (m_vara->cell_vector(idCentroidVelo_half) + m_vara->cell_vector(idCentroidVelo_lag));
-	for (int cnid = 0; cnid < CNDIM; cnid++)
-	{
-		
-		if (coordinate_type == p4est_data_t::MyCoordType::plane)
-		{
-			
-			m_vara->cell(idKineticVariation) += m_beta * 
-				Velo^ (m_vara->corner_vector(idcnFcp, cnid)+ m_vara->corner_vector(idcnFluxRelaxed, cnid));
-		}
-		if (coordinate_type == p4est_data_t::MyCoordType::cylinder)
-		{
-			
-			m_vara->cell(idKineticVariation) += m_beta * Velo^ m_vara->corner_vector(idAWFcp, cnid);
-		}
-
-		
-		m_vara->cell(idTotalWork) += m_alpha*
-			m_vara->corner_vector(idcnVelocity_lag, cnid) ^ 
-			(m_vara->corner_vector(idcnFcp, cnid)+ m_vara->corner_vector(idcnFluxRelaxed, cnid)); 
-	}
-
-	for (int eind = 0; eind < CNDIM; eind++)
-	{
-		
-		if (PCInfo[eind].IsParentChildBoun==true)
-		{
-			if (coordinate_type == p4est_data_t::MyCoordType::plane)
-			{
-				m_vara->cell(idKineticVariation) += m_beta * Velo ^
-					(m_vara->corner_vector(ideFcp, eind) + PCInfo[eind].FluxRelaxed);
-			}
-			m_vara->cell(idTotalWork) += m_alpha* PCInfo[eind].Hanging_velocity ^
-				(m_vara->corner_vector(ideFcp, eind) + PCInfo[eind].FluxRelaxed);
-		}
-	}
+	HydroCallbacks::update_work(*m_vara, PCInfo, coordinate_type);
 }
 
 void quadrant_update_energy_callback(p4est_iter_volume_info_t *info, void *user_data)
