@@ -17,20 +17,31 @@ velocity for regular corners:
 The solve is owner-local for the velocity write; remote corners are read-only
 inputs after the preceding exchange.
 
-## Migration Boundary
+## Implementation
 
-The next step is to extract a pure `solve_regular_corner_velocity(...)` helper
-and migrate the callback. This package records the input/output contract.
+Added `src/hydro/corner_velocity_kernel.h` with
+`HydroCallbacks::solve_regular_corner_velocity(...)` and migrated
+`quadrant_corner_velocity_callback` to use it for owner-local velocity writes.
+
+Added `python/test_m14_2_corner_velocity_kernel.py` to fixture interior and
+boundary solves.
+
+## Focused Verification
+
+```text
+C:/msys64/ucrt64/bin/python.exe python/test_m14_2_corner_velocity_kernel.py --summary .tmp/mg-m14-2-corner-velocity-kernel.json
+MG-M14-2 PASS
+```
 
 ## Gate Closure
 
 ```text
 package: M14.2
 base commit: 226ea02
-focused verification: regular-corner velocity contract documented
-G0: reused from M14.1 clean build PASS
-G1: reused from M14.1 serial golden PASS
-G3: reused from M14.1 MPI golden PASS
+focused verification: MG-M14-2 PASS
+G0: make clean && make -j8 PASS; bin/AMR_Solver.exe present
+G1: serial_golden_summary.json status PASS (Noh, Sod, Sedov)
+G3: mpi_gate_summary.json status PASS (Sod 4-rank, Sedov 4-rank)
 param_restored: true
 reference hash: unchanged
 closure commit: this package's single HEAD commit

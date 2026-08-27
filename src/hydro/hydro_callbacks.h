@@ -9,6 +9,7 @@
 #include "physics/corner_solve.h"
 #include "hydro/parent_edge_force.h"
 #include "hydro/corner_matrix_kernel.h"
+#include "hydro/corner_velocity_kernel.h"
 #include "diagnostics/hydro_trace.h"
 #include "nodal/boundary_mirror_runtime.h"
 #include "nodal/epoch_runtime.h"
@@ -132,27 +133,12 @@ void quadrant_corner_velocity_callback(p4est_iter_corner_info_t *info, void *use
 
 		if (!is_ghost)
 		{
-			if (is_boundary)
-			{
-
-
-				m_data->points[cnid].velo_lag = CornerSolve::boundary_node_velocity(
-					m_data->points[cnid].TwoBouns[0],
-					m_data->points[cnid].TwoBouns[1],
-					m_data->points[cnid].MatrixP,
-					m_data->points[cnid].RHS);
-			}
-			else
-			{
-				CDoubleMatrix MatrixP_Inverse;
-				MatrixP_Inverse = GeometryAlg::MatrixInverse(m_data->points[cnid].MatrixP);
-				m_data->points[cnid].velo_lag = GeometryAlg::MatrixDotVector(MatrixP_Inverse, m_data->points[cnid].RHS);
-			}
-
-			if (fabs(m_data->points[cnid].velo_lag.x) < m_eps) { m_data->points[cnid].velo_lag.x = 0.; }
-			if (fabs(m_data->points[cnid].velo_lag.y) < m_eps) { m_data->points[cnid].velo_lag.y = 0.; }
-
-
+			m_data->points[cnid].velo_lag = solve_regular_corner_velocity(
+				is_boundary,
+				m_data->points[cnid].TwoBouns[0],
+				m_data->points[cnid].TwoBouns[1],
+				m_data->points[cnid].MatrixP,
+				m_data->points[cnid].RHS);
 			m_vara->corner_vector(idcnVelocity_lag, cnid) = m_data->points[cnid].velo_lag;
 		}
 		p4est_data_t *p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
