@@ -436,81 +436,89 @@ void ComputeSoundSpeed(p4est_t *p4est)
 // M9.2.3: single-stage hydro advance (M9.2.2 skipped item). Orchestrates
 // boundary, half-time, corner matrix/velocity, divergence, coordinate,
 // and conservative-update phases with trace/checksum diagnostics.
+
+inline void stage_phase_boundary(p4est_t *p4est)
+{
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
+	Initializer::get_boundary_from_p4est(p4est);
+	p4est_data->dt_iter =
+		StagePolicy::timestep_scale(0) * p4est_data->delta_time;
+}
+
+inline void stage_phase_half_corner(p4est_t *p4est)
+{
+	HydroController::CalculateHalfTimeVariable(p4est);
+	trace_target_snapshot(p4est, "AFTER_HALF");
+	HydroController::CalculateCornerRcpLcpNcp(p4est);
+	trace_target_snapshot(p4est, "AFTER_RCP");
+}
+
+inline void stage_phase_nodal_assemble(p4est_t *p4est, GhostSession &session)
+{
+	HydroController::InvalidateNodalStamps(p4est);
+	HydroController::MirrorNodalBoundary(p4est);
+	session.exchange();
+
+	AMRCallbacks::Get_AMR_BDY_info(p4est, session);
+	trace_target_snapshot(p4est, "AFTER_AMR_BDY");
+	HydroController::MirrorNodalGeometry(p4est);
+	HydroController::WriteNodalLocalMaster(p4est);
+	HydroController::StampNodalStage(p4est, session, 0, Nodal::StagePhase::Assemble);
+	session.exchange();
+	HydroController::ValidateNodalStamps(p4est, session, 0, Nodal::StagePhase::Assemble);
+}
+
+inline void stage_phase_riemann(p4est_t *p4est, GhostSession &session)
+{
+	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
+	const SolverGate::CoordinateType coordinate_type =
+		SolverGate::coordinate_type_from_legacy(p4est_data->coord_type);
+	const SolverGate::SolverType solver_type =
+		SolverGate::solver_type_from_legacy(p4est_data->solver_type);
+	if (SolverGate::should_run_riemann(coordinate_type, solver_type))
+	{
+		HydroController::RiemannSolver(p4est, session);
+	}
+	Diagnostics::dump_riemann_target_if_enabled(p4est, session);
+}
+
+inline void stage_phase_conservative_updates(p4est_t *p4est)
+{
+	HydroController::ComputeDivergence(p4est);
+	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 3: Divergence");
+
+	HydroController::ComputeCoordinate(p4est);
+	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 4: Coordinate");
+
+	HydroController::UpdateDensity(p4est);
+	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 5: Density");
+
+	HydroController::UpdateMomentumEquation(p4est);
+	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 6: Momentum");
+
+	HydroController::ComputeWork(p4est);
+	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 7: Work");
+
+	HydroController::UpdateEnergyEquation(p4est);
+	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 8: EnergyEq");
+
+	HydroController::UpdateEquationOfState(p4est);
+	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
+
+	HydroController::ComputeSoundSpeed(p4est);
+	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
+}
+
 void advance_single_stage(p4est_t * p4est, GhostSession &session)
 {
 	p4est_data_t	*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 
 
-	Initializer::get_boundary_from_p4est(p4est);
-	p4est_data->dt_iter =
-		StagePolicy::timestep_scale(0) * p4est_data->delta_time;
-
-	HydroController::CalculateHalfTimeVariable(p4est);
-		trace_target_snapshot(p4est, "AFTER_HALF");
-		//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 3: Predict");
-
-
-		HydroController::CalculateCornerRcpLcpNcp(p4est);
-		trace_target_snapshot(p4est, "AFTER_RCP");
-		HydroController::InvalidateNodalStamps(p4est);
-		HydroController::MirrorNodalBoundary(p4est);
-		session.exchange();
-
-
-		AMRCallbacks::Get_AMR_BDY_info(p4est, session);
-		trace_target_snapshot(p4est, "AFTER_AMR_BDY");
-		HydroController::MirrorNodalGeometry(p4est);
-		HydroController::WriteNodalLocalMaster(p4est);
-		HydroController::StampNodalStage(p4est, session, 0, Nodal::StagePhase::Assemble);
-		session.exchange();
-		HydroController::ValidateNodalStamps(p4est, session, 0, Nodal::StagePhase::Assemble);
-
-
-		const SolverGate::CoordinateType coordinate_type =
-			SolverGate::coordinate_type_from_legacy(p4est_data->coord_type);
-		const SolverGate::SolverType solver_type =
-			SolverGate::solver_type_from_legacy(p4est_data->solver_type);
-		if (SolverGate::should_run_riemann(coordinate_type, solver_type))
-		{
-			HydroController::RiemannSolver(p4est, session);
-		}
-
-		Diagnostics::dump_riemann_target_if_enabled(p4est, session);
-
-		//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 4: RiemannSolver");
-
-
-		HydroController::ComputeDivergence(p4est);
-		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 3: Divergence");
-
-
-		HydroController::ComputeCoordinate(p4est);
-		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 4: Coordinate");
-
-
-		HydroController::UpdateDensity(p4est);
-		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 5: Density");
-
-
-		HydroController::UpdateMomentumEquation(p4est);
-		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 6: Momentum");
-
-
-		HydroController::ComputeWork(p4est);
-		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 7: Work");
-
-
-		HydroController::UpdateEnergyEquation(p4est);
-		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 8: EnergyEq");
-
-
-		HydroController::UpdateEquationOfState(p4est);
-		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
-
-
-	HydroController::ComputeSoundSpeed(p4est);
-	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
-	//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 5: Update");
+	HydroController::stage_phase_boundary(p4est);
+	HydroController::stage_phase_half_corner(p4est);
+	HydroController::stage_phase_nodal_assemble(p4est, session);
+	HydroController::stage_phase_riemann(p4est, session);
+	HydroController::stage_phase_conservative_updates(p4est);
 	p4est_data->used_dt = p4est_data->delta_time;
 }
 
