@@ -9,6 +9,7 @@
 #include "physics/timestep_reduction.h"
 #include "amr/amr_transfer.h"
 #include "amr/amr_criteria.h"
+#include "amr/parent_edge_scratch.h"
 #include "core/trace.h"
 #include "nodal/epoch_runtime.h"
 
@@ -1115,6 +1116,8 @@ quadrant_reset_parent_edge_callback(p4est_iter_volume_info_t *info, void *user_d
 {
 	p4est_t			*p4est = info->p4est;
 	quad_data_t		*m_quad_data = (quad_data_t *)info->quad->p.user_data;
+
+	reset_point_pi_constrained_parent(*m_quad_data);
 
 	for (int eind = 0; eind < CNDIM; eind++)
 	{
