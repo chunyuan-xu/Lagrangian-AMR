@@ -1,5 +1,7 @@
 #pragma once
 #include <iostream>
+#include <cstdio>
+#include <cstdlib>
 #include "defines.h"
 #include "math.h"
 
@@ -67,6 +69,20 @@ namespace GeometryAlg {
 	
 	double GetPointToPointDistance(const CDoubleVector &pt1, const CDoubleVector &pt2);
 
+	// M11.5: pure zero-distance guard for gradient geometry. Rejects zero
+	// distance instead of clamping it.
+	inline double guarded_point_distance(const CDoubleVector &pt1,
+		const CDoubleVector &pt2, const char *label)
+	{
+		const double dist = GetPointToPointDistance(pt1, pt2);
+		if (!(dist > m_eps)) {
+			fprintf(stderr, "Zero distance in %s\n",
+				label ? label : "guarded_point_distance");
+			std::abort();
+		}
+		return dist;
+	}
+
 	
 	double GetRcpWeightWithLinearDistribution(const CDoubleVector &pts, const CDoubleVector &pte);
 
@@ -117,4 +133,4 @@ namespace PhysicalAlg {
 		double &TopBouVal, double &BottomBouVal, double &LeftBouVal, double &RightBouVal);
 }
 
-
+

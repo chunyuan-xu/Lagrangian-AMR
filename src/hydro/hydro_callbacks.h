@@ -1508,8 +1508,9 @@ void quadrant_corner_minmod_estimate_callback(p4est_iter_corner_info_t *info, vo
 			}
 			m_vara_aside = (CVariable  *)&m_data_aside->m_vara;
 
-			double m_dist = GeometryAlg::GetPointToPointDistance(
-				m_vara->cell_vector(idCentroidCoord_cur), m_vara_aside->cell_vector(idCentroidCoord_cur));
+			double m_dist = GeometryAlg::guarded_point_distance(
+				m_vara->cell_vector(idCentroidCoord_cur), m_vara_aside->cell_vector(idCentroidCoord_cur),
+				"AMR corner gradient");
 			ParaGradient = abs(m_vara->cell(idCPara) - m_vara_aside->cell(idCPara)) / m_dist;
 			if (!is_ghost) {
 				m_vara->corner(idCNPara, cnid) = SC_MAX(m_vara->corner(idCNPara, cnid), ParaGradient);

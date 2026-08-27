@@ -330,8 +330,10 @@ void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info, void *
 			child2_center = m_child2_read_vara->cell_vector(idCentroidCoord_cur);
 
 			
-			dist1 = GeometryAlg::GetPointToPointDistance(parent_center, child1_center);
-			dist2 = GeometryAlg::GetPointToPointDistance(parent_center, child2_center);
+			dist1 = GeometryAlg::guarded_point_distance(parent_center, child1_center,
+				"AMR hanging gradient");
+			dist2 = GeometryAlg::guarded_point_distance(parent_center, child2_center,
+				"AMR hanging gradient");
 
 			
 			child1_gradient = abs(parent_para - child1_para) / dist1;
@@ -418,7 +420,8 @@ void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info, void *
 		m_center[0] = brother1_read_vara->cell_vector(idCentroidCoord_cur);
 		m_center[1] = brother2_read_vara->cell_vector(idCentroidCoord_cur);
 
-		double dist = GeometryAlg::GetPointToPointDistance(m_center[0], m_center[1]);
+		double dist = GeometryAlg::guarded_point_distance(m_center[0], m_center[1],
+			"AMR conforming gradient");
 		m_gradient = abs(m_para[0] - m_para[1]) / dist;
 
 		if (brother1_write_vara != NULL)
