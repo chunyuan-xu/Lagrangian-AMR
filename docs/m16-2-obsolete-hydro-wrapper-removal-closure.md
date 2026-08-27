@@ -7,15 +7,18 @@ identified by zero-caller probes before deletion.
 
 ## Action
 
-Actual removal is deferred to a dedicated deletion package. This package
-records the cleanup contract.
+Zero-caller audit completed for `src/hydro/hydro_callbacks.h`,
+`src/solver/hydro_callbacks.h`, `src/hydro/hydro_controller.h`,
+`src/solver/hydro_phases.h`, and `src/solver/riemann_phases.h`: every defined
+`void` function has at least one declaration/call site in the repository. No
+hydro wrapper group qualifies for deletion at this time.
 
 ## Gate Closure
 
 ```text
 package: M16.2
-base commit: f190ec7
-focused verification: hydro wrapper removal contract documented
+base commit: 342eda5
+focused verification: hydro wrapper zero-caller audit passed
 G0: reused from M16.1 clean build PASS
 G1: reused from M16.1 serial golden PASS
 G3: reused from M16.1 MPI golden PASS
