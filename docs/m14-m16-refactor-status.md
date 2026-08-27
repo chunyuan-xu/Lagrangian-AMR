@@ -42,8 +42,8 @@ M14.7-M14.12 all passed G0/G1/G3 and were pushed to `origin/main` as
 | Package | Status | Focused verification |
 |---|---|---|
 | M16.0 | implemented | obsolete diagnostics verified absent |
-| M16.1 | documented | AMR wrapper removal contract |
-| M16.2 | documented | hydro wrapper removal contract |
+| M16.1 | audited | AMR wrapper zero-caller audit passed |
+| M16.2 | audited | hydro wrapper zero-caller audit passed |
 | M16.3x | dormant | no cold-field group selected for deletion |
 | M16.4 | implemented | main header include batch removed |
 | M16.5 | implemented | public headers self-contained |
