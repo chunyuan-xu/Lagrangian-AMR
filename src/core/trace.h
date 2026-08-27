@@ -7,6 +7,7 @@
 #include "defines.h"
 #include "core/vector_matrix.h"
 #include "variable.h"
+#include "diagnostics/diagnostic_options.h"
 
 // M8.2: Trace — shared debug/trace helpers extracted from main.cpp so
 // callback modules (hydro/amr/io) can decode trace gating consistently.
@@ -17,48 +18,34 @@ inline int &trace_riemann_iter()
 	return value;
 }
 
-inline bool debug_flag_enabled(const char *name)
-{
-	const char *value = std::getenv(name);
-	return value != NULL && value[0] != '\0' && std::strcmp(value, "0") != 0;
-}
-
 inline bool target_trace_enabled()
 {
-	static const bool enabled = debug_flag_enabled("LAGRANGIAN_TRACE_TARGET");
-	return enabled;
+	return Diagnostics::DiagnosticOptions::instance().trace_target();
 }
 
 inline bool refine_trace_enabled()
 {
-	static const bool enabled = debug_flag_enabled("LAGRANGIAN_TRACE_REFINE");
-	return enabled;
+	return Diagnostics::DiagnosticOptions::instance().trace_refine();
 }
 
 inline bool verbose_amr_log_enabled()
 {
-	static const bool enabled = debug_flag_enabled("LAGRANGIAN_VERBOSE_AMR");
-	return enabled;
+	return Diagnostics::DiagnosticOptions::instance().verbose_amr();
 }
 
 inline bool checksum_trace_enabled()
 {
-	static const bool enabled = debug_flag_enabled("LAGRANGIAN_TRACE_CHECKSUM");
-	return enabled;
+	return Diagnostics::DiagnosticOptions::instance().checksum_trace();
 }
 
 inline bool refresh_idempotence_check_enabled()
 {
-	static const bool enabled =
-		debug_flag_enabled("LAGRANGIAN_CHECK_REFRESH_IDEMPOTENCE");
-	return enabled;
+	return Diagnostics::DiagnosticOptions::instance().refresh_idempotence();
 }
 
 inline bool state_invariant_check_enabled()
 {
-	static const bool enabled =
-		debug_flag_enabled("LAGRANGIAN_CHECK_STATE_INVARIANTS");
-	return enabled;
+	return Diagnostics::DiagnosticOptions::instance().state_invariant();
 }
 
 #define AMR_DEBUG_LOG(...) do { \
