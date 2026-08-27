@@ -76,6 +76,9 @@ namespace GeometryAlg {
 		if (sign3 < 0) return 3;
 		if (sign4 < 0) return 0;
 
+		// Compiler-visible fail-closed default; all reachable paths return
+		// above. -1 is the "not concave" marker used by the first branch.
+		return -1;
 	}
 
 	
