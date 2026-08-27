@@ -11,6 +11,7 @@
 #include "amr/amr_criteria.h"
 #include "amr/parent_edge_scratch.h"
 #include "amr/refinement_variable_selector.h"
+#include "amr/gradient_kernels.h"
 #include "core/trace.h"
 #include "nodal/epoch_runtime.h"
 #include "diagnostics/amr_transfer_trace.h"
@@ -421,9 +422,8 @@ void quadrant_edge_minmod_estimate_callback(p4est_iter_face_info_t *info, void *
 		m_center[0] = brother1_read_vara->cell_vector(idCentroidCoord_cur);
 		m_center[1] = brother2_read_vara->cell_vector(idCentroidCoord_cur);
 
-		double dist = GeometryAlg::guarded_point_distance(m_center[0], m_center[1],
-			"AMR conforming gradient");
-		m_gradient = abs(m_para[0] - m_para[1]) / dist;
+		m_gradient = conforming_gradient(
+			m_para[0], m_para[1], m_center[0], m_center[1]);
 
 		if (brother1_write_vara != NULL)
 		{
