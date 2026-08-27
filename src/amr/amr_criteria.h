@@ -5,6 +5,7 @@
 #include "amr/coarsen_family_policy.h"
 #include "amr/shock_front_policy.h"
 #include "amr/refine_decision_policy.h"
+#include "amr/coarsen_decision_policy.h"
 #include "defines.h"
 #include "variable.h"
 #include "physics/eos.h"
@@ -73,23 +74,10 @@ inline int CoarsenErrorEstimate(
 	p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *children[])
 {
 	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	DoubleCellVariableID idCPara = idCDensityGradient;
-	AMRCoarsenPolicy::IndicatorMode mode = AMRCoarsenPolicy::IndicatorMode::Gradient;
-
-	switch (p4est_data->refine_coarsen_enum)
-	{
-	case RefineCriteria::PressureGradient:
-		idCPara = idCPressureGradient;
-		break;
-	case RefineCriteria::DensityGradient:
-		idCPara = idCDensityGradient;
-		break;
-	case RefineCriteria::Distance:
-		mode = AMRCoarsenPolicy::IndicatorMode::DistanceFromShock;
-		break;
-	default:
-		break;
-	}
+	const DoubleCellVariableID idCPara =
+		AMRCallbacks::coarsen_indicator_id(p4est_data->refine_coarsen_enum);
+	const AMRCoarsenPolicy::IndicatorMode mode =
+		AMRCallbacks::coarsen_indicator_mode(p4est_data->refine_coarsen_enum);
 
 	if (mode == AMRCoarsenPolicy::IndicatorMode::DistanceFromShock) {
 		const double front_radius = ShockFrontRadius(p4est_data);
