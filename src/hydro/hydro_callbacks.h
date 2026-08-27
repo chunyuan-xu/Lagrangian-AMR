@@ -12,6 +12,7 @@
 #include "hydro/corner_velocity_kernel.h"
 #include "hydro/parent_edge_matrix_kernel.h"
 #include "hydro/hanging_aggregate_kernel.h"
+#include "hydro/coordinate_kernel.h"
 #include "diagnostics/hydro_trace.h"
 #include "nodal/boundary_mirror_runtime.h"
 #include "nodal/epoch_runtime.h"
@@ -916,45 +917,7 @@ void quadrant_update_corner_coordinate_callback(p4est_iter_volume_info_t *info, 
 	CVariable			*m_vara = (CVariable *)&data->m_vara;
 	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	double				delta_time = p4est_data->dt_iter;
-	for (int k = 0; k < CNDIM; k++)  
-	{
-		m_vara->corner_vector(idcnCoords_lag, k) = m_vara->corner_vector(idcnCoords_half, k) +
-			CDoubleVector(m_vara->corner_vector(idcnVelocity_lag, k).x * delta_time, m_vara->corner_vector(idcnVelocity_lag, k).y * delta_time);
-	}
-	CDoubleVector m_cell_coord[CNDIM];
-	for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = m_vara->corner_vector(idcnCoords_lag, i); }
-
-	CDoubleVector center_point;
-	center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
-	m_vara->cell_vector(idCentroidCoord_lag) = center_point;
-
-	for (int idIndex = idEChildrenCoordinate_lag; idIndex < idVectorEdgeVariableNum; idIndex++)
-	{
-		VectorCornerVariableID idcnVara;
-		switch (idIndex)
-		{
-		case idEChildrenCoordinate_lag:
-			idcnVara = idcnCoords_lag;
-			break;
-		case idEChildrenVelocity_lag:
-			idcnVara = idcnVelocity_lag;
-			break;
-		default:
-			break;
-		}
-		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::LEFT) = 0.5 *
-			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTUP) +
-				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTBOTTOM));
-		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::RIGHT) = 0.5 *
-			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTUP) +
-				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTBOTTOM));
-		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::BOTTOM) = 0.5 *
-			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTBOTTOM) +
-				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTBOTTOM));
-		m_vara->edge_vector(static_cast<VectorEdgeVariableID>(idIndex), quad_data_t::EnumEdge::UP) = 0.5 *
-			(m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::LEFTUP) +
-				m_vara->corner_vector(idcnVara, quad_data_t::EnumCorner::RIGHTUP));
-	}
+	update_corner_coordinates(*m_vara, delta_time);
 }
 
 void
