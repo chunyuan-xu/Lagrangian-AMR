@@ -7,6 +7,7 @@
 #include "alg.h"
 #include "amr/parent_edge_view.h"
 #include "hydro/divergence_kernel.h"
+#include "hydro/eos_kernel.h"
 #include "hydro/energy_kernel.h"
 #include "hydro/momentum_kernel.h"
 #include "hydro/volume_density_kernel.h"
@@ -45,10 +46,7 @@ void quadrant_compute_soundspeed_callback(p4est_iter_volume_info_t *info, void *
 {
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
-	m_vara->cell(idSoundSpeed) = PhysicalAlg::CalculateSoundSpeed(
-		m_vara->cell(idGamma),
-		m_vara->cell(idPressure_lag),
-		m_vara->cell(idDensity_lag));
+	HydroCallbacks::update_sound_speed(*m_vara);
 }
 
 void quadrant_update_density_callback(p4est_iter_volume_info_t *info, void *user_data)
@@ -97,14 +95,7 @@ void quadrant_update_EOS_callback(p4est_iter_volume_info_t *info, void *user_dat
 {
 	quad_data_t *data = (quad_data_t *)info->quad->p.user_data;
 	CVariable				*m_vara = (CVariable *)&data->m_vara;
-	m_vara->cell(idPressure_lag) = PhysicalAlg::EquationOfState(m_vara->cell(idGamma), m_vara->cell(idDensity_lag), m_vara->cell(idInternalEnergy_lag));
-	if (m_vara->cell(idPressure_lag) > m_eps)
-	{
-	}
-	else
-	{
-		P4EST_GLOBAL_PRODUCTIONF("the value of pressure is illegal\n");
-	}
+	HydroCallbacks::update_eos(*m_vara);
 }
 
 } // namespace HydroPhases

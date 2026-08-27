@@ -8,18 +8,26 @@ gamma/density/internal energy. `quadrant_compute_soundspeed_callback` recomputes
 
 ## Migration Boundary
 
-The next step is to extract pure `update_eos(...)` and `update_sound_speed(...)`
-helpers and migrate the callbacks.
+Implemented: pure `HydroCallbacks::update_eos(CVariable&)` and
+`HydroCallbacks::update_sound_speed(CVariable&)` helpers now own the EOS and
+sound-speed updates. `HydroPhases::quadrant_update_EOS_callback` and
+`quadrant_compute_soundspeed_callback` delegate to them; no numerical formula
+changed.
+
+Added:
+
+- `src/hydro/eos_kernel.h` — pure helpers.
+- `python/test_m14_11_eos_kernel.py` — focused micro-gate.
 
 ## Gate Closure
 
 ```text
 package: M14.11
-base commit: 4ecd253
-focused verification: EOS/sound-speed contract documented
-G0: reused from M14.10 clean build PASS
-G1: reused from M14.10 serial golden PASS
-G3: reused from M14.10 MPI golden PASS
+base commit: 1bfb11b
+focused verification: EOS and sound-speed kernels implemented and migrated
+G0: clean build PASS
+G1: serial golden PASS
+G3: MPI golden PASS
 param_restored: true
 reference hash: unchanged
 closure commit: this package's single HEAD commit
