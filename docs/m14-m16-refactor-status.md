@@ -58,3 +58,17 @@ committed locally and pending push while GitHub connectivity is unstable.
 - DBGF milestones (A/D/E/C) are frozen per user instruction.
 - `src/nodal/**`, `reference/**`, tolerances, and golden fields were not
   modified.
+
+## Final freeze / handoff
+
+For the legacy optimization refactor scope (M10L-M16), the current branch is
+the accepted handoff state:
+
+- Implemented and gated: M10L.0-M10L.11, M11.0-M11.5, M12.0-M12.3,
+  M13.0-M13.9, M14.0-M14.12, M16.0, M16.4, M16.5.
+- Dormant until activation: M15.2x, M15.3x, M15.3P, M16.3x, M16.6x.
+- Frozen per user instruction: DBGF milestones A0/A1/A2/A3, E1d-E6, D1-D4,
+  C0. These remain documented but are not part of the current optimization
+  refactor continuation.
+
+No reference, tolerance, or golden-field changes were made in this branch.
