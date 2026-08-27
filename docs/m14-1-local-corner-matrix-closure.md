@@ -16,22 +16,31 @@
 The kernel is owner-local: it writes only the current quadrant's `CVariable`
 and `m_cndata`. No ghost write occurs.
 
-## Migration Boundary
+## Implementation
 
-The next step is to extract this per-corner algebra into a pure
-`build_corner_matrix_rhs(...)` helper. This package records the input/output
-contract so the extraction can preserve exact formulas and no exchange
-changes.
+Added `src/hydro/corner_matrix_kernel.h` with
+`HydroCallbacks::build_corner_matrix_rhs(...)` and migrated
+`quadrant_corner_matrix_assemble_callback` to call it per corner. The
+callback keeps only the trace output after the kernel call.
+
+Added `python/test_m14_1_corner_matrix_kernel.py` to fixture the kernel.
+
+## Focused Verification
+
+```text
+C:/msys64/ucrt64/bin/python.exe python/test_m14_1_corner_matrix_kernel.py --summary .tmp/mg-m14-1-corner-matrix-kernel.json
+MG-M14-1 PASS
+```
 
 ## Gate Closure
 
 ```text
 package: M14.1
 base commit: e101f59
-focused verification: local corner-matrix kernel contract documented
-G0: reused from M14.0 clean build PASS
-G1: reused from M14.0 serial golden PASS
-G3: reused from M14.0 MPI golden PASS
+focused verification: MG-M14-1 PASS
+G0: make clean && make -j8 PASS; bin/AMR_Solver.exe present
+G1: serial_golden_summary.json status PASS (Noh, Sod, Sedov)
+G3: mpi_gate_summary.json status PASS (Sod 4-rank, Sedov 4-rank)
 param_restored: true
 reference hash: unchanged
 closure commit: this package's single HEAD commit

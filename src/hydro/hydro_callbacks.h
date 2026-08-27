@@ -8,6 +8,7 @@
 #include "amr/gradient_kernels.h"
 #include "physics/corner_solve.h"
 #include "hydro/parent_edge_force.h"
+#include "hydro/corner_matrix_kernel.h"
 #include "diagnostics/hydro_trace.h"
 #include "nodal/boundary_mirror_runtime.h"
 #include "nodal/epoch_runtime.h"
@@ -37,74 +38,11 @@ void quadrant_corner_matrix_assemble_callback(p4est_iter_volume_info_t *info, vo
 	CCorner_data	*cndata = (CCorner_data *)&(data->m_cndata);
 	p4est_data_t	*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	int				CoordType = p4est_data->coord_type;
-	int				Scheme_type = p4est_data->Scheme_type;
-	CDoubleVector DeltaU[CNDIM], RcpLcpNcpPc[CNDIM];
-	CDoubleMatrix  NcpPlusMatrix, NcpMinusMatrix;
-	CHalf_edge_data	*m_plus, *m_minus;
-	double abs_deltau;
 
 	for (int k = 0; k < CNDIM; k++)
 	{
-		m_plus = (CHalf_edge_data *)&cndata[k].hdata[CHalf_edge_data::cside::plus];
-		m_minus = (CHalf_edge_data *)&cndata[k].hdata[CHalf_edge_data::cside::minus];
-		double Divergence = 0.;
-		CDoubleVector	LcpNcpPc, LcpNcp;
-
-		m_vara->corner(idReconstructDensity, k) = m_vara->cell(idDensity_cur);
-		m_vara->corner(idReconstructPressure, k) = m_vara->cell(idPressure_cur);
-		double Tc = 0.;
-		m_vara->corner_vector(idReconstructVelocity, k) = m_vara->cell_vector(idCentroidVelo_cur);
-		DeltaU[k] = m_vara->corner_vector(idcnVelocity_lag, k) - m_vara->corner_vector(idReconstructVelocity, k);
-		abs_deltau = sqrt(pow(DeltaU[k].x, 2) + pow(DeltaU[k].y, 2));
-		LcpNcp = m_plus->Lcp * m_plus->Ncp + m_minus->Lcp*m_minus->Ncp;
-		LcpNcpPc = LcpNcp * m_vara->corner(idReconstructPressure, k);
-		Divergence = LcpNcpPc ^ DeltaU[k];
-
-		if (CoordType == p4est_data_t::MyCoordType::plane)
-		{
-			RcpLcpNcpPc[k] = m_plus->Rcp*m_plus->Lcp * m_plus->Ncp + 
-				m_minus->Rcp*m_minus->Lcp*m_minus->Ncp;
-		}
-		if (CoordType == p4est_data_t::MyCoordType::cylinder)
-		{
-
-		}
-
-		m_plus->Zcp = m_vara->corner(idReconstructDensity, k) * m_vara->cell(idSoundSpeed);
-		m_minus->Zcp = m_vara->corner(idReconstructDensity, k) * m_vara->cell(idSoundSpeed);
-		m_plus->delta_u_cp = m_vara->corner_vector(idcnVelocity_lag, k) - m_vara->corner_vector(idReconstructVelocity, k);
-		m_minus->delta_u_cp = m_vara->corner_vector(idcnVelocity_lag, k) - m_vara->corner_vector(idReconstructVelocity, k);
-		m_plus->Uc_cur = m_vara->corner_vector(idReconstructVelocity, k);
-		m_minus->Uc_cur = m_vara->corner_vector(idReconstructVelocity, k);
-		m_plus->pi = m_vara->corner(idReconstructPressure, k) - m_plus->Zcp * (m_plus->delta_u_cp^ m_plus->Ncp);
-		m_minus->pi = m_vara->corner(idReconstructPressure, k) - m_minus->Zcp * (m_minus->delta_u_cp^ m_minus->Ncp);
-
-		NcpPlusMatrix = GeometryAlg::DyadicProduct(m_plus->Ncp, m_plus->Ncp);
-		NcpMinusMatrix = GeometryAlg::DyadicProduct(m_minus->Ncp, m_minus->Ncp);
-
-		
-		m_vara->MarCnData[idcnMcp][k] = m_plus->Zcp*m_plus->Rcp*m_plus->Lcp*NcpPlusMatrix
-			+ m_minus->Zcp*m_minus->Rcp*m_minus->Lcp*NcpMinusMatrix;
-
-		
-		if (p4est_data->solver_type == p4est_data_t::RiemannSolver::Rotated)
-		{
-			if (abs_deltau > m_eps)
-			{
-				m_vara->MarCnData[idcnMcp][k].xx = m_plus->Zcp*m_plus->Rcp*m_plus->Lcp *
-					abs(DeltaU[k]^ m_plus->Ncp) / abs_deltau +
-					m_minus->Zcp*m_minus->Rcp*m_minus->Lcp *
-					abs(DeltaU[k] ^ m_minus->Ncp) / abs_deltau;
-				m_vara->MarCnData[idcnMcp][k].yy = m_vara->MarCnData[idcnMcp][k].xx;
-				m_vara->MarCnData[idcnMcp][k].xy = 0.;
-				m_vara->MarCnData[idcnMcp][k].yx = 0.;
-			}
-		}
-
-
-		m_vara->corner_vector(idcnMcpUc, k) = GeometryAlg::MatrixDotVector(m_vara->MarCnData[idcnMcp][k],
-			m_vara->corner_vector(idReconstructVelocity, k));
-		m_vara->corner_vector(idcnRHS, k) = LcpNcpPc + m_vara->corner_vector(idcnMcpUc, k);
+		build_corner_matrix_rhs(*m_vara, cndata[k], CoordType,
+			p4est_data->solver_type, k);
 		if (target_trace_enabled() && p4est_data->current_step == 3 && is_trace_parent(info->quad) && (k == 0 || k == 3)) {
 			FILE *f = open_corner2_trace(info->p4est);
 			if (f) {
