@@ -49,4 +49,12 @@ inline void reset_coarsen_parent_parent_edge_scratch(quad_data_t &data)
 	}
 }
 
+// M10L.8: apply the same scratch reset after balance replacement.
+inline void reset_balance_parent_edge_scratch(quad_data_t &data)
+{
+	for (int eind = 0; eind < CNDIM; ++eind) {
+		reset_parent_edge_scratch(data.m_pc_edge_data[eind]);
+	}
+}
+
 } // namespace AMRCallbacks

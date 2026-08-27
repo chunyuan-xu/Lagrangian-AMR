@@ -1225,6 +1225,8 @@ quadrant_reset_hanging_info_callback(p4est_iter_volume_info_t *info, void *user_
 	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 
+	reset_balance_parent_edge_scratch(*data);
+
 	for (int cnid = 0; cnid < CNDIM; cnid++)
 	{
 		data->points[cnid].IsHanging = false;
