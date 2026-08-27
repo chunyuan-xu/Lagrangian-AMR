@@ -23,4 +23,14 @@ inline void reset_parent_edge_scratch(ParentBounInfo &info)
 	info.FluxRelaxed = CDoubleVector(0., 0.);
 }
 
+// M10L.5: apply the M10L.4 scratch reset to every parent-edge slot during
+// initial leaf creation. This preserves the active-mask and all other fields;
+// it only defines FluxRelaxed for the transient contract.
+inline void reset_initial_parent_edge_scratch(quad_data_t &data)
+{
+	for (int eind = 0; eind < CNDIM; ++eind) {
+		reset_parent_edge_scratch(data.m_pc_edge_data[eind]);
+	}
+}
+
 } // namespace AMRCallbacks

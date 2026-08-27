@@ -4,6 +4,7 @@
 #include "variable.h"
 #include "alg.h"
 #include "init/initial_geometry.h"
+#include "amr/parent_edge_scratch.h"
 #include "hydro/hydro_callbacks.h"
 #include "solver/hydro_callbacks.h"
 
@@ -46,6 +47,7 @@ void Lagrangian_init_condition(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 
 	quad_data_t		*data = (quad_data_t *)q->p.user_data;
 	Nodal::reset_storage(data->nodal);
+	AMRCallbacks::reset_initial_parent_edge_scratch(*data);
 	CVariable	*m_vara = (CVariable *)&data->m_vara;
 	p4est_connectivity_t *connectivity = p4est->connectivity;
 	// M10.4.1: user_pointer is a P4estBridge carrier; unpack the payload.
