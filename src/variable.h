@@ -47,7 +47,7 @@ using namespace std;
 
 enum DoubleCellVariableID
 {
-	
+
 	idMass,
 	idPressure_cur,
 	idPressure_half,
@@ -70,14 +70,14 @@ enum DoubleCellVariableID
 	idCDensityGradient,
 	idCPressureGradient,
 	idCVorticity,
-	 
-	
+
+
 	idDoubleCellVariableNum,
 };
 
 enum IntCellVariableID
 {
-	idCoarseningTag, 
+	idCoarseningTag,
 	idAllowCoarsening,
 	idAllowRefining,
 
@@ -95,11 +95,11 @@ enum DoubleEdgeVariableID
 
 enum VectorEdgeVariableID
 {
-	idEChildrenCoordinate_cur, 
+	idEChildrenCoordinate_cur,
 	idEChidrenVelocity_cur,
 	idEChildrenCoordinate_lag,
 	idEChildrenVelocity_lag,
-	idEChildrenCoordinate_bc,   
+	idEChildrenCoordinate_bc,
 	idEChildrenVelocity_bc,
 
 	idVectorEdgeVariableNum,
@@ -107,15 +107,16 @@ enum VectorEdgeVariableID
 
 enum DoubleCornerVariableID
 {
-	
+
 	idReconstructPressure,
 	idReconstructDensity,
+	idcnWork,
 	idVeloDeriToPoint,
 	idCNRhoGradient,
 	idCNPressGradient,
 	idCNVorticity,
 
-	
+
 	idDoubleCornerVariableNum,
 };
 
@@ -135,7 +136,7 @@ enum VectorCellVariableID
 
 	idCentroidCoord_relaxed,
 
-	
+
 	idVectorCellVariableNum,
 };
 
@@ -149,6 +150,7 @@ enum VectorCornerVariableID
 	idReconstructVelocity,
 	idcnMcpUc,
 	idcnRHS,
+	idcnRHS_h,
 	ideMcpUc,
 	ideRHS,
 	idcnFcp,
@@ -158,13 +160,14 @@ enum VectorCornerVariableID
 	idcnCoords_relaxed,
 	idcnVelocity_relaxed,
 
-	
+
 	idVectorCornerVariableNum,
 };
 
 enum MatrixCornerVariableID
 {
 	idcnMcp,
+	idcnMch,
 	ideMcp,
 	idcnAWMcp,
 
@@ -185,83 +188,83 @@ public:
 	CDoubleVector  VecEdata[idVectorEdgeVariableNum][CNDIM];
 	CDoubleVector  ChildrenCnGeomVara[2][CNDIM][CNDIM];
 	double         ChildrenPhysicalVara[2][CNDIM];
-	CDoubleMatrix  MarCnData[idcnMatrixNum][CNDIM];  
+	CDoubleMatrix  MarCnData[idcnMatrixNum][CNDIM];
 
 
 public:
-	inline double &cell(DoubleCellVariableID id) noexcept
+	inline double& cell(DoubleCellVariableID id) noexcept
 	{
 		return DouCData[id];
 	}
 
-	inline const double &cell(DoubleCellVariableID id) const noexcept
+	inline const double& cell(DoubleCellVariableID id) const noexcept
 	{
 		return DouCData[id];
 	}
 
-	inline double &corner(DoubleCornerVariableID id, int corner_id) noexcept
+	inline double& corner(DoubleCornerVariableID id, int corner_id) noexcept
 	{
 		return DouCnData[id][corner_id];
 	}
 
-	inline const double &corner(
+	inline const double& corner(
 		DoubleCornerVariableID id, int corner_id) const noexcept
 	{
 		return DouCnData[id][corner_id];
 	}
 
-	inline double &edge(DoubleEdgeVariableID id, int edge_id) noexcept
+	inline double& edge(DoubleEdgeVariableID id, int edge_id) noexcept
 	{
 		return DouEData[id][edge_id];
 	}
 
-	inline const double &edge(
+	inline const double& edge(
 		DoubleEdgeVariableID id, int edge_id) const noexcept
 	{
 		return DouEData[id][edge_id];
 	}
 
-	inline CDoubleVector &corner_vector(
+	inline CDoubleVector& corner_vector(
 		VectorCornerVariableID id, int corner_id) noexcept
 	{
 		return VecCnData[id][corner_id];
 	}
 
-	inline const CDoubleVector &corner_vector(
+	inline const CDoubleVector& corner_vector(
 		VectorCornerVariableID id, int corner_id) const noexcept
 	{
 		return VecCnData[id][corner_id];
 	}
 
-	inline CDoubleVector &cell_vector(VectorCellVariableID id) noexcept
+	inline CDoubleVector& cell_vector(VectorCellVariableID id) noexcept
 	{
 		return VecCData[id];
 	}
 
-	inline const CDoubleVector &cell_vector(
+	inline const CDoubleVector& cell_vector(
 		VectorCellVariableID id) const noexcept
 	{
 		return VecCData[id];
 	}
 
-	inline CDoubleVector &edge_vector(
+	inline CDoubleVector& edge_vector(
 		VectorEdgeVariableID id, int edge_id) noexcept
 	{
 		return VecEdata[id][edge_id];
 	}
 
-	inline const CDoubleVector &edge_vector(
+	inline const CDoubleVector& edge_vector(
 		VectorEdgeVariableID id, int edge_id) const noexcept
 	{
 		return VecEdata[id][edge_id];
 	}
 
-	inline int &int_cell(IntCellVariableID id) noexcept
+	inline int& int_cell(IntCellVariableID id) noexcept
 	{
 		return IntCData[id];
 	}
 
-	inline const int &int_cell(IntCellVariableID id) const noexcept
+	inline const int& int_cell(IntCellVariableID id) const noexcept
 	{
 		return IntCData[id];
 	}

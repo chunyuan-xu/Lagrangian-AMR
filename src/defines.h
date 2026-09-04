@@ -68,7 +68,9 @@ struct p4est_data_t {
 	int coord_type;
 	CGlobal_grid_info m_grid_info;
 	enum MySchemeType
-	{ControlVolume, AreaWeighted};
+	{
+		ControlVolume, AreaWeighted
+	};
 	int Scheme_type;
 	enum RiemannSolver
 	{
@@ -76,13 +78,19 @@ struct p4est_data_t {
 	};
 	int solver_type;
 	enum SchemeOrder
-	{first_order, second_order};
+	{
+		first_order, second_order
+	};
 
 	enum CoarseningEnum
-	{NotCoarsenedJustNow, CoarsenedJustNow, CoarsingAllowed, CoarsingNotAllowed};
+	{
+		NotCoarsenedJustNow, CoarsenedJustNow, CoarsingAllowed, CoarsingNotAllowed
+	};
 
 	enum RefiningEnum
-	{RefiningAllowed, RefiningNotAllowed, MustRefing};
+	{
+		RefiningAllowed, RefiningNotAllowed, MustRefing
+	};
 
 	enum DistanceProfileType
 	{
@@ -115,30 +123,30 @@ struct p4est_data_t {
 	double current_time;
 	double initial_dt;
 	double refine_coarsen_time;
-	
+
 	double shock_velocity;
 	double distance_shock_radius_scale;
 	double distance_shock_radius_exponent;
 	double distance_band_half_width;
 	double used_dt;
-	double local_dt;  
-	double delta_time;  
-	double dt_iter;   
-	double max_dt;    
-	bool equal_dt;    
-	int current_step;  
-	int max_time_step; 
-	int refine_coarsen_enum;    
-	int minus_level;   
-	int max_level;     
-	int  refine_period;  
-	int repartition_period; 
-	int last_output_index; 
+	double local_dt;
+	double delta_time;
+	double dt_iter;
+	double max_dt;
+	bool equal_dt;
+	int current_step;
+	int max_time_step;
+	int refine_coarsen_enum;
+	int minus_level;
+	int max_level;
+	int  refine_period;
+	int repartition_period;
+	int last_output_index;
 	int write_interval_step;
-	int profiletype;  
-	int children_center_type;  
-	int x_tree_number;  
-	int y_tree_number;  
+	int profiletype;
+	int children_center_type;
+	int x_tree_number;
+	int y_tree_number;
 	double write_interval_time;
 	// M10.3.1a: total_energy_cur/lag/init moved to IOCallbacks::ReductionContext.
 	double volume_varation_torelarion;
@@ -161,8 +169,8 @@ struct p4est_data_t {
 		refine_coarsen_time = 0.0;
 		minus_level = 4;
 		max_level = 7;
-		
-		
+
+
 		refine_err = 1.;
 		coarsen_error = 0.8;
 		refine_period = 4;
@@ -178,7 +186,7 @@ struct p4est_data_t {
 		profiletype = DistanceProfileType::radiusType;
 		coord_type = plane;
 		Scheme_type = ControlVolume;
-		solver_type = Rotated;
+		solver_type = GridAligned;
 		accuracy = first_order;
 		LeftBoun = -1;
 		RightBoun = -1;
@@ -228,7 +236,7 @@ struct p4est_data_t {
 				refine_coarsen_time,
 				distance_shock_radius_scale,
 				distance_shock_radius_exponent,
-				distance_band_half_width},
+				distance_band_half_width },
 			SimulationModel::SolverConfig{
 				coord_type,
 				Scheme_type,
@@ -239,11 +247,11 @@ struct p4est_data_t {
 				max_dt,
 				equal_dt,
 				volume_varation_torelarion,
-				dt_increase_percent},
+				dt_increase_percent },
 			SimulationModel::OutputConfig{
 				write_interval_time,
 				write_interval_step,
-				profiletype}};
+				profiletype } };
 	}
 
 	SimulationModel::SimulationClock simulation_clock() const {
@@ -255,7 +263,7 @@ struct p4est_data_t {
 			dt_iter,
 			used_dt,
 			current_step,
-			max_time_step};
+			max_time_step };
 	}
 
 	void load_from_config(const IOAlgorithm::ConfigParser& cfg) {
@@ -272,7 +280,7 @@ struct p4est_data_t {
 			else if (case_str == "TriplePoint") which_case = ProblemNo::TriplePoint;
 			else if (case_str == "TwoDimRiemann") which_case = ProblemNo::TwoDimRiemann;
 			else if (case_str == "TaylorGreen") which_case = ProblemNo::TaylorGreen;
-			else which_case = cfg.GetInt("which_case", which_case); 
+			else which_case = cfg.GetInt("which_case", which_case);
 		}
 		if (cfg.HasKey("start_time")) {
 			start_time = cfg.GetDouble("start_time", start_time);
@@ -312,19 +320,19 @@ struct p4est_data_t {
 // bridge->config without touching the mutable payload.
 struct P4estBridge {
 	p4est_data_t data;
-	const SimulationModel::SimulationConfig *config;
+	const SimulationModel::SimulationConfig* config;
 };
 
 
 struct CPointBounInfo
 {
-	enum BouDTY {Inner, Velo, Wall, Symmetry, Free, Press};
-	int enumType;  
-	double Val; 
-	CDoubleVector Ncp; 
-	double Lcp; 
-	CDoubleVector delta_u_cp;   
-	CDoubleVector Uc_cur;  
+	enum BouDTY { Inner, Velo, Wall, Symmetry, Free, Press };
+	int enumType;
+	double Val;
+	CDoubleVector Ncp;
+	double Lcp;
+	CDoubleVector delta_u_cp;
+	CDoubleVector Uc_cur;
 	double Zc;
 
 	CPointBounInfo()
@@ -339,41 +347,45 @@ struct CPointBounInfo
 
 struct CPoint_data_t
 {
-	
-	bool IsHanging;  
-	bool AddDiss; 
-	
-	
+
+	bool IsHanging;
+	bool AddDiss;
+
+
 	CPointBounInfo TwoBouns[2];
 	CPointBounInfo BounParent;
-	CDoubleVector master_coord_relaxed[2];  
-	CDoubleVector hanging_coord;  
-	CDoubleVector velo_lag;  
+	CDoubleVector master_coord_relaxed[2];
+	CDoubleVector hanging_coord;
+	CDoubleVector velo_lag;
 	double PI_hanging;
 	double pi_constrained_parent;
 	bool add_dissipation_child1;
 	bool add_dissipation_child2;
 	bool add_dissipation_parent;
-	CDoubleMatrix MatrixP;   
-	CDoubleVector RHS;       
+	CDoubleMatrix MatrixP;
+	CDoubleVector RHS;
+
+	CDoubleVector master_velocity_lag[2];
 };
 
 
 struct CHalf_edge_data
 {
-	enum cside{plus, minus}; 
-	double Rcp;  
-	double Lcp;  
-	CDoubleVector Ncp;  
+	enum cside { plus, minus };
+	double Rcp;
+	double Lcp;
+	CDoubleVector Ncp;
 	double Zcp;
 	CDoubleVector delta_u_cp;
 	CDoubleVector Uc_cur;
 	double pi;
-	enum BounDTY {Inner, Velo, Wall, Symmetry, Free, Press};
-	int enumBYD; 
-	double BYDVal; 
-	bool is_hanging; 
-	int which_face; 
+	double pi_master[2];
+	enum BounDTY { Inner, Velo, Wall, Symmetry, Free, Press };
+	int enumBYD;
+	double BYDVal;
+	bool is_hanging;
+	int which_face;
+
 	CHalf_edge_data()
 	{
 		Rcp = 1.;
@@ -388,61 +400,61 @@ struct CHalf_edge_data
 
 struct CCorner_data
 {
-	CHalf_edge_data hdata[2];   
+	CHalf_edge_data hdata[2];
 };
 
 struct CEdge_data
 {
-	enum enumET{Inner, Velo, Wall, Symmetry, Free, Press};
+	enum enumET { Inner, Velo, Wall, Symmetry, Free, Press };
 	int EdgeType;
 };
 
 
 struct ParentBounInfo
 {
-	bool IsParentChildBoun;   
+	bool IsParentChildBoun;
 	bool addDiss;
-	CDoubleVector Ncp[2];   
-	double ParentPIStar;   
+	CDoubleVector Ncp[2];
+	double ParentPIStar;
 	CDoubleVector FluxRelaxed;
 	double Lcp[2];
 	double Zcp;
 
-	CDoubleVector Hanging_velocity;  
+	CDoubleVector Hanging_velocity;
 	ParentBounInfo()
 	{
-		IsParentChildBoun = false;    
+		IsParentChildBoun = false;
 	}
 };
 
 
 typedef struct quad_data
 {
-	
-	
+
+
 	enum EnumCorner
 	{
-		LEFTBOTTOM, LEFTUP, RIGHTUP, RIGHTBOTTOM   
+		LEFTBOTTOM, LEFTUP, RIGHTUP, RIGHTBOTTOM
 	};
-	CCorner_data m_cndata[CNDIM];   
+	CCorner_data m_cndata[CNDIM];
 
 	enum EnumEdge
 	{
 		LEFT, RIGHT, BOTTOM, UP
 	};
-	CEdge_data m_edata[CNDIM];   
+	CEdge_data m_edata[CNDIM];
 
-	CPoint_data_t points[CNDIM];  
-	double init_node_coords[CNDIM][P4EST_DIM];  
-	
-	ParentBounInfo m_pc_edge_data[CNDIM]; 
+	CPoint_data_t points[CNDIM];
+	double init_node_coords[CNDIM][P4EST_DIM];
 
-	CVariable m_vara;    
+	ParentBounInfo m_pc_edge_data[CNDIM];
 
-	int face_neighbors[2 * CNDIM];    
+	CVariable m_vara;
+
+	int face_neighbors[2 * CNDIM];
 	int face_num;
 	Nodal::CellNodalData nodal;
-}quad_data_t;  
+}quad_data_t;
 
 
 enum p4est_enum_corner
@@ -452,40 +464,40 @@ enum p4est_enum_corner
 
 
 typedef struct {
-	sc_array_t *pressure_array;
-	sc_array_t *density_array;
-	sc_array_t *temperature_array;
-	sc_array_t *internal_energy_array;
+	sc_array_t* pressure_array;
+	sc_array_t* density_array;
+	sc_array_t* temperature_array;
+	sc_array_t* internal_energy_array;
 
-	sc_array_t *coordx;
-	sc_array_t *coordy;
-	sc_array_t *velox;
-	sc_array_t *veloy;
+	sc_array_t* coordx;
+	sc_array_t* coordy;
+	sc_array_t* velox;
+	sc_array_t* veloy;
 }vtu_cell_data_t;
 
 typedef struct {
-	sc_array_t *global_sfc_id_array;
-	sc_array_t *pressure_array;
-	sc_array_t *density_array;
-	sc_array_t *internal_energy_array;
+	sc_array_t* global_sfc_id_array;
+	sc_array_t* pressure_array;
+	sc_array_t* density_array;
+	sc_array_t* internal_energy_array;
 
-	sc_array_t *pressure_c0_array;
-	sc_array_t *pressure_c1_array;
-	sc_array_t *pressure_c2_array;
-	sc_array_t *pressure_c3_array;
+	sc_array_t* pressure_c0_array;
+	sc_array_t* pressure_c1_array;
+	sc_array_t* pressure_c2_array;
+	sc_array_t* pressure_c3_array;
 
-	sc_array_t *velou_c0_array;
-	sc_array_t *velou_c1_array;
-	sc_array_t *velou_c2_array;
-	sc_array_t *velou_c3_array;
+	sc_array_t* velou_c0_array;
+	sc_array_t* velou_c1_array;
+	sc_array_t* velou_c2_array;
+	sc_array_t* velou_c3_array;
 
-	sc_array_t *velov_c0_array;
-	sc_array_t *velov_c1_array;
-	sc_array_t *velov_c2_array;
-	sc_array_t *velov_c3_array;
+	sc_array_t* velov_c0_array;
+	sc_array_t* velov_c1_array;
+	sc_array_t* velov_c2_array;
+	sc_array_t* velov_c3_array;
 }debug_vtu_cell_data_t;
 
 typedef struct {
-	void *p4est_data;
-	void *quad_data;
+	void* p4est_data;
+	void* quad_data;
 }my_user_data_t;

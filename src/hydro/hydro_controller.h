@@ -22,569 +22,530 @@
 
 namespace HydroController {
 
-void FluxRelaxedResetZero(p4est_t *p4est);
-void MatrixAssemble(p4est_t *p4est, GhostSession &session);
-void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p4est, GhostSession &session);
-void ComputeCornerNodeVelocity(p4est_t *p4est, GhostSession &session);
-void ComputeCornerAndEdgeForce(p4est_t *p4est);
-void MirrorNodalBoundary(p4est_t *p4est);
-void MirrorNodalGeometry(p4est_t *p4est);
-void WriteNodalLocalMaster(p4est_t *p4est);
-void InvalidateNodalStamps(p4est_t *p4est);
-void ValidateNodalStamps(p4est_t *p4est, GhostSession &session,
-	std::uint16_t sub_stage, Nodal::StagePhase phase);
-void StampNodalStage(p4est_t *p4est, GhostSession &session,
-	std::uint16_t sub_stage, Nodal::StagePhase phase);
+	void FluxRelaxedResetZero(p4est_t* p4est);
+	void MatrixAssemble(p4est_t* p4est, GhostSession& session);
+	void ComputeHangingNodeVelocity(p4est_t* p4est, GhostSession& session);
+	void ComputeCornerNodeVelocity(p4est_t* p4est, GhostSession& session);
+	void ComputeCornerAndEdgeForce(p4est_t* p4est);
+	void MirrorNodalBoundary(p4est_t* p4est);
+	void MirrorNodalGeometry(p4est_t* p4est);
+	void WriteNodalLocalMaster(p4est_t* p4est);
+	void InvalidateNodalStamps(p4est_t* p4est);
+	void ValidateNodalStamps(p4est_t* p4est, GhostSession& session,
+		std::uint16_t sub_stage, Nodal::StagePhase phase);
+	void StampNodalStage(p4est_t* p4est, GhostSession& session,
+		std::uint16_t sub_stage, Nodal::StagePhase phase);
 
 
 
-void 
-predict_timestep(p4est_t *p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	p4est_data->local_dt = TimestepReduction::initial_local_minimum();
-
-	p4est_iterate(p4est,
-		NULL,
-		(void*)p4est_data,
-		AMRCallbacks::quadrant_predict_timestep_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-
-	int		mpiret;
-	mpiret =
-		sc_MPI_Allreduce(&p4est_data->local_dt, &p4est_data->delta_time,
-			1, sc_MPI_DOUBLE, sc_MPI_MIN, p4est->mpicomm);
-	SC_CHECK_MPI(mpiret);
-}
-
-void RiemannSolver(p4est_t * p4est, GhostSession &session)
-{
-
-	FluxRelaxedResetZero(p4est);
-
-	for (int iter_num = 0; iter_num < fixed_iter_num; iter_num++)
+	void
+		predict_timestep(p4est_t* p4est)
 	{
-		trace_riemann_iter() = iter_num;
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		p4est_data->local_dt = TimestepReduction::initial_local_minimum();
 
-		RiemannPhases::run_iteration(p4est, session,
-			MatrixAssemble, ComputeCornerNodeVelocity,
-			ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes);
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			AMRCallbacks::quadrant_predict_timestep_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+
+		int		mpiret;
+		mpiret =
+			sc_MPI_Allreduce(&p4est_data->local_dt, &p4est_data->delta_time,
+				1, sc_MPI_DOUBLE, sc_MPI_MIN, p4est->mpicomm);
+		SC_CHECK_MPI(mpiret);
 	}
 
-	
-	ComputeCornerAndEdgeForce(p4est);
-}
+	void RiemannSolver(p4est_t* p4est, GhostSession& session)
+	{
 
-void MatrixAssemble(p4est_t *p4est, GhostSession &session)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
+		FluxRelaxedResetZero(p4est);
+
+		for (int iter_num = 0; iter_num < fixed_iter_num; iter_num++)
+		{
+			trace_riemann_iter() = iter_num;
+
+			RiemannPhases::run_iteration(p4est, session,
+				MatrixAssemble, ComputeCornerNodeVelocity,
+				ComputeHangingNodeVelocity);
+		}
 
 
-	p4est_iterate(p4est,
-		NULL,
-		NULL,
-		HydroCallbacks::quadrant_corner_matrix_assemble_callback,
-		NULL,
-#ifdef P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-
-	if (!session.empty()) {
-		session.exchange();
+		ComputeCornerAndEdgeForce(p4est);
 	}
 
-	GhostCallbackContext callback_context = { &session };
-	p4est_iterate(p4est,
-		session.get(),
-		&callback_context,
-		NULL,
-		NULL,
+	void MatrixAssemble(p4est_t* p4est, GhostSession& session)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+
+
+		p4est_iterate(p4est,
+			NULL,
+			NULL,
+			HydroCallbacks::quadrant_corner_matrix_assemble_callback,
+			NULL,
 #ifdef P4_TO_P8
-		NULL,
+			NULL,
 
 #endif
-		HydroCallbacks::quadrant_corner_to_point_matrix_assemble_callback);
-}
-
-void ComputeHangingNodeVelocityUsingConstrainedConditionByMasterNodes(p4est_t *p4est, GhostSession &session)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	GhostCallbackContext callback_context = { &session };
-
-
-	p4est_iterate(p4est,
-		NULL,
-		NULL,
-		HydroCallbacks::quadrant_compute_relaxed_info_callback,
-		NULL,
-#ifdef P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-
-
-	p4est_iterate(p4est,
-		NULL,
-		NULL,
-		HydroCallbacks::quadrant_parent_edge_matrix_callback,
-		NULL,
-#ifdef P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-
-	if (!session.empty()) {
-		session.exchange();
-	}
-
-	p4est_iterate(p4est,
-		session.get(),
-		&callback_context,
-		NULL,
-		HydroCallbacks::quadrant_hanging_point_matrix_assemble_callback,
-#ifdef P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
+			NULL);
 
 		if (!session.empty()) {
 			session.exchange();
 		}
 
-	p4est_iterate(p4est,
-		session.get(),
-		&callback_context,
-		NULL,
-		HydroCallbacks::quadrant_relaxed_hanging_solver_callback,
+		GhostCallbackContext callback_context = { &session };
+		p4est_iterate(p4est,
+			session.get(),
+			&callback_context,
+			NULL,
+			NULL,
 #ifdef P4_TO_P8
-		NULL,
+			NULL,
 
 #endif
-		NULL);
-}
-
-void ComputeCornerNodeVelocity(p4est_t * p4est, GhostSession &session)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-
-	GhostCallbackContext callback_context = { &session };
-	p4est_iterate(p4est,
-		session.get(),
-		&callback_context,
-		NULL,
-		NULL,
-#ifdef P4_TO_P8
-		NULL,
-
-#endif
-		HydroCallbacks::quadrant_corner_velocity_callback);
-
-	p4est_iterate(p4est,
-		NULL,
-		NULL,
-		HydroCallbacks::quadrant_copy_velocity_from_lag_to_relax_callback,
-		NULL,
-#ifdef P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
-
-void ComputeCoordinate(p4est_t * p4est)
-{
-	p4est_data_t	*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	
-	p4est_iterate(p4est,
-		NULL,          
-		(void*)p4est_data,   
-		HydroCallbacks::quadrant_update_corner_coordinate_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
-
-#endif
-		NULL);         
-}
-
-void UpdateDensity(p4est_t * p4est)
-{
-	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_density_callback);
-}
-
-void UpdateMomentumEquation(p4est_t * p4est)
-{
-	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_momentum_callback);
-}
-
-void ComputeWork(p4est_t * p4est)
-{
-	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_work_callback);
-}
-
-void UpdateEnergyEquation(p4est_t * p4est)
-{
-	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_energy_callback);
-}
-
-void UpdateEquationOfState(p4est_t * p4est)
-{
-	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_EOS_callback);
-}
-
-void AcceptNumericalSolution(p4est_t * p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	p4est_iterate(p4est,
-		NULL,          
-		(void*)p4est_data,   
-		HydroCallbacks::quadrant_accept_center_solution_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
-
-#endif
-		NULL);         
-}
-
-void ComputeCornerAndEdgeForce(p4est_t * p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	p4est_iterate(p4est,
-		NULL,          
-		(void*)p4est_data,   
-		HydroCallbacks::quadrant_compute_corner_force_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
-
-#endif
-		NULL);         
-}
-
-void FluxRelaxedResetZero(p4est_t *p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-
-	
-	p4est_iterate(p4est,
-		NULL,          
-		NULL,   
-		HydroCallbacks::quadrant_flux_relaxed_reset_callback, 
-		NULL,
-#ifdef P4_TO_P8
-		NULL,                  
-
-#endif
-		NULL);         
-}
-
-void CalculateHalfTimeVariable(p4est_t *p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-
-
-	p4est_iterate(p4est,
-		NULL,
-		(void*)p4est_data,
-		HydroCallbacks::quadrant_compute_halftime_variable_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
-
-void CalculateCornerRcpLcpNcp(p4est_t *p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	p4est_iterate(p4est,
-		NULL,
-		(void*)p4est_data,
-		HydroCallbacks::quadrant_compute_RcpLcpNcp_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
-
-void MirrorNodalBoundary(p4est_t *p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	p4est_iterate(p4est,
-		NULL,
-		(void*)p4est_data,
-		HydroCallbacks::quadrant_mirror_boundary_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
-
-void MirrorNodalGeometry(p4est_t *p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	p4est_iterate(p4est,
-		NULL,
-		(void*)p4est_data,
-		HydroCallbacks::quadrant_mirror_face_geometry_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
-
-void StampNodalStage(p4est_t *p4est, GhostSession &session,
-	std::uint16_t sub_stage, Nodal::StagePhase phase)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	Nodal::StageResetContext context;
-	context.ctx = Nodal::make_stage_context(*p4est_data,
-		static_cast<std::uint64_t>(session.generation()),
-		static_cast<std::uint64_t>(session.topology_version()),
-		sub_stage, phase);
-	p4est_iterate(p4est,
-		NULL,
-		&context,
-		HydroCallbacks::quadrant_stage_reset_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
-
-void InvalidateNodalStamps(p4est_t *p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	p4est_iterate(p4est,
-		NULL,
-		(void*)p4est_data,
-		HydroCallbacks::quadrant_invalidate_stage_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
-
-void WriteNodalLocalMaster(p4est_t *p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	p4est_iterate(p4est,
-		NULL,
-		(void*)p4est_data,
-		HydroCallbacks::quadrant_write_local_master_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
-
-void ValidateNodalStamps(p4est_t *p4est, GhostSession &session,
-	std::uint16_t sub_stage, Nodal::StagePhase phase)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	Nodal::StageResetContext context;
-	context.ctx = Nodal::make_stage_context(*p4est_data,
-		static_cast<std::uint64_t>(session.generation()),
-		static_cast<std::uint64_t>(session.topology_version()),
-		sub_stage, phase);
-	p4est_iterate(p4est,
-		NULL,
-		&context,
-		HydroCallbacks::quadrant_validate_stage_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-}
-
-void ComputeDivergence(p4est_t *p4est)
-{
-	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_divergence_callback);
-}
-
-void ComputeSoundSpeed(p4est_t *p4est)
-{
-	HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_soundspeed_callback);
-}
-
-// M9.2.3: single-stage hydro advance (M9.2.2 skipped item). Orchestrates
-// boundary, half-time, corner matrix/velocity, divergence, coordinate,
-// and conservative-update phases with trace/checksum diagnostics.
-
-inline void stage_phase_boundary(p4est_t *p4est)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	Initializer::get_boundary_from_p4est(p4est);
-	p4est_data->dt_iter =
-		StagePolicy::timestep_scale(0) * p4est_data->delta_time;
-}
-
-inline void stage_phase_half_corner(p4est_t *p4est)
-{
-	HydroController::CalculateHalfTimeVariable(p4est);
-	trace_target_snapshot(p4est, "AFTER_HALF");
-	HydroController::CalculateCornerRcpLcpNcp(p4est);
-	trace_target_snapshot(p4est, "AFTER_RCP");
-}
-
-inline void stage_phase_nodal_assemble(p4est_t *p4est, GhostSession &session)
-{
-	HydroController::InvalidateNodalStamps(p4est);
-	HydroController::MirrorNodalBoundary(p4est);
-	session.exchange();
-
-	AMRCallbacks::Get_AMR_BDY_info(p4est, session);
-	trace_target_snapshot(p4est, "AFTER_AMR_BDY");
-	HydroController::MirrorNodalGeometry(p4est);
-	HydroController::WriteNodalLocalMaster(p4est);
-	HydroController::StampNodalStage(p4est, session, 0, Nodal::StagePhase::Assemble);
-	session.exchange();
-	HydroController::ValidateNodalStamps(p4est, session, 0, Nodal::StagePhase::Assemble);
-}
-
-inline void stage_phase_riemann(p4est_t *p4est, GhostSession &session)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	const SolverGate::CoordinateType coordinate_type =
-		SolverGate::coordinate_type_from_legacy(p4est_data->coord_type);
-	const SolverGate::SolverType solver_type =
-		SolverGate::solver_type_from_legacy(p4est_data->solver_type);
-	if (SolverGate::should_run_riemann(coordinate_type, solver_type))
-	{
-		HydroController::RiemannSolver(p4est, session);
+			HydroCallbacks::quadrant_corner_to_point_matrix_assemble_callback);
 	}
-	Diagnostics::dump_riemann_target_if_enabled(p4est, session);
-}
 
-inline void stage_phase_conservative_updates(p4est_t *p4est)
-{
-	HydroController::ComputeDivergence(p4est);
-	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 3: Divergence");
+	void ComputeHangingNodeVelocity(p4est_t* p4est, GhostSession& session)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		GhostCallbackContext callback_context = { &session };
 
-	HydroController::ComputeCoordinate(p4est);
-	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 4: Coordinate");
+		if (!session.empty()) {
+			session.exchange();
+		}
 
-	HydroController::UpdateDensity(p4est);
-	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 5: Density");
-
-	HydroController::UpdateMomentumEquation(p4est);
-	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 6: Momentum");
-
-	HydroController::ComputeWork(p4est);
-	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 7: Work");
-
-	HydroController::UpdateEnergyEquation(p4est);
-	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 8: EnergyEq");
-
-	HydroController::UpdateEquationOfState(p4est);
-	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
-
-	HydroController::ComputeSoundSpeed(p4est);
-	if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
-}
-
-void advance_single_stage(p4est_t * p4est, GhostSession &session)
-{
-	p4est_data_t	*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-
-
-	HydroController::stage_phase_boundary(p4est);
-	HydroController::stage_phase_half_corner(p4est);
-	HydroController::stage_phase_nodal_assemble(p4est, session);
-	HydroController::stage_phase_riemann(p4est, session);
-	HydroController::stage_phase_conservative_updates(p4est);
-	p4est_data->used_dt = p4est_data->delta_time;
-}
-
-// M9.2.4: MUSCL gradient estimation shell and PreProcess (default tags).
-void
-Gradient_estimate(p4est_t *p4est, GhostSession &session)
-{
-	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
-	GhostCallbackContext callback_context = { &session };
-
-	p4est_iterate(p4est,
-		session.get(),
-		(void *)session.data(),
-		HydroCallbacks::quadrant_set_gradient_zero_estimate_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
+		p4est_iterate(p4est,
+			session.get(),
+			&callback_context,
+			NULL,
+			HydroCallbacks::quadrant_hanging_solver_callback,
+#ifdef P4_TO_P8
+			NULL,
 
 #endif
-		NULL);
+			NULL);
+	}
 
+	void ComputeCornerNodeVelocity(p4est_t* p4est, GhostSession& session)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
 
-	p4est_iterate(p4est,
-		session.get(),
-		&callback_context,
-		NULL,
-		AMRCallbacks::quadrant_edge_minmod_estimate_callback,
-#ifdef  P4_TO_P8
-		NULL,
-
-#endif
-		NULL);
-
-	p4est_iterate(p4est,
-		session.get(),
-		&callback_context,
-		NULL,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
+		GhostCallbackContext callback_context = { &session };
+		p4est_iterate(p4est,
+			session.get(),
+			&callback_context,
+			NULL,
+			NULL,
+#ifdef P4_TO_P8
+			NULL,
 
 #endif
-		HydroCallbacks::quadrant_corner_minmod_estimate_callback);
+			HydroCallbacks::quadrant_corner_velocity_callback);
 
-
-	p4est_iterate(p4est,
-		NULL,
-		(void *)p4est_data,
-		AMRCallbacks::quadrant_cell_minmod_estimate_callback,
-		NULL,
-#ifdef  P4_TO_P8
-		NULL,
+		p4est_iterate(p4est,
+			NULL,
+			NULL,
+			HydroCallbacks::quadrant_copy_velocity_from_lag_to_relax_callback,
+			NULL,
+#ifdef P4_TO_P8
+			NULL,
 
 #endif
-		NULL);
-}
+			NULL);
+	}
 
-void PreProcess(p4est_t *p4est, GhostSession &session)
-{
+	void ComputeCoordinate(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
 
-	HydroController::Gradient_estimate(p4est, session);
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			HydroCallbacks::quadrant_update_corner_coordinate_callback,
+			NULL,
+#ifdef P4_TO_P8
+			NULL,
 
-	AMRCallbacks::set_default_coarsening_tag(p4est);
+#endif
+			NULL);
+	}
+
+	void UpdateDensity(p4est_t* p4est)
+	{
+		HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_density_callback);
+	}
+
+	void UpdateMomentumEquation(p4est_t* p4est)
+	{
+		HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_momentum_callback);
+	}
+
+	void ComputeWork(p4est_t* p4est)
+	{
+		HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_work_callback);
+	}
+
+	void UpdateEnergyEquation(p4est_t* p4est)
+	{
+		HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_energy_callback);
+	}
+
+	void UpdateEquationOfState(p4est_t* p4est)
+	{
+		HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_update_EOS_callback);
+	}
+
+	void AcceptNumericalSolution(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			HydroCallbacks::quadrant_accept_center_solution_callback,
+			NULL,
+#ifdef P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void ComputeCornerAndEdgeForce(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			HydroCallbacks::quadrant_compute_corner_force_callback,
+			NULL,
+#ifdef P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void FluxRelaxedResetZero(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
 
 
-	AMRCallbacks::set_default_refining_tag(p4est);
-}
+		p4est_iterate(p4est,
+			NULL,
+			NULL,
+			HydroCallbacks::quadrant_flux_relaxed_reset_callback,
+			NULL,
+#ifdef P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void CalculateHalfTimeVariable(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+
+
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			HydroCallbacks::quadrant_compute_halftime_variable_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void CalculateCornerRcpLcpNcp(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			HydroCallbacks::quadrant_compute_RcpLcpNcp_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void MirrorNodalBoundary(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			HydroCallbacks::quadrant_mirror_boundary_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void MirrorNodalGeometry(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			HydroCallbacks::quadrant_mirror_face_geometry_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void StampNodalStage(p4est_t* p4est, GhostSession& session,
+		std::uint16_t sub_stage, Nodal::StagePhase phase)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		Nodal::StageResetContext context;
+		context.ctx = Nodal::make_stage_context(*p4est_data,
+			static_cast<std::uint64_t>(session.generation()),
+			static_cast<std::uint64_t>(session.topology_version()),
+			sub_stage, phase);
+		p4est_iterate(p4est,
+			NULL,
+			&context,
+			HydroCallbacks::quadrant_stage_reset_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void InvalidateNodalStamps(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			HydroCallbacks::quadrant_invalidate_stage_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void WriteNodalLocalMaster(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			HydroCallbacks::quadrant_write_local_master_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void ValidateNodalStamps(p4est_t* p4est, GhostSession& session,
+		std::uint16_t sub_stage, Nodal::StagePhase phase)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		Nodal::StageResetContext context;
+		context.ctx = Nodal::make_stage_context(*p4est_data,
+			static_cast<std::uint64_t>(session.generation()),
+			static_cast<std::uint64_t>(session.topology_version()),
+			sub_stage, phase);
+		p4est_iterate(p4est,
+			NULL,
+			&context,
+			HydroCallbacks::quadrant_validate_stage_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void ComputeDivergence(p4est_t* p4est)
+	{
+		HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_divergence_callback);
+	}
+
+	void ComputeSoundSpeed(p4est_t* p4est)
+	{
+		HydroPhases::run_volume_update(p4est, HydroPhases::quadrant_compute_soundspeed_callback);
+	}
+
+	// M9.2.3: single-stage hydro advance (M9.2.2 skipped item). Orchestrates
+	// boundary, half-time, corner matrix/velocity, divergence, coordinate,
+	// and conservative-update phases with trace/checksum diagnostics.
+
+	inline void stage_phase_boundary(p4est_t* p4est)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		Initializer::get_boundary_from_p4est(p4est);
+		p4est_data->dt_iter =
+			StagePolicy::timestep_scale(0) * p4est_data->delta_time;
+	}
+
+	inline void stage_phase_half_corner(p4est_t* p4est)
+	{
+		HydroController::CalculateHalfTimeVariable(p4est);
+		trace_target_snapshot(p4est, "AFTER_HALF");
+		HydroController::CalculateCornerRcpLcpNcp(p4est);
+		trace_target_snapshot(p4est, "AFTER_RCP");
+	}
+
+	inline void stage_phase_nodal_assemble(p4est_t* p4est, GhostSession& session)
+	{
+		HydroController::InvalidateNodalStamps(p4est);
+		HydroController::MirrorNodalBoundary(p4est);
+		session.exchange();
+
+		AMRCallbacks::Get_AMR_BDY_info(p4est, session);
+		trace_target_snapshot(p4est, "AFTER_AMR_BDY");
+		HydroController::MirrorNodalGeometry(p4est);
+		HydroController::WriteNodalLocalMaster(p4est);
+		HydroController::StampNodalStage(p4est, session, 0, Nodal::StagePhase::Assemble);
+		session.exchange();
+		HydroController::ValidateNodalStamps(p4est, session, 0, Nodal::StagePhase::Assemble);
+	}
+
+	inline void stage_phase_riemann(p4est_t* p4est, GhostSession& session)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		const SolverGate::CoordinateType coordinate_type =
+			SolverGate::coordinate_type_from_legacy(p4est_data->coord_type);
+		const SolverGate::SolverType solver_type =
+			SolverGate::solver_type_from_legacy(p4est_data->solver_type);
+		if (SolverGate::should_run_riemann(coordinate_type, solver_type))
+		{
+			HydroController::RiemannSolver(p4est, session);
+		}
+		Diagnostics::dump_riemann_target_if_enabled(p4est, session);
+	}
+
+	inline void stage_phase_conservative_updates(p4est_t* p4est)
+	{
+		HydroController::ComputeDivergence(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 3: Divergence");
+
+		HydroController::ComputeCoordinate(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 4: Coordinate");
+
+		HydroController::UpdateDensity(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 5: Density");
+
+		HydroController::UpdateMomentumEquation(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 6: Momentum");
+
+		HydroController::ComputeWork(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 7: Work");
+
+		HydroController::UpdateEnergyEquation(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 8: EnergyEq");
+
+		HydroController::UpdateEquationOfState(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 9: EOS");
+
+		HydroController::ComputeSoundSpeed(p4est);
+		if (checksum_trace_enabled()) IOCallbacks::StatGlobalFieldChecksum(p4est, "SubStep 10: SoundSpeed");
+	}
+
+	void advance_single_stage(p4est_t* p4est, GhostSession& session)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+
+
+		HydroController::stage_phase_boundary(p4est);
+		HydroController::stage_phase_half_corner(p4est);
+		HydroController::stage_phase_nodal_assemble(p4est, session);
+		HydroController::stage_phase_riemann(p4est, session);
+		HydroController::stage_phase_conservative_updates(p4est);
+		p4est_data->used_dt = p4est_data->delta_time;
+	}
+
+	// M9.2.4: MUSCL gradient estimation shell and PreProcess (default tags).
+	void
+		Gradient_estimate(p4est_t* p4est, GhostSession& session)
+	{
+		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
+		GhostCallbackContext callback_context = { &session };
+
+		p4est_iterate(p4est,
+			session.get(),
+			(void*)session.data(),
+			HydroCallbacks::quadrant_set_gradient_zero_estimate_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+
+
+		p4est_iterate(p4est,
+			session.get(),
+			&callback_context,
+			NULL,
+			AMRCallbacks::quadrant_edge_minmod_estimate_callback,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+
+		p4est_iterate(p4est,
+			session.get(),
+			&callback_context,
+			NULL,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			HydroCallbacks::quadrant_corner_minmod_estimate_callback);
+
+
+		p4est_iterate(p4est,
+			NULL,
+			(void*)p4est_data,
+			AMRCallbacks::quadrant_cell_minmod_estimate_callback,
+			NULL,
+#ifdef  P4_TO_P8
+			NULL,
+
+#endif
+			NULL);
+	}
+
+	void PreProcess(p4est_t* p4est, GhostSession& session)
+	{
+
+		HydroController::Gradient_estimate(p4est, session);
+
+		AMRCallbacks::set_default_coarsening_tag(p4est);
+
+
+		AMRCallbacks::set_default_refining_tag(p4est);
+	}
 
 } // namespace HydroController
