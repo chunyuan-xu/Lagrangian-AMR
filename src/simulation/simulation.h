@@ -72,6 +72,13 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 			p4est_data->refine_coarsen_enum != RefineCriteria::Distance) {
 			HydroController::PreProcess(p4est, ghost_session);
 		}
+		else if (!p4est_data->static_ring_mesh &&
+			!p4est_data->uniform_level_switch &&
+			p4est_data->refine_coarsen_enum == RefineCriteria::Distance) {
+			// Distance AMR does not need gradient estimates, but it still
+			// needs the default coarsening permission before edge/corner checks.
+			AMRCallbacks::set_default_coarsening_tag(p4est);
+		}
 		trace_target_snapshot(p4est, "AFTER_PREPROCESS");
 
 
