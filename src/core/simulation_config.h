@@ -13,6 +13,10 @@ struct MeshConfig {
 	int y_tree_number;
 	int minimum_level;
 	int maximum_level;
+	bool static_ring_mesh;
+	bool uniform_level_switch;
+	double uniform_level_switch_time;
+	int uniform_level_switch_target;
 	int refine_criterion;
 	double refine_error;
 	double coarsen_error;
@@ -88,6 +92,11 @@ inline bool valid(const MeshConfig &config)
 		config.y_tree_number > 0 &&
 		config.minimum_level >= 0 &&
 		config.maximum_level >= config.minimum_level &&
+		(!config.static_ring_mesh ||
+			(config.minimum_level == 5 && config.maximum_level == 7)) &&
+		std::isfinite(config.uniform_level_switch_time) &&
+		config.uniform_level_switch_target >= config.minimum_level &&
+		config.uniform_level_switch_target <= config.maximum_level &&
 		config.refine_period > 0 &&
 		config.repartition_period > 0;
 }

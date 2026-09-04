@@ -33,6 +33,7 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 	int					allowed_level = p4est_data->max_level;
 	int					callbackorphans = 0;
 	int					allowcoarsening = 1;
+	bool level_switch_done = !p4est_data->uniform_level_switch;
 
 
 	if (memory_probe.enabled()) {
@@ -46,6 +47,16 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 	for (t = start_time; t < end_time; t += p4est_data->delta_time)
 	{
 		p4est_data->current_step += 1;
+		const bool switch_due = p4est_data->uniform_level_switch &&
+			!level_switch_done &&
+			p4est_data->current_time >= p4est_data->uniform_level_switch_time;
+		if (switch_due) {
+			p4est_data->minus_level = p4est_data->uniform_level_switch_target;
+			recursive = 1;
+			level_switch_done = true;
+			P4EST_GLOBAL_PRODUCTIONF("[level-switch] refining to uniform L%d at t=%.6f\n",
+				p4est_data->minus_level, p4est_data->current_time);
+		}
 		trace_target_snapshot(p4est, "STEP_BEGIN");
 		//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 1: Start time loop");
 		if(p4est_data->current_step>p4est_data->max_time_step)
@@ -57,11 +68,15 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 		int current_output_index = (int)(p4est_data->current_time / p4est_data->write_interval_time);
 
 
-		HydroController::PreProcess(p4est, ghost_session);
+		if (!p4est_data->static_ring_mesh && !p4est_data->uniform_level_switch) {
+			HydroController::PreProcess(p4est, ghost_session);
+		}
 		trace_target_snapshot(p4est, "AFTER_PREPROCESS");
 
 
-		if (p4est_data->current_step && !(p4est_data->current_step%p4est_data->refine_period)
+		if (!p4est_data->static_ring_mesh &&
+			(!p4est_data->uniform_level_switch || switch_due) &&
+			p4est_data->current_step && !(p4est_data->current_step%p4est_data->refine_period)
 			&& p4est_data->current_time>p4est_data->refine_coarsen_time)
 
 		{
@@ -78,7 +93,7 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 		//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");
 
 
-		if (p4est_data->current_step &&
+		if (!p4est_data->static_ring_mesh && !p4est_data->uniform_level_switch && p4est_data->current_step &&
 			!(p4est_data->current_step%p4est_data->repartition_period)
 			&& p4est_data->current_time>p4est_data->refine_coarsen_time)
 		{

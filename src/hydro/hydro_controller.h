@@ -486,13 +486,13 @@ namespace HydroController {
 	// M9.2.4: MUSCL gradient estimation shell and PreProcess (default tags).
 	void
 		Gradient_estimate(p4est_t* p4est, GhostSession& session)
-	{
+		{
 		p4est_data_t* p4est_data = &((P4estBridge*)p4est->user_pointer)->data;
 		GhostCallbackContext callback_context = { &session };
 
 		p4est_iterate(p4est,
-			session.get(),
-			(void*)session.data(),
+			NULL,
+			NULL,
 			HydroCallbacks::quadrant_set_gradient_zero_estimate_callback,
 			NULL,
 #ifdef  P4_TO_P8
@@ -501,8 +501,7 @@ namespace HydroController {
 #endif
 			NULL);
 
-
-		p4est_iterate(p4est,
+			p4est_iterate(p4est,
 			session.get(),
 			&callback_context,
 			NULL,
@@ -513,7 +512,7 @@ namespace HydroController {
 #endif
 			NULL);
 
-		p4est_iterate(p4est,
+			p4est_iterate(p4est,
 			session.get(),
 			&callback_context,
 			NULL,
@@ -524,8 +523,7 @@ namespace HydroController {
 #endif
 			HydroCallbacks::quadrant_corner_minmod_estimate_callback);
 
-
-		p4est_iterate(p4est,
+			p4est_iterate(p4est,
 			NULL,
 			(void*)p4est_data,
 			AMRCallbacks::quadrant_cell_minmod_estimate_callback,

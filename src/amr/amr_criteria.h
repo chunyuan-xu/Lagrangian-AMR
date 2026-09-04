@@ -70,6 +70,19 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 	return m_vara->cell(idCPara) > p4est_data->refine_err ? 1 : 0;
 }
 
+// Initial-only fixed radial topology for SedovCartesian.  The leaf is
+// refined to the highest ring level intersected by its physical bounds.
+inline int StaticRingRefineErrorEstimate(
+	p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *q)
+{
+	quad_data_t *data = (quad_data_t *) q->p.user_data;
+	const ShockFrontPolicy::RadialBounds bounds = CellRadialBounds(data->m_vara);
+	int target = 5;
+	if (bounds.maximum >= 0.8 && bounds.minimum < 1.1) target = 7;
+	else if (bounds.maximum >= 0.4 && bounds.minimum < 0.8) target = 6;
+	return q->level < target;
+}
+
 inline int CoarsenErrorEstimate(
 	p4est_t *p4est, p4est_topidx_t which_tree, p4est_quadrant_t *children[])
 {

@@ -300,8 +300,29 @@ int main(int argc, char **argv)
 	int partforcoarsen = 1;
 
 	
-	p4est_balance(p4est, P4EST_CONNECT_CORNER, Initializer::Lagrangian_init_condition);
+	if (startup_config.mesh.static_ring_mesh) {
+		P4EST_GLOBAL_PRODUCTIONF(
+			"[static-ring] building fixed Sedov topology: L5(<0.4), L6(0.4-0.8), L7(0.8-1.1)\n");
+		for (int ring_pass = startup_config.mesh.minimum_level;
+			ring_pass < startup_config.mesh.maximum_level; ++ring_pass) {
+			p4est_refine_ext(p4est, 0, startup_config.mesh.maximum_level,
+				AMRAgorithm::StaticRingRefineErrorEstimate,
+				NULL, AMRCallbacks::Lagrangian_replace_quads);
+		}
+	}
+	if (startup_config.mesh.static_ring_mesh) {
+		p4est_balance_ext(p4est, P4EST_CONNECT_CORNER, NULL,
+			AMRCallbacks::Lagrangian_replace_quads);
+	}
+	else {
+		p4est_balance(p4est, P4EST_CONNECT_CORNER,
+			Initializer::Lagrangian_init_condition);
+	}
 	p4est_partition(p4est, partforcoarsen, NULL);
+	if (startup_config.mesh.static_ring_mesh) {
+		P4EST_GLOBAL_PRODUCTIONF("[static-ring] fixed topology ready: %lld global quadrants\n",
+			(long long) p4est->global_num_quadrants);
+	}
 
 	if (state_invariant_check_enabled()) {
 		P4EST_GLOBAL_PRODUCTIONF(

@@ -139,6 +139,10 @@ struct p4est_data_t {
 	int refine_coarsen_enum;
 	int minus_level;
 	int max_level;
+	bool static_ring_mesh;
+	bool uniform_level_switch;
+	double uniform_level_switch_time;
+	int uniform_level_switch_target;
 	int  refine_period;
 	int repartition_period;
 	int last_output_index;
@@ -169,6 +173,10 @@ struct p4est_data_t {
 		refine_coarsen_time = 0.0;
 		minus_level = 4;
 		max_level = 7;
+		static_ring_mesh = false;
+		uniform_level_switch = false;
+		uniform_level_switch_time = 0.5;
+		uniform_level_switch_target = 5;
 
 
 		refine_err = 1.;
@@ -228,6 +236,10 @@ struct p4est_data_t {
 				y_tree_number,
 				minus_level,
 				max_level,
+				static_ring_mesh,
+				uniform_level_switch,
+				uniform_level_switch_time,
+				uniform_level_switch_target,
 				refine_coarsen_enum,
 				refine_err,
 				coarsen_error,
@@ -291,6 +303,16 @@ struct p4est_data_t {
 		if (cfg.HasKey("refine_coarsen_enum")) refine_coarsen_enum = cfg.GetInt("refine_coarsen_enum", refine_coarsen_enum);
 		if (cfg.HasKey("minus_level")) minus_level = cfg.GetInt("minus_level", minus_level);
 		if (cfg.HasKey("max_level")) max_level = cfg.GetInt("max_level", max_level);
+		if (cfg.HasKey("static_ring_mesh")) {
+			const std::string value = cfg.GetString("static_ring_mesh", "false");
+			static_ring_mesh = value == "true" || value == "1" || value == "yes";
+		}
+		if (cfg.HasKey("uniform_level_switch")) {
+			const std::string value = cfg.GetString("uniform_level_switch", "false");
+			uniform_level_switch = value == "true" || value == "1" || value == "yes";
+		}
+		if (cfg.HasKey("uniform_level_switch_time")) uniform_level_switch_time = cfg.GetDouble("uniform_level_switch_time", uniform_level_switch_time);
+		if (cfg.HasKey("uniform_level_switch_target")) uniform_level_switch_target = cfg.GetInt("uniform_level_switch_target", uniform_level_switch_target);
 		if (cfg.HasKey("refine_err")) refine_err = cfg.GetDouble("refine_err", refine_err);
 		if (cfg.HasKey("coarsen_error")) coarsen_error = cfg.GetDouble("coarsen_error", coarsen_error);
 		if (cfg.HasKey("refine_period")) refine_period = cfg.GetInt("refine_period", refine_period);

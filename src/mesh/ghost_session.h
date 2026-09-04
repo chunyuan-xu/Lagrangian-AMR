@@ -65,7 +65,9 @@ public:
 		destroy();
 		forest_ = forest;
 		ghost_ = p4est_ghost_new(forest_, connectivity);
-		data_ = P4EST_ALLOC(quad_data_t, ghost_->ghosts.elem_count);
+		const std::size_t data_count = ghost_->ghosts.elem_count == 0 ? 1 :
+			ghost_->ghosts.elem_count;
+		data_ = P4EST_ALLOC(quad_data_t, data_count);
 		generation_++;
 		valid_ = true;
 		exchange();
@@ -105,7 +107,8 @@ public:
 	void exchange()
 	{
 		assert(valid_ && "GhostSession used after topology change without rebuild");
-		assert(ghost_ != NULL && data_ != NULL);
+		if (ghost_ == NULL) return;
+		assert(data_ != NULL);
 		p4est_ghost_exchange_data(forest_, ghost_, data_);
 	}
 
