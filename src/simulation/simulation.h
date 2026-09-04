@@ -68,7 +68,8 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 		int current_output_index = (int)(p4est_data->current_time / p4est_data->write_interval_time);
 
 
-		if (!p4est_data->static_ring_mesh && !p4est_data->uniform_level_switch) {
+		if (!p4est_data->static_ring_mesh && !p4est_data->uniform_level_switch &&
+			p4est_data->refine_coarsen_enum != RefineCriteria::Distance) {
 			HydroController::PreProcess(p4est, ghost_session);
 		}
 		trace_target_snapshot(p4est, "AFTER_PREPROCESS");
