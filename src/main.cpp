@@ -21,7 +21,9 @@ using namespace std;
 #include<p4est_iterate.h>
 #include<p4est_io.h>
 #include<p4est_communication.h>
+#ifdef _WIN32
 #include<windows.h>
+#endif
 #else
 #include<p8est_vtk.h>
 #include<p8est_bits.h>
