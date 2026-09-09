@@ -42,6 +42,19 @@ inline void execute_amr(p4est_t *p4est, GhostSession &session,
 	session.destroy();
 }
 
+inline void execute_refine_only(p4est_t *p4est, GhostSession &session,
+	int recursive, int allowed_level, refine_fn refine_cb,
+	replace_fn replace_cb, energy_fn energy_cb)
+{
+	p4est_refine_ext(p4est, recursive, allowed_level,
+		refine_cb, NULL, replace_cb);
+	energy_cb(p4est);
+	p4est_balance_ext(p4est, P4EST_CONNECT_CORNER, NULL,
+		replace_cb);
+	session.invalidate_after_topology_change();
+	session.destroy();
+}
+
 inline void execute_partition(p4est_t *p4est, GhostSession &session,
 	int allowcoarsening)
 {

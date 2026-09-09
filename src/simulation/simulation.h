@@ -91,11 +91,19 @@ void advance_time_step(p4est_t * p4est, double start_time, double end_time)
 						if (memory_probe.enabled()) {
 						    memory_probe.context()->origin = Diagnostics::ExchangeOrigin::Rebuild;
 						}
-						AMRController::execute_amr(p4est, ghost_session,
+			if (p4est_data->disable_coarsening) {
+				AMRController::execute_refine_only(p4est, ghost_session,
+					recursive, allowed_level,
+					AMRCallbacks::Lagrangian_refine_err_estimate,
+					AMRCallbacks::Lagrangian_replace_quads,
+					IOCallbacks::StatTotalEnergyError);
+			} else {
+			AMRController::execute_amr(p4est, ghost_session,
 				recursive, allowed_level, callbackorphans,
 				AMRCallbacks::Lagrangian_refine_err_estimate, AMRCallbacks::Lagrangian_coarsen_err_estimate,
 				AMRCallbacks::Lagrangian_replace_quads, AMRCallbacks::set_allowing_coarsening_tag,
 				IOCallbacks::StatTotalEnergyError);
+			}
 			HydroController::InvalidateNodalStamps(p4est);
 		}
 		//IOCallbacks::StatGlobalFieldChecksum(p4est, "Checkpoint 2: AMR");

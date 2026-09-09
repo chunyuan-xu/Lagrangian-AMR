@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <vector>
 #include <p4est.h>
 #include <p4est_vtk.h>
 #include "defines.h"
@@ -151,9 +152,15 @@ void quadrant_copy_variable_to_array_callback(p4est_iter_volume_info_t *info, vo
 	}
 }
 
+struct DistanceProfileWriteContext {
+	p4est_data_t *p4est_data;
+	std::vector<double> values;
+};
+
 void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *info, void *user_data)
 {
-	p4est_data_t		*p4est_data = &((P4estBridge *)info->p4est->user_pointer)->data;
+	DistanceProfileWriteContext *context = (DistanceProfileWriteContext *)user_data;
+	p4est_data_t		*p4est_data = context->p4est_data;
 	quad_data_t		*data = (quad_data_t *)info->quad->p.user_data;
 	CVariable		*m_vara = (CVariable *)&data->m_vara;
 
@@ -182,12 +189,11 @@ void quadrant_write_distance_profiles_callback(p4est_iter_volume_info_t *info, v
 			p4est_data->profiletype);
 		std::abort();
 	}
-	std::ofstream &distance_file = distance_profile_file();
-	distance_file << blank << blank << distance <<
-		blank << blank << m_vara->cell(idDensity_lag) <<
-		blank << blank << m_vara->cell(idPressure_lag) <<
-		blank << blank << m_vara->cell(idInternalEnergy_lag) <<
-		blank << blank << m_vara->cell(idTotalEnergy_lag) << endl;
+	context->values.push_back(distance);
+	context->values.push_back(m_vara->cell(idDensity_lag));
+	context->values.push_back(m_vara->cell(idPressure_lag));
+	context->values.push_back(m_vara->cell(idInternalEnergy_lag));
+	context->values.push_back(m_vara->cell(idTotalEnergy_lag));
 }
 
 
@@ -470,7 +476,8 @@ void p4est_debug_output_vtu(p4est_t *p4est, const char *prefix, int step, int lo
 	sc_array_destroy(m_cell_data.velov_c3_array);
 }
 
-// M9.3.3: distance-profile writer (rank-local mkdir + iterate callback).
+// M9.3.3: distance-profile writer. Ranks gather local records and rank 0 writes
+// the shared file, preventing concurrent ofstream corruption.
 void write_distance_profiles(p4est_t *p4est)
 {
 	p4est_data_t		*p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
@@ -484,14 +491,54 @@ void write_distance_profiles(p4est_t *p4est)
 #endif
 		perror("Error creating directory");
 	}
+	DistanceProfileWriteContext context;
+	context.p4est_data = p4est_data;
 	p4est_iterate(p4est, NULL,
-		(void *)p4est_data,
+		(void *)&context,
 		IOCallbacks::quadrant_write_distance_profiles_callback,
 		NULL,
 #ifdef  P4_TO_P8
 		NULL,
 #endif
 		NULL);
+
+	const int local_count = (int)context.values.size();
+	std::vector<int> counts;
+	if (p4est->mpirank == 0) {
+		counts.resize(p4est->mpisize, 0);
+	}
+	sc_MPI_Gather((void *)&local_count, 1, sc_MPI_INT,
+		p4est->mpirank == 0 ? (void *)counts.data() : NULL, 1, sc_MPI_INT,
+		0, p4est->mpicomm);
+
+	std::vector<int> displacements;
+	std::vector<double> global_values;
+	if (p4est->mpirank == 0) {
+		displacements.resize(p4est->mpisize, 0);
+		int total_count = 0;
+		for (int rank = 0; rank < p4est->mpisize; ++rank) {
+			displacements[rank] = total_count;
+			total_count += counts[rank];
+		}
+		global_values.resize(total_count);
+	}
+	sc_MPI_Gatherv(context.values.empty() ? NULL : context.values.data(),
+		local_count, sc_MPI_DOUBLE,
+		p4est->mpirank == 0 && !global_values.empty() ? global_values.data() : NULL,
+		p4est->mpirank == 0 ? counts.data() : NULL,
+		p4est->mpirank == 0 ? displacements.data() : NULL,
+		sc_MPI_DOUBLE, 0, p4est->mpicomm);
+
+	if (p4est->mpirank == 0) {
+		std::ofstream &distance_file = distance_profile_file();
+		for (size_t i = 0; i + 4 < global_values.size(); i += 5) {
+			distance_file << blank << blank << global_values[i]
+				<< blank << blank << global_values[i + 1]
+				<< blank << blank << global_values[i + 2]
+				<< blank << blank << global_values[i + 3]
+				<< blank << blank << global_values[i + 4] << endl;
+		}
+	}
 }
 
 // M9.3.3: global total-energy conservation check (MPI Allreduce + abort gate).

@@ -140,6 +140,7 @@ struct p4est_data_t {
 	int minus_level;
 	int max_level;
 	bool static_ring_mesh;
+	bool disable_coarsening;
 	bool uniform_level_switch;
 	double uniform_level_switch_time;
 	int uniform_level_switch_target;
@@ -174,6 +175,7 @@ struct p4est_data_t {
 		minus_level = 4;
 		max_level = 7;
 		static_ring_mesh = false;
+		disable_coarsening = false;
 		uniform_level_switch = false;
 		uniform_level_switch_time = 0.5;
 		uniform_level_switch_target = 5;
@@ -306,6 +308,10 @@ struct p4est_data_t {
 		if (cfg.HasKey("static_ring_mesh")) {
 			const std::string value = cfg.GetString("static_ring_mesh", "false");
 			static_ring_mesh = value == "true" || value == "1" || value == "yes";
+		}
+		if (cfg.HasKey("disable_coarsening")) {
+			const std::string value = cfg.GetString("disable_coarsening", "false");
+			disable_coarsening = value == "true" || value == "1" || value == "yes";
 		}
 		if (cfg.HasKey("uniform_level_switch")) {
 			const std::string value = cfg.GetString("uniform_level_switch", "false");
