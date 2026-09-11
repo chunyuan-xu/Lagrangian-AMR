@@ -854,6 +854,62 @@ void InitBoundaryCondition(const int &problem_index, const int &coord_type,
 			LeftBouVal = 0.;
 			RightBouVal = 0.;
 		}
+		if (problem_index == ProblemNo::Sod1DCartesian)
+		{
+			double scale = 1.0;
+
+			for (int i = 0; i < CNDIM; ++i) {
+				CoordCur[i] = scale * CoordCur[i];
+				CoordLag[i] = CoordCur[i];
+			}
+
+			density_cur = 1.0;
+			density_lag = 1.0;
+
+			CDoubleVector m_cell_coord[CNDIM];
+			for (int i = 0; i < CNDIM; i++) { m_cell_coord[i] = CoordCur[i]; }
+			volume = GeometryAlg::CalculateCellVolume(coord_type, m_cell_coord);
+			mass = PhysicalAlg::CalculateCellMass(volume, density_cur);
+			CDoubleVector center_point;
+			center_point = GeometryAlg::GetPolyCenter(m_cell_coord);
+			CentroidCoordCur = center_point;
+			CentroidVeloCur = CDoubleVector(0., 0.);
+			CentroidVeloLag = CentroidVeloCur;
+
+			if (center_point.x <0.5)
+			{
+				density_cur = 1.0;
+				internal_energy_cur = 1.5;
+			}
+			else
+			{
+				density_cur = 0.125;
+				internal_energy_cur = 1.2;
+			}
+			density_lag = density_cur;
+			CentroidVeloCur = CDoubleVector(0., 0.);
+			CentroidVeloLag = CentroidVeloCur;
+			
+			mass = PhysicalAlg::CalculateCellMass(volume, density_cur);
+
+			internal_energy_lag = internal_energy_cur;
+			gamma = 5. / 3;
+			pressure_cur = PhysicalAlg::EquationOfState(gamma, density_cur, internal_energy_cur);
+			pressure_lag = pressure_cur;
+			total_energy_cur = 0.5*(pow(CentroidVeloCur.x, 2) + pow(CentroidVeloCur.y, 2)) + internal_energy_cur;
+			total_energy_lag = total_energy_cur;
+			soundspeed = PhysicalAlg::CalculateSoundSpeed(gamma, pressure_cur, density_cur);
+
+			TopBouType = WallBoundary;
+			BottomBouType = WallBoundary;
+			LeftBouType = WallBoundary;
+			RightBouType = WallBoundary;
+
+			TopBouVal = 0.;
+			BottomBouVal = 0.;
+			LeftBouVal = 0.;
+			RightBouVal = 0.;
+		}
 		return;
 	}
 }

@@ -15,6 +15,7 @@ enum ProblemNo
 	Saltzman,
 	SodPolar,
 	SodCartesian,
+	Sod1DCartesian,
 	TriplePoint,
 	TwoDimRiemann,
 	TaylorGreen,
@@ -268,6 +269,7 @@ struct p4est_data_t {
 			else if (case_str == "Saltzman") which_case = ProblemNo::Saltzman;
 			else if (case_str == "SodPolar") which_case = ProblemNo::SodPolar;
 			else if (case_str == "SodCartesian") which_case = ProblemNo::SodCartesian;
+			else if (case_str == "Sod1DCartesian") which_case = ProblemNo::Sod1DCartesian;
 			else if (case_str == "TriplePoint") which_case = ProblemNo::TriplePoint;
 			else if (case_str == "TwoDimRiemann") which_case = ProblemNo::TwoDimRiemann;
 			else if (case_str == "TaylorGreen") which_case = ProblemNo::TaylorGreen;
