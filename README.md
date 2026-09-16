@@ -630,7 +630,9 @@ C_K=\frac{\max(-\Phi_K,0)}{\sqrt{A_K^{\mathrm{geom}}}\max(U_*,10^{-12})},
 
 可复算归档见 [密度—压力 AMR 试验包](experiments/density-pressure-amr/README.md)，包含隔离源码、Noh/Sedov 成功配置、编译运行入口及结果校验依据；不覆盖正式 src/。详细历史诊断仍保存在本地 .tmp/noh-sensor-study-20260914/ 中，复算归档包不依赖该临时目录。
 
-### 10.4 Common-weights AMR：共享线性平滑指标（2026-09-16 已实现并测试）
+### 10.4 Common-weights AMR：共享线性平滑指标（2026-09-16）
+
+版本范围：基础版 mode 6 的实现和三算例说明已归档于 `82d1965`。本节末补充的 mode 7 密度尺度保护与父尺度检查来自后续本地试验，其源码仍是未提交的工作区改动；本次文档提交不将这些扩展宣称为已归档、可直接从该提交复现的功能。根目录求解器默认路径保持不变。
 
 #### 核心数学物理思想
 
@@ -705,7 +707,7 @@ q^L_{s,K}(\boldsymbol x)=q_{s,K}+\boldsymbol g_{s,K}\cdot(\boldsymbol x-\boldsym
 - `src/amr/linear_service_sensor.h`：服务变量差分、线性拟合与共享指标；
 - `src/amr/density_gradient.h`：物理邻居遍历、尺度保护和指标写回；
 - `src/amr/amr_criteria.h`：`RefineByWenoServiceVariable` / `CoarsenByWenoServiceVariable`；
-- `tests/linear_service_test.cpp`：12 项制造场数学检查；`tests/run_service_study.py`：配置、完整计算及源码/二进制快照归档。
+- `tests/linear_service_test.cpp`：基础归档版的 12 项制造场数学检查；`tests/run_service_study.py`：配置、完整计算及源码/二进制快照归档。
 
 以上路径均相对于试验包。`Weno`/`AMR_WENO_*` 为实验沿用命名，不表示调用了 WENO 通量重构。开启 `AMR_WENO_SENSOR=1`、选择 `AMR_WENO_MODE=6`，并使用 `refine_coarsen_enum=6` 与 `density_gradient_method=1`；设 `AMR_WENO_SENSOR=0` 保持原判据。具体环境开关和复算命令见 [数学与复现说明](experiments/density-pressure-amr/tests/LINEAR-SERVICE.md)，不要只复制 ini 而遗漏配套环境。
 
@@ -722,6 +724,54 @@ q^L_{s,K}(\boldsymbol x)=q_{s,K}+\boldsymbol g_{s,K}\cdot(\boldsymbol x-\boldsym
 三例均完整运行并通过保存帧正性/有限性检查。Noh 在 r<0.3 的密度相对 L1 误差约 1.931%，与原方法 1.969% 接近，过冲仍存在；Sedov 相比原方法终态 3517 单元增加至 6013，不能称为效率改进。Sod 外侧压力波和接触分界代理在 91 条射线上的交点邻接较低层级全部达到 L7–L8，改善了原方法的细网格覆盖，但尚无匹配高分辨率参考支持整体精度提升的量化结论。这里 Sod 是初始半径 0.5、gamma=5/3 的二维径向问题，不是一维 gamma=1.4 激波管。
 
 该指标仍可能响应波后数值噪声；全局压力保护可能降低弱波敏感性，\(\sqrt A\) 也不能充分描述强畸变各向异性。Sedov 末帧仍有少量正面积凹单元。当前结果支持保留为可选方案，不证明无振荡、网格质量问题解决或多核一致性，也不更新黄金参考。
+
+#### 后续扩展：尺度正则化与跨层级一致性（本地试验）
+
+基础版与后续扩展可统一写成一个**向量服务变量**，而不必将密度和压力先乘成标量：
+
+\[
+\boldsymbol q_K=\begin{pmatrix}
+\ln[(\rho_K+\rho_*)/\rho_{\rm ref}]\\
+\ln[(p_K+P_*)/p_{\rm ref}]
+\end{pmatrix},\quad
+\rho_*=f_\rho\max_j\rho_j,\quad P_*=\tfrac12\alpha\max_jp_j,
+\qquad S_K=h_K\|\nabla\boldsymbol q_K\|_F.
+\]
+
+其中梯度矩阵的 Frobenius 范数就是上面的两个梯度平方和；离散求解仍采用同一个邻域、同一个距离加权拟合算子。mode 6 对应 \(f_\rho=0\)；本地 mode 7 试验取 \(f_\rho=0.05\)。两种尺度每轮在全域取常数，正参考量仅用于量纲定义，不参与物理状态更新。
+
+这一扩展的核心不是“波后必然光滑”，而是**低背景值不应无限放大微小绝对变化**：
+
+\[
+\nabla\ln(\rho+\rho_*)=
+\frac{\rho}{\rho+\rho_*}\nabla\ln\rho.
+\]
+
+密度较高时接近原相对变化指标，密度很低时连续降低其敏感性；压力分量同理。它不裁剪密度、不平滑解，也不能识别每一处变化究竟来自真实结构还是数值噪声。代价是低密度接触和弱波也可能被弱化，全局最大值的过冲会影响尺度；因此不能仅凭网格减少判断改进成功。
+
+减疏还要考虑“子单元光滑”与“合并后仍足够分辨”并非同一件事。对完整四兄弟家族 \(F\)，在原减疏条件外可增加：
+
+\[
+A_P=\sum_{K\in F}A_K,\qquad
+\widehat S_{P,K}=S_K\sqrt{A_P/A_K},\qquad
+\forall K\in F:\ \widehat S_{P,K}<\tau_r.
+\]
+
+这是保持梯度近似不变时的父尺度预测，不是合并后重新拟合的精确指标。等面积四兄弟有 \(h_P=2h_K\)，故 \(\tau_r=0.20\) 时该检查要求每个 \(S_K<0.10\)，即使原减疏阈值为 0.19。它用于减少“刚合并又加密”的跨轮往返，可能保留更多中间层级，不保证完全消除往返。
+
+扩展后的算法流程为：
+
+1. 刷新当前几何、状态与面邻居/ghost；归约全局密度、压力尺度，计算压缩辅助指标。
+2. 在共同邻域上拟合两个对数服务分量，生成并存储唯一的共享指标 \(S_K\)。无效状态或退化拟合不按光滑单元处理。
+3. 按 \(S_K>\tau_r\) 或压缩补救条件请求加密；遵守最高层级，完成现有状态转移及所需数据刷新。
+4. 对完整四兄弟依次检查最低层级、各子单元 \(S_K<\tau_c\)、压缩/安全条件；启用父尺度保护时，再要求各 \(\widehat S_{P,K}<\tau_r\)。
+5. 通过同轮保护和拓扑预演后执行减疏、平衡及配置要求的重分区；刷新几何与派生状态，检查守恒和状态有效性，再进入下一时间步。
+
+本地实现入口为 `LinearServiceSensor::density_floor_factor`、`parent_scale_estimate` 和 `CommonWeightsParentCoarsenAllowed`；对应可选开关为 `AMR_WENO_MODE=7`、`AMR_CW_DENSITY_FLOOR=0.05`、`AMR_CW_PARENT_GUARD=1`。这些开关须待扩展源码另行归档后才能作为 Git 版本的复算接口，不能用于基础版复算命令。
+
+**判据与状态误差必须分开归因。** 后续 Sedov 组合试验还包含初始原点热源 L7 预分辨和实际一阶守恒重映：前者改变有限单元热源的初始化正则化，后者处理几何改变后的状态转移；两者都不是 CW-AMR 标记公式的一部分。即使组合结果的波后角向散布降低，也不能推断共享指标本身消除了噪声、密度峰值过冲已改善，或同一参数已适用于所有问题。目前没有统一参数覆盖 Noh、Sedov、Sod 和二维 Riemann 的完整验证。
+
+数学物理思想可概括为：**用共同线性拟合衡量多物理量在当前单元内的无量纲变化，用平方和保留不同波结构，用尺度保护调节低背景敏感性，用父尺度检查控制合并后的分辨率。** AMR 决定在哪里保留自由度，而不替代求解器的耗散、守恒转移或初始数据分辨率设计。
 
 ### 10.5 其余数学方案待补充
 
