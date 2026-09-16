@@ -74,6 +74,7 @@ enum DoubleCellVariableID
     idAMRPressureSidedJump, // isolated high-pressure-side sensor, no hydro use
     idAMRPressurePairRefine, // isolated same-face density/pressure flags
     idAMRPressurePairRetain,
+    idAMRWenoSensor, // shared linear log-smoothness, AMR marking only
 	 
 	
 	idDoubleCellVariableNum,

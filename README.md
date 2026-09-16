@@ -630,7 +630,100 @@ C_K=\frac{\max(-\Phi_K,0)}{\sqrt{A_K^{\mathrm{geom}}}\max(U_*,10^{-12})},
 
 可复算归档见 [密度—压力 AMR 试验包](experiments/density-pressure-amr/README.md)，包含隔离源码、Noh/Sedov 成功配置、编译运行入口及结果校验依据；不覆盖正式 src/。详细历史诊断仍保存在本地 .tmp/noh-sensor-study-20260914/ 中，复算归档包不依赖该临时目录。
 
-### 10.4 其余数学方案待补充
+### 10.4 Common-weights AMR：共享线性平滑指标（2026-09-16 已实现并测试）
+
+#### 核心数学物理思想
+
+本项目将该方法称为 **Common-weights 思想下的 AMR 判据（CW-AMR）**：密度与压力使用同一物理邻域和距离权重进行线性拟合，由共享平滑指标统一决定网格加密与减疏。它借鉴 Shen 等人《A robust common-weights WENO scheme based on the flux vector splitting for Euler equations》（SSRN 4257437，第 3.3 节）的共权思想，但**不是原论文的 WENO 算法，也不计算 WENO 非线性模板权重**。论文用服务变量构造各通量分量共享的权重；这里将其转化为各物理分量共享的网格标记决策，不改变水动力通量或重映方法。
+
+其与第 10.3 节原判据的共同基础，是衡量**当前物理单元尺度内的相对变化**：
+
+\[
+\eta_{\rho,K}=h_K\frac{|\nabla\rho|}{\rho}
+=h_K|\nabla\ln\rho|,\qquad h_K=\sqrt{A_K}.
+\]
+
+此等式指连续微分关系；离散地拟合密度后除以密度，与直接拟合对数密度并不完全相同。密度分量响应激波和接触间断，压力分量补充压力波信息；平方和合并避免两者方向相反时抵消，也不再用压力 AND 门槛屏蔽近等压接触。它是波结构/相对变化传感器，不是只响应激波的分类器，更不是消除数值噪声的耗散机制。
+
+#### 数学方案
+
+对叶子单元 K，定义两个仅用于标记的服务分量：
+
+\[
+q_\rho=\ln(\rho/\rho_{\rm ref}),\qquad
+q_p=\ln[(p+P_*)/p_{\rm ref}],\qquad
+P_*=\tfrac12\alpha\max_j p_j.
+\]
+
+每轮检测中，\(P_*\) 是空间常数，全局最大压力通过 MPI 归约取得。它只保护传感器分母，**不向物理压力或状态方程添加压力底限**。Noh 冷入流区的压力极小，取 \(\alpha=1\) 可降低微小绝对压力扰动的误触发；本轮 Sedov/Sod 取 \(\alpha=0\)，保留局部相对压力敏感性。系数 1/2 与原对称压力跳变分母 \(p_K+p_j+\alpha p_{\max}\) 的局部尺度对应，不是新的物理常数。
+
+以当前物理中心差 \(\boldsymbol d_{Kj}=\boldsymbol x_j-\boldsymbol x_K\) 定义共同几何权重 \(w_{Kj}=|\boldsymbol d_{Kj}|^{-2}\)。对 \(s\in\{\rho,p\}\) 分别拟合：
+
+\[
+\boldsymbol g_{s,K}=\arg\min_{\boldsymbol g}
+\sum_{j\in N(K)}w_{Kj}
+\left[q_{s,j}-q_{s,K}-\boldsymbol g\cdot\boldsymbol d_{Kj}\right]^2,
+\qquad
+q^L_{s,K}(\boldsymbol x)=q_{s,K}+\boldsymbol g_{s,K}\cdot(\boldsymbol x-\boldsymbol x_K).
+\]
+
+这里 \(N(K)\) 为物理面邻居，包含粗细接口的各细邻居和 MPI ghost；边界使用域内单边拟合，不填补零状态。复用距离归一化、流式 Givens QR，不显式求正规矩阵逆。
+
+构造单元尺度上的线性平滑指标，并以等系数组合：
+
+\[
+\beta_{\rho,K}=h_K^2|\boldsymbol g_{\rho,K}|^2,\qquad
+\beta_{p,K}=h_K^2|\boldsymbol g_{p,K}|^2,\qquad
+\boxed{S_K=\sqrt{\beta_{\rho,K}+\beta_{p,K}}}.
+\]
+
+此处“共权”体现为共同拟合权重及共享标记决策，不是额外引入一组非线性 WENO 权重。实现只计算对数差，正参考量自然消去；改变单位时 \(P_*\) 随压力同倍缩放，因此 \(S_K\) 无量纲。无量纲化有助于复用阈值，但不保证阈值与网格、畸变和算例无关。二维笛卡尔算例中 \(A_K\) 取当前物理面积，不能简单用初始 \(2^{-\ell}\) 替代 \(h_K\)。
+
+在有效状态、允许层级和本轮配置下，沿用第 10.3 节的压缩指标 \(C_K\)：
+
+\[
+\text{加密请求：}\quad S_K>\tau_r\ \lor\ C_K>1,
+\]
+\[
+\text{家族减疏资格：}\quad
+\forall K\in F:\ S_K<\tau_c\ \land\ C_K<0.5,
+\qquad 0\le\tau_c<\tau_r.
+\]
+
+其中 F 为完整四兄弟家族；最终还需通过层级、安全标签、同轮保护及拓扑预演。非法状态或退化拟合不得视为光滑：阻止减疏，并在允许层级内请求加密/交由状态检查处理。这些公式对应本轮关闭 coarse-priority 和 finest-pressure-fraction 等额外实验筛选的配置。
+
+#### 算法流程与程序入口
+
+1. 到达 AMR 检查步，刷新当前流体状态、物理中心、邻接及 ghost 数据，计算全局压力尺度和压缩指标。
+2. 遍历物理面邻居，用相同距离权重累计两个对数服务分量的线性拟合；求得梯度并计算 \(S_K\)。
+3. 将共享指标保存到叶子单元 `idAMRWenoSensor`，依加密阈值及压缩补救请求细分，执行已有状态转移。
+4. 按现有流程刷新减疏所需数据，检查四兄弟阈值及安全条件；禁止新家族同轮立即合并，预演排除会被平衡立即拆回的合并。
+5. 执行获准减疏、2:1 平衡及按配置需要的重分区，刷新派生状态，保留几何、覆盖和状态一致性检查，继续时间推进。
+
+实现位于独立的 [AMR 试验包](experiments/density-pressure-amr/README.md)，**尚未替换根目录 `src/` 的默认判据**：
+
+- `src/amr/linear_service_sensor.h`：服务变量差分、线性拟合与共享指标；
+- `src/amr/density_gradient.h`：物理邻居遍历、尺度保护和指标写回；
+- `src/amr/amr_criteria.h`：`RefineByWenoServiceVariable` / `CoarsenByWenoServiceVariable`；
+- `tests/linear_service_test.cpp`：12 项制造场数学检查；`tests/run_service_study.py`：配置、完整计算及源码/二进制快照归档。
+
+以上路径均相对于试验包。`Weno`/`AMR_WENO_*` 为实验沿用命名，不表示调用了 WENO 通量重构。开启 `AMR_WENO_SENSOR=1`、选择 `AMR_WENO_MODE=6`，并使用 `refine_coarsen_enum=6` 与 `density_gradient_method=1`；设 `AMR_WENO_SENSOR=0` 保持原判据。具体环境开关和复算命令见 [数学与复现说明](experiments/density-pressure-amr/tests/LINEAR-SERVICE.md)，不要只复制 ini 而遗漏配套环境。
+
+#### 已测试配置与结论边界
+
+以下均为 L5–L8、每 4 步 AMR、MPI 1，阈值 \(\tau_r/\tau_c=0.20/0.19\)，原始最大密度没有删峰或平滑：
+
+| 算例 | 压力尺度 alpha | 目标时刻 | 最后接受时刻 | 终态叶子数 | 原始终态最大密度 |
+|---|---:|---:|---:|---:|---:|
+| NohCartesian | 1 | 0.6 | 0.600182 | 3145 | 19.103196 |
+| SedovCartesian | 0 | 1.0 | 1.000121 | 6013 | 6.387212 |
+| SodCartesian | 0 | 0.2 | 0.200191 | 4438 | 0.989890 |
+
+三例均完整运行并通过保存帧正性/有限性检查。Noh 在 r<0.3 的密度相对 L1 误差约 1.931%，与原方法 1.969% 接近，过冲仍存在；Sedov 相比原方法终态 3517 单元增加至 6013，不能称为效率改进。Sod 外侧压力波和接触分界代理在 91 条射线上的交点邻接较低层级全部达到 L7–L8，改善了原方法的细网格覆盖，但尚无匹配高分辨率参考支持整体精度提升的量化结论。这里 Sod 是初始半径 0.5、gamma=5/3 的二维径向问题，不是一维 gamma=1.4 激波管。
+
+该指标仍可能响应波后数值噪声；全局压力保护可能降低弱波敏感性，\(\sqrt A\) 也不能充分描述强畸变各向异性。Sedov 末帧仍有少量正面积凹单元。当前结果支持保留为可选方案，不证明无振荡、网格质量问题解决或多核一致性，也不更新黄金参考。
+
+### 10.5 其余数学方案待补充
 
 待补充内容：
 

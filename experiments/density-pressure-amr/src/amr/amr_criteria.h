@@ -15,6 +15,7 @@
 #include "amr/compression_experiment.h"
 #include "amr/directional_length_experiment.h"
 #include "amr/coarse_priority_experiment.h"
+#include "amr/density_gradient.h"
 
 namespace AMRAgorithm {
 
@@ -153,6 +154,59 @@ inline int RefineByDimensionlessDensityGradient(
     return selected ? 1 : 0;
 }
 
+
+// Linear log-service fits feed one dimensionless AMR smoothness indicator.
+// No high-order reconstruction or change to hydrodynamic fluxes. Existing
+// compression rescue, family eligibility and geometry safeguards remain.
+
+inline int RefineByWenoServiceVariable(
+    const p4est_data_t &p4est_data, const p4est_quadrant_t &quadrant,
+    const CVariable &vara)
+{
+    if (quadrant.level < p4est_data.minus_level) return 1;
+    if (quadrant.level >= p4est_data.max_level) return 0;
+    const double sensor = vara.cell(idAMRWenoSensor);
+    const double pressure = PressureSidedExperiment::select(
+        vara.cell(idAMRPressureJump), vara.cell(idAMRPressureSidedJump), true,
+        quadrant.level, p4est_data.max_level, PressureSidedExperiment::mode());
+    const bool compressed = CompressionExperiment::runtime_enabled() &&
+        CompressionExperiment::indicator(vara) > CompressionExperiment::threshold();
+    if (!std::isfinite(sensor) || !std::isfinite(pressure)) return 1;
+    if (compressed) return 1;
+    const double eta = DimensionlessDensityGradientIndicator(vara);
+    const bool gradient_gate = std::isfinite(eta) &&
+        sensor > DensityGradientEstimator::WenoShockSensor::threshold_refine();
+    if (quadrant.level == p4est_data.max_level - 1 &&
+        PressureExperiment::finest_fraction() > 0. &&
+        std::abs(vara.cell(idPressure_cur)) <= PressureExperiment::finest_fraction() * PressureExperiment::maximum_pressure())
+        return 0;
+    return (gradient_gate && !CoarsePriorityExperiment::veto_refine(quadrant)) ? 1 : 0;
+}
+
+inline int CoarsenByWenoServiceVariable(
+    const p4est_data_t &p4est_data, p4est_quadrant_t *children[])
+{
+    for (int i = 0; i < P4EST_CHILDREN; ++i) {
+        const auto *data = static_cast<const quad_data_t *>(children[i]->p.user_data);
+        if (children[i]->level <= p4est_data.minus_level ||
+            data->m_vara.int_cell(idAllowCoarsening) == p4est_data_t::CoarseningEnum::CoarsingNotAllowed)
+            return 0;
+        if (!std::isfinite(data->m_vara.cell(idAMRWenoSensor)) ||
+            !std::isfinite(data->m_vara.cell(idAMRPressureJump))) return 0;
+    }
+    if (CoarsePriorityExperiment::prefer_coarsen(children)) return 1;
+    for (int i = 0; i < P4EST_CHILDREN; ++i) {
+        const auto *data = static_cast<const quad_data_t *>(children[i]->p.user_data);
+        const double sensor = data->m_vara.cell(idAMRWenoSensor);
+        const double eta = DimensionlessDensityGradientIndicator(data->m_vara);
+        const bool compressed = CompressionExperiment::runtime_enabled() &&
+            CompressionExperiment::indicator(data->m_vara) >= .5 * CompressionExperiment::threshold();
+        if (!std::isfinite(eta) || compressed ||
+            !(sensor < DensityGradientEstimator::WenoShockSensor::threshold_coarsen())) return 0;
+    }
+    return 1;
+}
+
 inline int CoarsenByDimensionlessDensityGradient(
 	const p4est_data_t &p4est_data, p4est_quadrant_t *children[])
 {
@@ -246,6 +300,8 @@ inline int RefineErrorEstimate(p4est_t *p4est, p4est_topidx_t which_tree, p4est_
 	}
 	if (p4est_data->refine_coarsen_enum ==
 		RefineCriteria::DimensionlessDensityGradient) {
+		if (DensityGradientEstimator::WenoShockSensor::enabled())
+			return RefineByWenoServiceVariable(*p4est_data, *q, *m_vara);
 		return RefineByDimensionlessDensityGradient(
 			*p4est_data, *q, *m_vara);
 	}
@@ -259,6 +315,8 @@ inline int CoarsenErrorEstimate(
 	p4est_data_t *p4est_data = &((P4estBridge *)p4est->user_pointer)->data;
 	if (p4est_data->refine_coarsen_enum ==
 		RefineCriteria::DimensionlessDensityGradient) {
+		if (DensityGradientEstimator::WenoShockSensor::enabled())
+			return CoarsenByWenoServiceVariable(*p4est_data, children);
 		return CoarsenByDimensionlessDensityGradient(
 			*p4est_data, children);
 	}

@@ -27,6 +27,10 @@
 
 两个 ini 只包含程序参数；configs/presets.json 还记录必需环境开关，不能只复制 ini 后使用正式 bin 运行。共同开启压缩辅助、家族拓扑预演、同轮保护、派生状态同步和内能修正权重。耗散权重 mode=1、overlap-remap mode=3 仅审计，不应用其候选修正。Noh 的解析前沿相关输出只作诊断，不用于标记加密。
 
+## Common-weights AMR 扩展（2026-09-16）
+
+本包新增可选 CW-AMR 线性共享平滑指标，关闭 `AMR_WENO_SENSOR` 时仍保留原密度—压力判据。根目录 `README.md` 第 10.4 节记录核心思想、数学公式、算法流程及 Noh/Sedov/SodCartesian 的 L5–L8 测试摘要；[详细数学与运行说明](tests/LINEAR-SERVICE.md) 提供新路线复算命令。下述 `run.ps1` 仍用于原 L4–L7 归档配置；新路线使用 `tests/run_service_study.py`，不替换原参考哈希。
+
 ## 编译与复算
 
 在仓库根目录，使用现有 Makefile 与已安装的 p4est、libsc、zlib、MS-MPI 依赖执行：

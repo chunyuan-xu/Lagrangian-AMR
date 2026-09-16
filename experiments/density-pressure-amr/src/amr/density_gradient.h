@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdlib>
+#include <limits>
 #include <vector>
 #include <p4est_iterate.h>
 #include "mesh/ghost_session.h"
@@ -7,11 +9,18 @@
 #include "amr/compression_experiment.h"
 #include "amr/pressure_sided_experiment.h"
 #include "amr/pressure_pair_math.h"
+#include "amr/linear_service_sensor.h"
 
 // AMR indicator only: does not change the hydrodynamic reconstruction.
 namespace DensityGradientEstimator {
+namespace WenoShockSensor {
+inline bool enabled() { const char *s=std::getenv("AMR_WENO_SENSOR"); return s && std::atoi(s)!=0; }
+inline double threshold_refine() { static const double v=std::getenv("AMR_WENO_REFINE") ? std::atof(std::getenv("AMR_WENO_REFINE")) : .20; return v; }
+inline double threshold_coarsen() { static const double v=std::getenv("AMR_WENO_COARSEN") ? std::atof(std::getenv("AMR_WENO_COARSEN")) : .19; return v; }
+}
 struct Scratch {
     DensityLeastSquares::Fit fit;
+    LinearServiceSensor::Fit service_fit;
     double edge_sum[4] = {};
     int edge_count[4] = {};
     double pressure_jump = 0.;
@@ -46,7 +55,12 @@ inline Leaf leaf(p4est_t *forest, Context &ctx,
 }
 inline void observe(const Leaf &target, const Leaf &neighbor) {
     if (!target.scratch) return;
-    if (!neighbor.value) { target.scratch->fit.invalidate(); return; }
+    if (!neighbor.value) {
+        target.scratch->fit.invalidate();
+        target.scratch->service_fit.density.invalidate();
+        target.scratch->service_fit.pressure.invalidate();
+        return;
+    }
     const auto &a = target.value->cell_vector(idCentroidCoord_cur);
     const auto &b = neighbor.value->cell_vector(idCentroidCoord_cur);
     const double dx = b.x-a.x, dy = b.y-a.y;
@@ -60,6 +74,11 @@ inline void observe(const Leaf &target, const Leaf &neighbor) {
         target.scratch->pressure_sided=std::max(target.scratch->pressure_sided,
             PressureSidedExperiment::high_side(pa,pb,jump));
     target.scratch->fit.add(dx, dy, drho);
+    if (WenoShockSensor::enabled()) {
+        target.scratch->service_fit.add(dx,dy,target.value->cell(idDensity_cur),
+            neighbor.value->cell(idDensity_cur),pa,pb,LinearServiceSensor::mode()==6 ?
+                .5*PressureExperiment::floor_factor()*PressureExperiment::maximum_pressure() : 0.);
+    }
     const double distance = std::hypot(dx, dy);
     const double raw = distance > 0. ? std::abs(drho)/distance : std::numeric_limits<double>::infinity();
     target.scratch->edge_sum[target.face] += std::isfinite(raw) ? raw : std::numeric_limits<double>::infinity();
@@ -129,6 +148,13 @@ inline void halo_face(p4est_iter_face_info_t *info, void *user) {
 inline size_t estimate(p4est_t *forest, GhostSession &session,
                        std::vector<DensityLeastSquares::Result> *results = nullptr) {
     session.exchange(); // Current density and physical centroids, including MPI neighbors.
+    if (WenoShockSensor::enabled()) {
+        SC_CHECK_ABORT(LinearServiceSensor::mode()>=4 && LinearServiceSensor::mode()<=6,
+            "Linear service sensor supports modes 4, 5, 6 only; use archived binaries for earlier prototypes");
+        const double r=WenoShockSensor::threshold_refine(), c=WenoShockSensor::threshold_coarsen();
+        SC_CHECK_ABORT(std::isfinite(r) && std::isfinite(c) && c>=0. && c<r,
+            "Linear service thresholds must be finite and 0 <= coarsen < refine");
+    }
     SC_CHECK_ABORT(PressurePairExperiment::mode()>=0&&PressurePairExperiment::mode()<=3,
         "Invalid pressure-pair experiment mode");
     if(PressurePairExperiment::mode()>0)
@@ -172,6 +198,8 @@ inline size_t estimate(p4est_t *forest, GhostSession &session,
             v.cell_vector(idAMRDensityGradient) = CDoubleVector(result.x,result.y);
             v.cell(idAMRPressureJump) = scratch.pressure_jump;
             v.cell(idAMRPressureSidedJump) = scratch.pressure_sided;
+            v.cell(idAMRWenoSensor) = WenoShockSensor::enabled() ?
+                scratch.service_fit.indicator(v.cell(idVolume),LinearServiceSensor::mode()) : 0.;
             if(PressureSidedExperiment::mode()>0) {
                 sided_changed+=scratch.pressure_sided<scratch.pressure_jump;
                 const auto &run=static_cast<P4estBridge *>(forest->user_pointer)->data;
