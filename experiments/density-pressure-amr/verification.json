@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "verification_date": "2026-09-16",
+  "platform": "Windows / MSYS2 UCRT64 / MS-MPI",
+  "mpi_processes": 1,
+  "build": {
+    "success": true,
+    "command": "./experiments/density-pressure-amr/build.ps1 -Jobs 3",
+    "existing_compiler_warnings": true
+  },
+  "source_manifest_verified": true,
+  "formal_source_unchanged": true,
+  "cases": [
+    {
+      "case": "noh",
+      "exit": 0,
+      "executable_sha256": "1ad8cda53a5649ad47522ccefd56738e0399d34c0c9ab8fd6aceb1ea4d571875",
+      "baseline": "verify-front-timing-control",
+      "verified": true,
+      "steps": 4222,
+      "last_logged_time": 0.600219,
+      "profile_sha256": "c01149f592d0d74c4c75c691375742d70db2fe35261bc377e6f6a6cff79d276e",
+      "final_cells": 1081,
+      "raw_density_max": 19.465058150273126,
+      "max_logged_energy_error": 5.32905986008105e-15,
+      "note": "Full-run exit, state/energy logs and exact historical final profile verified. Not an independent all-frame accuracy or geometry audit."
+    },
+    {
+      "case": "sedov",
+      "exit": 0,
+      "executable_sha256": "1ad8cda53a5649ad47522ccefd56738e0399d34c0c9ab8fd6aceb1ea4d571875",
+      "baseline": "sedov-sod-transfer/sedov-local-pressure",
+      "verified": true,
+      "steps": 4617,
+      "last_logged_time": 1.000568,
+      "profile_sha256": "bc9932eb0a9355596328da45719235bb807546e8c2e0679e211ffd871872e8c4",
+      "final_cells": 1906,
+      "raw_density_max": 6.024905867527046,
+      "max_logged_energy_error": 1.326388836158554e-14,
+      "note": "Full-run exit, state/energy logs and exact historical final profile verified. Not an independent all-frame accuracy or geometry audit."
+    }
+  ],
+  "limitations": [
+    "Final DistanceProfiles.plt SHA256 equals the historical baseline for each case; not an all-frame geometry or analytic accuracy audit.",
+    "Final cell counts and density maxima are historical expected values associated with the matching profile, not independently recomputed by the runner.",
+    "No Linux, multi-process MPI or performance validation in this verification."
+  ]
+}

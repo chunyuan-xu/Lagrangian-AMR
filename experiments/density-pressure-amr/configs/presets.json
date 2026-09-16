@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "mpi_ranks": 1,
+  "common_environment": {
+    "LAGRANGIAN_CHECK_STATE_INVARIANTS": "1",
+    "AMR_PRESSURE_MODE": "1",
+    "AMR_COMPRESSION_REFINE": "1",
+    "AMR_COARSEN_PLAN": "2",
+    "AMR_SAME_PASS": "2",
+    "AMR_DERIVED_SYNC": "1",
+    "AMR_FINEST_PRESSURE_FRACTION": "0",
+    "AMR_PRESSURE_HALO_WEIGHT": "1",
+    "AMR_THERMAL_RELAX_WEIGHTS": "1",
+    "AMR_DIRECTIONAL_LENGTH": "0",
+    "AMR_COARSE_PRIORITY": "0",
+    "AMR_DISSIPATIVE_WEIGHTS": "1",
+    "AMR_OVERLAP_REMAP": "3",
+    "AMR_PRESSURE_SIDED": "0",
+    "AMR_PRESSURE_PAIR": "0",
+    "AMR_RIEMANN_ITERATION": "0",
+    "AMR_RIEMANN_ITERATION_CAP": "32",
+    "AMR_RIEMANN_ITERATION_DAMPING": "1",
+    "AMR_RIEMANN_TARGET_NODES": "0",
+    "AMR_RIEMANN_FORM": "1",
+    "AMR_RIEMANN_NEWTON_FALLBACK": "0"
+  },
+  "cases": {
+    "noh": {
+      "config": "configs/noh.ini",
+      "environment": {
+        "AMR_PRESSURE_REFINE": "0.20",
+        "AMR_PRESSURE_COARSEN": "0.10",
+        "AMR_PRESSURE_FLOOR_FACTOR": "1",
+        "AMR_DERIVED_AUDIT": "1",
+        "AMR_LOCALIZATION_AUDIT": "1",
+        "AMR_ORIGIN_AUDIT": "1",
+        "AMR_FINAL_TOPOLOGY_AUDIT": "1",
+        "AMR_MINIMAL_FRONT_AUDIT": "1",
+        "AMR_TRANSFER_ENERGY_AUDIT": "1",
+        "AMR_REFRESH_GEOMETRY_AUDIT": "1",
+        "AMR_FRONT_DEPENDENCY_AUDIT": "1",
+        "AMR_FRONT_TIMING_AUDIT": "1"
+      },
+      "baseline": "verify-front-timing-control"
+    },
+    "sedov": {
+      "config": "configs/sedov.ini",
+      "environment": {
+        "AMR_PRESSURE_REFINE": "0.05",
+        "AMR_PRESSURE_COARSEN": "0.025",
+        "AMR_PRESSURE_FLOOR_FACTOR": "0",
+        "AMR_DERIVED_AUDIT": "0"
+      },
+      "baseline": "sedov-sod-transfer/sedov-local-pressure"
+    }
+  }
+}

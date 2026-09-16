@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "description": "Frozen local full-run outputs; MPI1 numerical regression, not analytic accuracy or universal gold gates.",
+  "historical_executable_sha256": "0559cc826f77cb5f9d7791b8328c6b5a92ef85efc3ba15d8afaa6aaa54d33fe9",
+  "cases": {
+    "noh": {
+      "steps": 4222,
+      "last_logged_time": 0.600219,
+      "final_cells": 1081,
+      "raw_density_max": 19.465058150273126,
+      "max_logged_energy_error": 5.32905986008105e-15,
+      "profile_sha256": "c01149f592d0d74c4c75c691375742d70db2fe35261bc377e6f6a6cff79d276e"
+    },
+    "sedov": {
+      "steps": 4617,
+      "last_logged_time": 1.000568,
+      "final_cells": 1906,
+      "raw_density_max": 6.024905867527046,
+      "max_logged_energy_error": 1.326388836158554e-14,
+      "profile_sha256": "bc9932eb0a9355596328da45719235bb807546e8c2e0679e211ffd871872e8c4"
+    }
+  }
+}
