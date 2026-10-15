@@ -73,14 +73,14 @@ for cell-centered Lagrangian AMR}
 \cortext[1]{Corresponding author}
 
 \begin{abstract}
-Coupling adaptive mesh refinement (AMR) with Lagrangian hydrodynamics is difficult because the mesh moves with the flow: a coarse--fine interface is a moving internal boundary that participates in the flux exchange, so adaptation must preserve both the conservation laws and the geometric consistency of the embedded hierarchy. In cell-centered Lagrangian schemes, nodes carry no independent physical variables, which allows hanging points to be treated as purely geometric points slaved to their supporting coarse edges. Building on this observation, we construct a flux closure for $2\!:\!1$ non-conforming quadtree meshes in which hanging points carry no degree of freedom: the flux over each boundary segment ending at a hanging point is closed entirely by the half-Riemann relations of the adjacent independent nodes. The closure preserves discrete total energy and momentum conservation and the geometric conservation law of the coarse cells and of each aggregated refined patch. Because the simple quadtree topology --- straight coarse edges and permanently aligned children and parents --- is preserved, conservative refinement and coarsening require no geometric repair. For the adaptation itself, two families of dimensionless sensors---thermodynamic, from the density and pressure jumps, and kinematic, from the velocity divergence---are combined by an OR rule behind a single threshold pair. The closure is verified to first order on fixed-topology non-conforming meshes (Taylor--Green vortex, observed order $0.83\to0.95$), and on three classical shock problems the adaptive calculations match the captured-shock width of the uniformly refined reference at their finest level---within $10\%$ on Sedov and Sod and within $22\%$ on Noh---while using $0.4$--$8\%$ of its cell-steps, with total energy conserved to machine precision on every run.
+Coupling adaptive mesh refinement (AMR) with Lagrangian hydrodynamics is difficult because the mesh moves with the flow: a coarse--fine interface is a moving internal boundary that participates in the flux exchange, so adaptation must preserve both the conservation laws and the geometric consistency of the embedded hierarchy. In cell-centered Lagrangian schemes, nodes carry no independent physical variables, which allows hanging points to be treated as purely geometric points slaved to their supporting coarse edges. Building on this observation, we construct a flux closure for $2\!:\!1$ non-conforming quadtree meshes in which hanging points carry no degree of freedom: the flux over each boundary segment ending at a hanging point is closed entirely by the half-Riemann relations of the adjacent independent nodes. The closure preserves discrete total energy and momentum conservation and the geometric conservation law of the coarse cells and of each aggregated refined patch. Because the simple quadtree topology --- straight coarse edges and permanently aligned children and parents --- is preserved, conservative refinement and coarsening require no geometric repair. For the adaptation itself, two families of dimensionless sensors---thermodynamic, from the density and pressure jumps, and kinematic, from the velocity divergence---are combined by an OR rule. A single dimensionless threshold pair captures the strong shocks of the test suite without tuning; the weak secondary compressions of the Sod fan, whose density ratio sits exactly at the thermodynamic threshold, need a documented lower compression threshold, set by the criterion's own dimensionless scales. The closure is verified to first order on fixed-topology non-conforming meshes (Taylor--Green vortex, observed order $0.83\to0.95$), and on three classical shock problems the adaptive calculations match the captured-shock width of the uniformly refined reference at their finest level---within $10\%$ on Sedov and Sod and within $22\%$ on Noh---while using $0.4$--$8\%$ of its cell-steps, with total energy conserved to machine precision on every run.
 \end{abstract}
 
 %% Research highlights (Elsevier: 3-5 bullets, max 85 characters each)
 \begin{highlights}
 \item Hanging nodes on non-conforming quadtree meshes need no independent degree of freedom.
 \item Flux closure preserves discrete momentum and energy with no geometric repair.
-\item One dimensionless threshold pair adapts ahead of shocks without problem-specific tuning.
+\item One dimensionless threshold pair for strong shocks; a documented lower value for weak ones.
 \item Uniform-grid front resolution at 0.4--8\% of its cell-steps, energy exact to round-off.
 \end{highlights}
 
@@ -627,7 +627,7 @@ The error decreases monotonically, and the observed order increases from $0.83$ 
 This section validates the statements of Section~\ref{sec:indicator} on three classical shock problems and documents the conservation and efficiency of the adaptive calculations. Each subsection opens with the property it verifies.
 All calculations were performed on a single desktop node with an Intel Core i5-10210U processor (four cores, eight threads, $1.60$\,GHz base frequency) and $16$\,GB of memory; every run, uniform and adaptive alike, uses four MPI ranks on this node, one per physical core. All runs stem from one code, produced as a small number of builds of the same lineage whose differences are confined to experimental AMR toggles---the hydrodynamic core, and with it every conservation property of Section~\ref{sec:procedure}, is identical---and the Noh tables use a single build throughout. Cell counts and widths are unaffected by the build; CPU times agree between builds to roughly ten percent, and the speed-ups are accordingly read as order-of-magnitude figures. No parallel-scaling study is reported: the fixed four-rank configuration serves only to make the quoted wall-clock times mutually comparable. % TODO: code version (compiler + optimization level)
 
-The refinement thresholds, fixed once for all problems and levels, follow the calibration of Section~\ref{sec:threshold_calibration} and are listed in Table~\ref{tab:amr_parameters}. With $S_c\approx \ln(R)/m$ from Eq.~\eqref{eq:scappro}, we find that $\tau_c=0.5$ already captures all fronts in the tests below without tuning, while remaining well above smooth gradients. Similarly, with $C_c\le 1/m$ from Eq.~\eqref{eq:ck}, a shock over three cells reads at most $1/3$, so $\mu_c=0.2$ stays below this ceiling and above smooth compression. The supplement study of Section~\ref{sec:compression} additionally probes the more sensitive value $\mu_c=0.05$, which the weak shocks of the Sod fan require; every run states its operative $\mu_c$ in its table caption. The hysteresis ratio $\alpha=0.75$ avoids irreversible refinement at $\alpha\to0$ and refinement--coarsening cycling at $\alpha\to1$.
+The refinement thresholds follow the calibration of Section~\ref{sec:threshold_calibration} and are listed in Table~\ref{tab:amr_parameters}. One pair serves the strong shocks of the suite without tuning: with $S_c\approx \ln(R)/m$ from Eq.~\eqref{eq:scappro} a strong shock reads well above $\tau_c=0.5$, and with $C_c\le 1/m$ from Eq.~\eqref{eq:ck} a shock spread over three cells still reads $1/3$, above $\mu_c=0.2$; both thresholds stay far above smooth flow. The weak secondary compressions of the Sod fan need the more sensitive value $\mu_c=0.05$ of Section~\ref{sec:compression}, and the reason is quantitative rather than problem-specific. The Sod shock carries a density ratio of only $0.2055/0.125=1.64$, so that $S_c\approx\ln 1.64=0.50$ sits exactly at $\tau_c$ and the thermodynamic channel alone cannot separate it from the rest of the fan. Measured on the adaptive mesh, the primary shock compresses at $C_c\approx0.85$, the contact discontinuity at $C_c\approx0.21$, and the smooth interior stays below $0.01$; the rule that fixes $\mu_c$ is therefore read off the criterion's own scales---above the smooth background ($\lesssim0.01$) and below the weakest structure that must be captured ($\approx0.2$)---and not from any problem-specific constant. Every run states its operative $\mu_c$ in its table caption. The hysteresis ratio $\alpha=0.75$ avoids irreversible refinement at $\alpha\to0$ and refinement--coarsening cycling at $\alpha\to1$.
 
 \begin{table}[pos=htbp]
 	\centering
@@ -639,7 +639,7 @@ The refinement thresholds, fixed once for all problems and levels, follow the ca
 		\hline
 		Thermodynamic threshold $\tau_c$ & $0.5$ & captures all test shocks, well above smooth gradients \\
 		Hysteresis ratio $\alpha$ & $0.75$ & avoids irreversible refinement ($\alpha\to0$) and cycling ($\alpha\to1$) \\
-		Compression threshold $\mu_c$ & $0.2$ & below the $1/3$ ceiling for a shock over $3$ cells, above smooth compression \\
+		Compression threshold $\mu_c$ & $0.2$ & below the $1/3$ ceiling for a shock over $3$ cells, above smooth compression; lowered to $0.05$ in Section~\ref{sec:compression} for the weak Sod compression \\
 		\hline
 	\end{tabular}
 \end{table}
@@ -652,7 +652,7 @@ Three classical shock problems are computed on quarter domains with symmetry con
 % TODO: reconcile the ambient values against the run scripts before submission
 %   (Sedov e_0=1e-5 -> P_0=4e-6 for gamma=1.4; Noh P_0=1e-6).
 
-Accuracy is assessed at the final state, unless stated otherwise, through four quantities. \emph{(i)~Shock physical width:} let $\rho_L$ and $\rho_R$ be the densities just behind and ahead of the shock. Two threshold pairs are used. In the \emph{fixed} pair, $\rho_L$ and $\rho_R$ are the analytic values where available (Sedov: $6$ and $1$; Noh: $\rho_L=16$ with $\rho_R=3.85$ taken from the finest uniform run); in the \emph{adaptive} pair $\rho_L$ is replaced by the run's own post-shock peak, so that coarse meshes, whose peak is smeared below the analytic value, remain measurable. Along each of $90$ radial rays (one per degree in the quarter domain), walk inward and locate the radii at which the density crosses
+Accuracy is assessed at the final state, unless stated otherwise, through four quantities. \emph{(i)~Shock physical width:} let $\rho_L$ and $\rho_R$ be the densities just behind and ahead of the shock. Two threshold pairs are used. In the \emph{fixed} pair, $\rho_L$ and $\rho_R$ are the analytic values where available (Sedov: $6$ and $1$; Noh: $\rho_L=16$ with the analytic pre-shock value $\rho_R=\rho_0(1+t/r_s)=4.0$ at $r_s=t/3=0.2$). The numerical pre-shock density of the finest uniform run reads $3.85$, a $3.8\%$ deficit that is the signature of the smeared captured front, discussed in Section~\ref{sec:sedov}; using the analytic value instead lowers every Noh width by about $2\%$ without changing any comparison of the tables; in the \emph{adaptive} pair $\rho_L$ is replaced by the run's own post-shock peak, so that coarse meshes, whose peak is smeared below the analytic value, remain measurable. Along each of $90$ radial rays (one per degree in the quarter domain), walk inward and locate the radii at which the density crosses
 \begin{equation}
 	\rho_{20}=\rho_L+0.2\,(\rho_R-\rho_L),\qquad \rho_{80}=\rho_L+0.8\,(\rho_R-\rho_L),
 	\label{eq:wthresh}
@@ -694,9 +694,9 @@ $\rho_{20}$. The adaptive runs resolve the shock as narrowly as a much finer
 uniform grid, at a fraction of its cost. On Sedov, L4--L7 gives
 $W_{\mathrm{shock}}=0.0048$, the width of uniform L7 ($0.0044$), at a
 $47\times$ speed-up, and L5--L8 gives $0.0021$, matching uniform L8
-($0.0020$), at $20\times$; on Noh, L4--L7 gives $0.0079$, between uniform
-L6 and L7, at $87\times$, and L5--L8 gives $0.0036$, within $12\%$ of L8
-($0.0032$) and well below uniform L7 ($0.0065$), at $29\times$. The coverage
+($0.0020$), at $20\times$; on Noh, L4--L7 gives $0.0077$, between uniform
+L6 and L7, at $87\times$, and L5--L8 gives $0.0035$, within $13\%$ of L8
+($0.0031$) and well below uniform L7 ($0.0063$), at $29\times$. The coverage
 column confirms the mechanism: $85\%$ and $88\%$ of the Sedov shock band and
 $100\%$ of the Noh band are covered by the finest level, so the refinement is
 placed precisely on the transition that sets the width.
@@ -712,6 +712,94 @@ widths match the uniform ones; the residual offset on Noh is the price of the
 history, not of the coverage.
 Figures~\ref{fig:sedov_l4l7}--\ref{fig:noh_l4l7_enlarge} show the
 corresponding level distributions and density fields.
+
+\paragraph{Radial profiles and density errors.}
+The width measures the transition alone; the profiles behind it, and the
+density errors they imply, are shown in Figures~\ref{fig:sedov_profile}
+and~\ref{fig:noh_profile} and collected in Table~\ref{tab:radial_l1}. For Sedov
+the reference is the finest uniform run; for Noh the profiles are compared with
+the analytic solution, whose pre-shock density is $\rho=\rho_0(1+t/r)$ with the
+shock at $r_s=t/3=0.2$.
+
+On Sedov the adaptive L5--L8 profile lies on the uniform reference within the
+width of the line away from the front, and its area-weighted $L_1$ error,
+$0.011$, is within a factor of $2.5$ of uniform L7 ($0.0045$) at a tenth of its
+cell-steps; the coarser L4--L7 hierarchy is smeared by $0.074$, as its width
+already indicated. On Noh the error is dominated by two features that are not
+the shock. First, the origin: the wall-heating anomaly gives $L_1=3.9$ and
+$2.4$ in $r<0.05$ for uniform L7 and L8, falling by only a factor of $1.6$ when
+the mesh is refined by two---far below first order, as is characteristic of
+wall heating---and the adaptive meshes are no worse there ($1.9$ and $1.3$),
+since they leave the neighbourhood of the origin coarse. Second, the converging
+inflow outside the refined band: because the whole interior compresses, the
+adaptive hierarchies keep the coarse levels outside the narrow band, and their
+error beyond a small origin disk is an order of magnitude above the uniform
+runs. Neither feature belongs to the interface closure, and the transition
+itself is measured accurately---the widths of the adaptive and uniform runs
+agree to $3\%$ (Table~\ref{tab:noh_compression}), the residual difference being
+a front-position offset of a fraction of a cell rather than a width deficit.
+
+\begin{table}[pos=htbp]
+	\centering
+	\caption{Area-weighted $L_1$ density error of the adaptive and uniform runs,
+	on the radial profiles of Figures~\ref{fig:sedov_profile}
+	and~\ref{fig:noh_profile}. Sedov is compared with the finest uniform run
+	(L8), Noh with the analytic solution, over the whole domain, in the origin
+	neighbourhood ($r<0.05$) where the wall-heating anomaly lives, and outside
+	it. The gradient-only rows use $\mu_c=1$ (channel off); the supplement rows
+	$\mu_c=0.05$.}
+	\label{tab:radial_l1}
+	\begin{tabular}{lcccc}
+		\hline
+		Run & Sedov: $L_1$ (vs.\ L8) & Noh: $L_1$ ($r<0.05$) & Noh: $L_1$ ($r>0.05$) & Noh: $L_1$ (all) \\
+		\hline
+		Uniform L7 & $0.0045$ & $3.86$ & $0.016$ & $0.062$ \\
+		Uniform L8 & ---      & $2.35$ & $0.008$ & $0.031$ \\
+		L4--L7, gradient only & --- & $6.83$ & $0.271$ & $0.594$ \\
+		L5--L8, gradient only & --- & $5.00$ & $0.154$ & $0.289$ \\
+		L4--L7, supplement & $0.074$ & $1.87$ & $0.190$ & $0.202$ \\
+		L5--L8, supplement & $0.011$ & $1.25$ & $0.175$ & $0.182$ \\
+		\hline
+	\end{tabular}
+\end{table}
+
+\begin{figure}[pos=htbp]
+	\centering
+	\begin{tikzpicture}
+		\begin{axis}[width=0.82\textwidth, height=0.42\textwidth,
+			xlabel={$r$}, ylabel={$\rho$}, xmin=0, xmax=1.2, ymin=0, ymax=7,
+			legend style={at={(0.98,0.98)}, anchor=north east, font=\footnotesize},
+			grid=major, grid style={gray!20}, tick label style={font=\footnotesize}]
+			\addplot+[only marks, mark=+, mark size=1.6pt, blue] table {profiles/sedov-amr47.dat};
+			\addplot+[no marks, red, thick] table {profiles/sedov-u7.dat};
+			\addplot+[no marks, black, dashed, thick] table {profiles/sedov-ref.dat};
+			\legend{adaptive L4--L7, uniform L7, uniform L8 (reference)}
+		\end{axis}
+	\end{tikzpicture}
+	\caption{Sedov at $t=1$: area-weighted radial density profiles, adaptive
+	L4--L7 (crosses) against uniform L7 and the finest uniform run.}
+	\label{fig:sedov_profile}
+\end{figure}
+
+\begin{figure}[pos=htbp]
+	\centering
+	\begin{tikzpicture}
+		\begin{axis}[width=0.82\textwidth, height=0.42\textwidth,
+			xlabel={$r$}, ylabel={$\rho$}, xmin=0, xmax=1.0, ymin=0, ymax=17,
+			legend style={at={(0.98,0.98)}, anchor=north east, font=\footnotesize},
+			grid=major, grid style={gray!20}, tick label style={font=\footnotesize}]
+			\addplot+[only marks, mark=+, mark size=1.6pt, blue] table {profiles/noh-amr47.dat};
+			\addplot+[no marks, red, thick] table {profiles/noh-u7.dat};
+			\addplot+[no marks, black, dashed, thick] table {profiles/noh-analytic.dat};
+			\legend{adaptive L4--L7, uniform L7, analytic}
+		\end{axis}
+	\end{tikzpicture}
+	\caption{Noh at $t=0.6$: area-weighted radial density profiles through the
+	origin, adaptive L4--L7 against uniform L7 and the analytic solution
+	($\rho=16$ inside $r_s=t/3=0.2$, $\rho=\rho_0(1+t/r)$ outside). The origin
+	neighbourhood, where the wall-heating anomaly sits, is included.}
+	\label{fig:noh_profile}
+\end{figure}
 
 \begin{figure}[pos=htbp]
 	\centering
@@ -778,8 +866,8 @@ algebraic identities of Section~\ref{sec:procedure}.
 \begin{table}[pos=htbp]
 	\centering
 	\caption{Noh problem at $t=0.6$: shock physical width of
-	Eq.~\eqref{eq:wshock} for the fixed pair ($\rho_L=16$, $\rho_R=3.85$,
-	i.e.\ $\rho_{20}=13.6$, $\rho_{80}=6.28$) and for the adaptive pair, and
+	Eq.~\eqref{eq:wshock} for the fixed pair ($\rho_L=16$, $\rho_R=4.0$,
+	i.e.\ $\rho_{20}=13.6$, $\rho_{80}=6.4$) and for the adaptive pair, and
 	the remaining columns as in Table~\ref{tab:sedov_shock}, the speed-up
 	being against the uniform L8 run.}
 	\label{tab:noh_shock}
@@ -787,13 +875,13 @@ algebraic identities of Section~\ref{sec:procedure}.
 		\hline
 		Mesh & Cell-steps & $W_{\mathrm{shock}}$ (fixed) & $W_{\mathrm{shock}}$ (adapt.) & Coverage & CPU (s) & Speed-up & $\varepsilon_E$ \\
 		\hline
-		Uniform L4 ($16^2$)  & $1.05\times10^{6}$ & \emph{unresolved} & $0.0502$ & ---      & $22.9$   & $174\times$  & $1.3\times10^{-15}$ \\
-		Uniform L5 ($32^2$)  & $4.21\times10^{6}$ & $0.0406$          & $0.0365$ & ---      & $73.0$   & $54.5\times$ & $4.2\times10^{-15}$ \\
-		Uniform L6 ($64^2$)  & $1.68\times10^{7}$ & $0.0144$          & $0.0142$ & ---      & $251.4$  & $15.8\times$ & $4.9\times10^{-15}$ \\
-		Uniform L7 ($128^2$) & $6.74\times10^{7}$ & $0.0065$          & $0.0065$ & ---      & $986.7$  & $4.0\times$  & $1.1\times10^{-13}$ \\
-		Uniform L8 ($256^2$) & $2.93\times10^{8}$ & $0.0032$          & $0.0032$ & ---      & $3975.2$ & $1\times$    & $3.1\times10^{-13}$ \\
-		Adaptive L4--L7      & $2.00\times10^{6}$ & $0.0079$          & $0.0079$ & $100\%$  & $45.6$   & $87.2\times$ & $1.6\times10^{-15}$ \\
-		Adaptive L5--L8      & $6.93\times10^{6}$ & $0.0036$          & $0.0037$ & $100\%$  & $135.7$  & $29.3\times$ & $4.9\times10^{-15}$ \\
+		Uniform L4 ($16^2$)  & $1.05\times10^{6}$ & \emph{unresolved} & $0.0501$ & ---      & $22.9$   & $174\times$  & $1.3\times10^{-15}$ \\
+		Uniform L5 ($32^2$)  & $4.21\times10^{6}$ & $0.0401$          & $0.0362$ & ---      & $73.0$   & $54.5\times$ & $4.2\times10^{-15}$ \\
+		Uniform L6 ($64^2$)  & $1.68\times10^{7}$ & $0.0141$          & $0.0138$ & ---      & $251.4$  & $15.8\times$ & $4.9\times10^{-15}$ \\
+		Uniform L7 ($128^2$) & $6.74\times10^{7}$ & $0.0063$          & $0.0063$ & ---      & $986.7$  & $4.0\times$  & $1.1\times10^{-13}$ \\
+		Uniform L8 ($256^2$) & $2.93\times10^{8}$ & $0.0031$          & $0.0031$ & ---      & $3975.2$ & $1\times$    & $3.1\times10^{-13}$ \\
+		Adaptive L4--L7      & $2.00\times10^{6}$ & $0.0077$          & $0.0077$ & $100\%$  & $45.6$   & $87.2\times$ & $1.6\times10^{-15}$ \\
+		Adaptive L5--L8      & $6.93\times10^{6}$ & $0.0035$          & $0.0036$ & $100\%$  & $135.7$  & $29.3\times$ & $4.9\times10^{-15}$ \\
 		\hline
 	\end{tabular}
 \end{table}
@@ -809,8 +897,9 @@ the largest gradients, while the shock itself is left with too few refined
 cells. The supplement of Section~\ref{sec:threshold_calibration} adds a
 refinement request wherever the flow compresses, independently of the gradient
 magnitude. All supplement runs below use the compression threshold
-$\mu_c=0.05$---the more sensitive value announced in
-Section~\ref{sec:numerics}, required by the weak Sod shock---while the
+$\mu_c=0.05$---the value required by the weak secondary compression of the Sod
+fan, for the quantitative reasons given in
+Section~\ref{sec:numerics}---while the
 gradient thresholds $\tau_c$ and $\alpha$ keep the values of
 Table~\ref{tab:amr_parameters}; the default $\mu_c=0.2$ serves as the
 comparison point on Noh and is quoted in the text. The two subsections below assess it: first on Sod, where the
@@ -900,14 +989,14 @@ percent---the added requests concentrate the finest level on a narrower band,
 which the coarsening reclaims earlier---while the CPU difference, of order ten
 percent, lies within the build-to-build variability noted in
 Section~\ref{sec:numerics}. On
-Noh the supplement does narrow the shock, from $0.0078$ to $0.0066$ and from
-$0.0036$ to $0.0033$, but the cost grows much faster than the gain: L4--L7
+Noh the supplement does narrow the shock, from $0.0077$ to $0.0065$ and from
+$0.0035$ to $0.0032$, but the cost grows much faster than the gain: L4--L7
 goes from $2.0\times10^{6}$ to $1.6\times10^{7}$ cell-steps and from $46$ to
 $380$ seconds for a $15\%$ narrower transition, and L5--L8 from
 $6.9\times10^{6}$ to $2.3\times10^{7}$ cell-steps and from $136$ to $570$
 seconds for $8\%$. A comparison within one code path shows the same
-saturation: at $\mu=0.2$ the Noh widths are $0.0072$ and $0.0034$, only about
-$8\%$ wider than at $\mu=0.05$, while the cell-steps fall by a factor of three
+saturation: at $\mu=0.2$ the Noh widths are $0.0071$ and $0.0034$, only about
+$9\%$ and $6\%$ wider than at $\mu=0.05$, while the cell-steps fall by a factor of three
 to six. The supplement is therefore best read as a targeted repair for fronts
 that the gradient criterion misses rather than a default refinement channel:
 where the criterion already resolves the transition, the extra requests buy
@@ -944,8 +1033,8 @@ little and cost a great deal.
 \begin{table}[pos=htbp]
 	\centering
 	\caption{Noh problem at $t=0.6$: shock physical width of
-	Eq.~\eqref{eq:wshock} for the fixed pair ($\rho_L=16$, $\rho_R=3.85$,
-	i.e.\ $\rho_{20}=13.6$, $\rho_{80}=6.28$) and for the adaptive pair, and
+	Eq.~\eqref{eq:wshock} for the fixed pair ($\rho_L=16$, $\rho_R=4.0$,
+	i.e.\ $\rho_{20}=13.6$, $\rho_{80}=6.4$) and for the adaptive pair, and
 	the remaining columns as in Table~\ref{tab:sedov_compression}, the speed-up
 	being against the uniform L8 run. The supplement rows use $\mu_c=0.05$;
 	$\tau_c=0.5$ and $\alpha=0.75$ as in Table~\ref{tab:amr_parameters}.}
@@ -956,10 +1045,10 @@ little and cost a great deal.
 		\hline
 		Uniform L7 ($128^2$)    & $6.74\times10^{7}$ & $0.0065$ & $0.0065$ & ---      & $986.7$  & $4.0\times$  & $1.1\times10^{-13}$ \\
 		Uniform L8 ($256^2$)    & $2.93\times10^{8}$ & $0.0032$ & $0.0032$ & ---      & $3975.2$ & $1\times$    & $3.1\times10^{-13}$ \\
-		L4--L7, gradient only   & $2.00\times10^{6}$ & $0.0078$ & $0.0079$ & $100\%$  & $45.6$   & $87.2\times$ & $1.6\times10^{-15}$ \\
-		L4--L7, with supplement & $1.57\times10^{7}$ & $0.0066$ & $0.0076$ & $100\%$  & $379.6$  & $10.5\times$ & $8.2\times10^{-15}$ \\
-		L5--L8, gradient only   & $6.93\times10^{6}$ & $0.0036$ & $0.0037$ & $100\%$  & $135.7$  & $29.3\times$ & $4.9\times10^{-15}$ \\
-		L5--L8, with supplement & $2.32\times10^{7}$ & $0.0033$ & $0.0036$ & $100\%$  & $569.5$  & $7.0\times$  & $9.1\times10^{-15}$ \\
+		L4--L7, gradient only   & $2.00\times10^{6}$ & $0.0077$ & $0.0077$ & $100\%$  & $45.6$   & $87.2\times$ & $1.6\times10^{-15}$ \\
+		L4--L7, with supplement & $1.57\times10^{7}$ & $0.0065$ & $0.0074$ & $100\%$  & $379.6$  & $10.5\times$ & $8.2\times10^{-15}$ \\
+		L5--L8, gradient only   & $6.93\times10^{6}$ & $0.0035$ & $0.0036$ & $100\%$  & $135.7$  & $29.3\times$ & $4.9\times10^{-15}$ \\
+		L5--L8, with supplement & $2.32\times10^{7}$ & $0.0032$ & $0.0036$ & $100\%$  & $569.5$  & $7.0\times$  & $9.1\times10^{-15}$ \\
 		\hline
 	\end{tabular}
 \end{table}
@@ -1005,7 +1094,7 @@ fixed-topology non-conforming meshes the observed order of the Taylor--Green
 vortex increases from $0.83$ to $0.95$, approaching the first-order rate of
 the scheme. On three classical shock problems, the adaptive calculations reach
 the captured-shock width of the uniformly refined reference at their finest
-level --- within $10\%$ on Sedov and Sod, within $12$--$22\%$ on Noh, where the
+level --- within $10\%$ on Sedov and Sod, within $3$--$22\%$ on Noh, where the
 shock has been present since $t=0$ and refinement cannot reset a transition
 already smeared on the coarser levels --- while covering the shock band with
 the finest level everywhere on Noh and to $88$--$95\%$ on Sedov, and while
