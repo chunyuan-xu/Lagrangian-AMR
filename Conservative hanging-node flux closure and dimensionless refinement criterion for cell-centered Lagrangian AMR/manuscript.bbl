@@ -1,0 +1,270 @@
+\begin{thebibliography}{31}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\href}[2]{#2}
+\providecommand{\path}[1]{#1}
+\providecommand{\DOIprefix}{doi:}
+\providecommand{\ArXivprefix}{arXiv:}
+\providecommand{\URLprefix}{URL: }
+\providecommand{\Pubmedprefix}{pmid:}
+\providecommand{\doi}[1]{\href{http://dx.doi.org/#1}{\path{#1}}}
+\providecommand{\Pubmed}[1]{\href{pmid:#1}{\path{#1}}}
+\providecommand{\bibinfo}[2]{#2}
+\ifx\xfnm\relax \def\xfnm[#1]{\unskip,\space#1}\fi
+%Type = Article
+\bibitem[{Anderson et~al.(2004)Anderson, Elliott and
+  Pember}]{anderson2004arbitrary}
+\bibinfo{author}{Anderson, R.}, \bibinfo{author}{Elliott, N.},
+  \bibinfo{author}{Pember, R.}, \bibinfo{year}{2004}.
+\newblock \bibinfo{title}{An arbitrary {L}agrangian--{E}ulerian method with
+  adaptive mesh refinement for the solution of the {E}uler equations}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{199}, \bibinfo{pages}{598--617}.
+%Type = Article
+\bibitem[{Baiges et~al.(2017)Baiges, Codina, Pont and
+  Castillo}]{baiges2017adaptive}
+\bibinfo{author}{Baiges, J.}, \bibinfo{author}{Codina, R.},
+  \bibinfo{author}{Pont, A.}, \bibinfo{author}{Castillo, E.},
+  \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{An adaptive fixed-mesh {ALE} method for free surface
+  flows}.
+\newblock \bibinfo{journal}{Computer Methods in Applied Mechanics and
+  Engineering} \bibinfo{volume}{313}, \bibinfo{pages}{159--188}.
+%Type = Article
+\bibitem[{Bell et~al.(1994)Bell, Berger, Saltzman and Welcome}]{bell1994three}
+\bibinfo{author}{Bell, J.}, \bibinfo{author}{Berger, M.},
+  \bibinfo{author}{Saltzman, J.}, \bibinfo{author}{Welcome, M.},
+  \bibinfo{year}{1994}.
+\newblock \bibinfo{title}{Three-dimensional adaptive mesh refinement for
+  hyperbolic conservation laws}.
+\newblock \bibinfo{journal}{SIAM Journal on Scientific Computing}
+  \bibinfo{volume}{15}, \bibinfo{pages}{127--138}.
+%Type = Article
+\bibitem[{Benson(1992)}]{benson1992computational}
+\bibinfo{author}{Benson, D.J.}, \bibinfo{year}{1992}.
+\newblock \bibinfo{title}{Computational methods in {Lagrangian} and {Eulerian}
+  hydrocodes}.
+\newblock \bibinfo{journal}{Computer Methods in Applied Mechanics and
+  Engineering} \bibinfo{volume}{99}, \bibinfo{pages}{235--394}.
+%Type = Article
+\bibitem[{Berger(1987)}]{berger1987conservation}
+\bibinfo{author}{Berger, M.J.}, \bibinfo{year}{1987}.
+\newblock \bibinfo{title}{On conservation at grid interfaces}.
+\newblock \bibinfo{journal}{SIAM Journal on Numerical Analysis}
+  \bibinfo{volume}{24}, \bibinfo{pages}{967--984}.
+%Type = Article
+\bibitem[{Berger and Colella(1989)}]{berger1989local}
+\bibinfo{author}{Berger, M.J.}, \bibinfo{author}{Colella, P.},
+  \bibinfo{year}{1989}.
+\newblock \bibinfo{title}{Local adaptive mesh refinement for shock
+  hydrodynamics}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{82}, \bibinfo{pages}{64--84}.
+%Type = Article
+\bibitem[{Berger and Oliger(1984)}]{berger1984adaptive}
+\bibinfo{author}{Berger, M.J.}, \bibinfo{author}{Oliger, J.},
+  \bibinfo{year}{1984}.
+\newblock \bibinfo{title}{Adaptive mesh refinement for hyperbolic partial
+  differential equations}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{53}, \bibinfo{pages}{484--512}.
+%Type = Article
+\bibitem[{Burstedde et~al.(2011)Burstedde, Wilcox and
+  Ghattas}]{burstedde2011p4est}
+\bibinfo{author}{Burstedde, C.}, \bibinfo{author}{Wilcox, L.C.},
+  \bibinfo{author}{Ghattas, O.}, \bibinfo{year}{2011}.
+\newblock \bibinfo{title}{{\texttt{p4est}}: Scalable algorithms for parallel
+  adaptive mesh refinement on forests of octrees}.
+\newblock \bibinfo{journal}{SIAM Journal on Scientific Computing}
+  \bibinfo{volume}{33}, \bibinfo{pages}{1103--1133}.
+\newblock \DOIprefix\doi{10.1137/100791634}.
+%Type = Article
+\bibitem[{Caramana et~al.(1998)Caramana, Burton, Shashkov and
+  Whalen}]{caramana1998construction}
+\bibinfo{author}{Caramana, E.}, \bibinfo{author}{Burton, D.},
+  \bibinfo{author}{Shashkov, M.J.}, \bibinfo{author}{Whalen, P.},
+  \bibinfo{year}{1998}.
+\newblock \bibinfo{title}{The construction of compatible hydrodynamics
+  algorithms utilizing conservation of total energy}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{146}, \bibinfo{pages}{227--262}.
+%Type = Article
+\bibitem[{Cola{\"\i}tis et~al.(2026)Cola{\"\i}tis, Guisset and
+  Breil}]{colaitis2026cell}
+\bibinfo{author}{Cola{\"\i}tis, A.}, \bibinfo{author}{Guisset, S.},
+  \bibinfo{author}{Breil, J.}, \bibinfo{year}{2026}.
+\newblock \bibinfo{title}{A cell-centered {AMR}-{ALE} framework for {3D}
+  multi-material hydrodynamics. {P}art {I}: {L}agrangian and indirect {E}uler
+  {AMR} algorithms}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{552}, \bibinfo{pages}{114701}.
+%Type = Article
+\bibitem[{Dobrev et~al.(2012)Dobrev, Kolev and Rieben}]{dobrev2012high}
+\bibinfo{author}{Dobrev, V.A.}, \bibinfo{author}{Kolev, T.V.},
+  \bibinfo{author}{Rieben, R.N.}, \bibinfo{year}{2012}.
+\newblock \bibinfo{title}{High-order curvilinear finite element methods for
+  {L}agrangian hydrodynamics}.
+\newblock \bibinfo{journal}{SIAM Journal on Scientific Computing}
+  \bibinfo{volume}{34}, \bibinfo{pages}{B606--B641}.
+%Type = Article
+\bibitem[{Farhat et~al.(2001)Farhat, Geuzaine and
+  Grandmont}]{farhat2001discrete}
+\bibinfo{author}{Farhat, C.}, \bibinfo{author}{Geuzaine, P.},
+  \bibinfo{author}{Grandmont, C.}, \bibinfo{year}{2001}.
+\newblock \bibinfo{title}{The discrete geometric conservation law and the
+  nonlinear stability of {ALE} schemes for the solution of flow problems on
+  moving grids}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{174}, \bibinfo{pages}{669--694}.
+%Type = Article
+\bibitem[{Georges et~al.(2016)Georges, Breil and Maire}]{georges2016three}
+\bibinfo{author}{Georges, G.}, \bibinfo{author}{Breil, J.},
+  \bibinfo{author}{Maire, P.H.}, \bibinfo{year}{2016}.
+\newblock \bibinfo{title}{A {3D} {GCL}-compatible cell-centered {Lagrangian}
+  scheme for solving gas dynamics equations}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{305}, \bibinfo{pages}{921--941}.
+%Type = Article
+\bibitem[{Guillard and Farhat(2000)}]{guillard2000significance}
+\bibinfo{author}{Guillard, H.}, \bibinfo{author}{Farhat, C.},
+  \bibinfo{year}{2000}.
+\newblock \bibinfo{title}{On the significance of the geometric conservation law
+  for flow computations on moving meshes}.
+\newblock \bibinfo{journal}{Computer Methods in Applied Mechanics and
+  Engineering} \bibinfo{volume}{190}, \bibinfo{pages}{1467--1482}.
+%Type = Article
+\bibitem[{Hirt et~al.(1974)Hirt, Amsden and Cook}]{hirt1974arbitrary}
+\bibinfo{author}{Hirt, C.W.}, \bibinfo{author}{Amsden, A.A.},
+  \bibinfo{author}{Cook, J.L.}, \bibinfo{year}{1974}.
+\newblock \bibinfo{title}{An arbitrary {Lagrangian}--{Eulerian} computing
+  method for all flow speeds}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{14}, \bibinfo{pages}{227--253}.
+\newblock \DOIprefix\doi{10.1016/0021-9991(74)90091-7}.
+%Type = Techreport
+\bibitem[{Kamm and Timmes(2007)}]{kamm2007efficient}
+\bibinfo{author}{Kamm, J.R.}, \bibinfo{author}{Timmes, F.X.},
+  \bibinfo{year}{2007}.
+\newblock \bibinfo{title}{On efficient generation of numerically robust {S}edov
+  solutions}.
+\newblock \bibinfo{type}{Technical Report}. Technical Report LA-UR-07-2849, Los
+  Alamos National Laboratory.
+%Type = Article
+\bibitem[{Khokhlov(1998)}]{khokhlov1998fully}
+\bibinfo{author}{Khokhlov, A.M.}, \bibinfo{year}{1998}.
+\newblock \bibinfo{title}{Fully threaded tree algorithms for adaptive
+  refinement of meshes}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{143}, \bibinfo{pages}{519--543}.
+%Type = Inproceedings
+\bibitem[{Koniges et~al.(2006)Koniges, Anderson, Wang, Gunney, Becker, Eder,
+  Mac~McGowan and Schneider}]{koniges2006modeling}
+\bibinfo{author}{Koniges, A.}, \bibinfo{author}{Anderson, R.},
+  \bibinfo{author}{Wang, P.}, \bibinfo{author}{Gunney, B.},
+  \bibinfo{author}{Becker, R.}, \bibinfo{author}{Eder, D.},
+  \bibinfo{author}{Mac~McGowan, B.}, \bibinfo{author}{Schneider, M.},
+  \bibinfo{year}{2006}.
+\newblock \bibinfo{title}{Modeling {NIF} experimental designs with adaptive
+  mesh refinement and {L}agrangian hydrodynamics}, in:
+  \bibinfo{booktitle}{Journal de Physique IV (Proceedings)},
+  \bibinfo{organization}{EDP sciences}. pp. \bibinfo{pages}{587--593}.
+%Type = Article
+\bibitem[{L{\"o}hner(1987)}]{lohner1987adaptive}
+\bibinfo{author}{L{\"o}hner, R.}, \bibinfo{year}{1987}.
+\newblock \bibinfo{title}{An adaptive finite element scheme for transient
+  problems in fluid mechanics}.
+\newblock \bibinfo{journal}{Computer Methods in Applied Mechanics and
+  Engineering} \bibinfo{volume}{61}, \bibinfo{pages}{323--337}.
+%Type = Article
+\bibitem[{Maire(2009)}]{maire2009high}
+\bibinfo{author}{Maire, P.H.}, \bibinfo{year}{2009}.
+\newblock \bibinfo{title}{A high-order cell-centered {L}agrangian scheme for
+  two-dimensional compressible fluid flows on unstructured meshes}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{228}, \bibinfo{pages}{2391--2425}.
+%Type = Article
+\bibitem[{Maire et~al.(2007)Maire, Abgrall, Breil and Ovadia}]{maire2007SIAM}
+\bibinfo{author}{Maire, P.H.}, \bibinfo{author}{Abgrall, R.},
+  \bibinfo{author}{Breil, J.}, \bibinfo{author}{Ovadia, J.},
+  \bibinfo{year}{2007}.
+\newblock \bibinfo{title}{A cell-centered lagrangian scheme for two-dimensional
+  compressible flow problems}.
+\newblock \bibinfo{journal}{SIAM Journal on Scientific Computing}
+  \bibinfo{volume}{29}, \bibinfo{pages}{1781--1824}.
+%Type = Article
+\bibitem[{Morrell et~al.(2007)Morrell, Sweby and Barlow}]{morrell2007cell}
+\bibinfo{author}{Morrell, J.}, \bibinfo{author}{Sweby, P.},
+  \bibinfo{author}{Barlow, A.}, \bibinfo{year}{2007}.
+\newblock \bibinfo{title}{A cell by cell anisotropic adaptive mesh {ALE} scheme
+  for the numerical solution of the {E}uler equations}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{226}, \bibinfo{pages}{1152--1180}.
+%Type = Article
+\bibitem[{von Neumann and Richtmyer(1950)}]{vonneumann1950method}
+\bibinfo{author}{von Neumann, J.}, \bibinfo{author}{Richtmyer, R.D.},
+  \bibinfo{year}{1950}.
+\newblock \bibinfo{title}{A method for the numerical calculation of
+  hydrodynamic shocks}.
+\newblock \bibinfo{journal}{Journal of Applied Physics} \bibinfo{volume}{21},
+  \bibinfo{pages}{232--237}.
+\newblock \DOIprefix\doi{10.1063/1.1699428}.
+%Type = Article
+\bibitem[{Noh(1987)}]{noh1987errors}
+\bibinfo{author}{Noh, W.F.}, \bibinfo{year}{1987}.
+\newblock \bibinfo{title}{Errors for calculations of strong shocks using an
+  artificial viscosity and an artificial heat flux}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{72}, \bibinfo{pages}{78--120}.
+%Type = Article
+\bibitem[{Pember et~al.(1995)Pember, Bell, Colella, Crutchfield and
+  Welcome}]{pember1995adaptive}
+\bibinfo{author}{Pember, R.}, \bibinfo{author}{Bell, J.},
+  \bibinfo{author}{Colella, P.}, \bibinfo{author}{Crutchfield, W.},
+  \bibinfo{author}{Welcome, M.L.}, \bibinfo{year}{1995}.
+\newblock \bibinfo{title}{An adaptive {Cartesian} grid method for unsteady
+  compressible flow in irregular regions}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{120}, \bibinfo{pages}{278--304}.
+%Type = Book
+\bibitem[{Sedov(1959)}]{sedov1959similarity}
+\bibinfo{author}{Sedov, L.I.}, \bibinfo{year}{1959}.
+\newblock \bibinfo{title}{Similarity and Dimensional Methods in Mechanics}.
+\newblock \bibinfo{publisher}{Academic Press}, \bibinfo{address}{New York}.
+%Type = Article
+\bibitem[{Sod(1978)}]{sod1978survey}
+\bibinfo{author}{Sod, G.A.}, \bibinfo{year}{1978}.
+\newblock \bibinfo{title}{A survey of several finite difference methods for
+  systems of nonlinear hyperbolic conservation laws}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{27}, \bibinfo{pages}{1--31}.
+%Type = Article
+\bibitem[{Thomas and Lombard(1979)}]{thomas1979geometric}
+\bibinfo{author}{Thomas, P.D.}, \bibinfo{author}{Lombard, C.K.},
+  \bibinfo{year}{1979}.
+\newblock \bibinfo{title}{Geometric conservation law and its application to
+  flow computations on moving grids}.
+\newblock \bibinfo{journal}{AIAA Journal} \bibinfo{volume}{17},
+  \bibinfo{pages}{1030--1037}.
+%Type = Article
+\bibitem[{Waltz and Bakosi(2018)}]{waltz2018coupled}
+\bibinfo{author}{Waltz, J.}, \bibinfo{author}{Bakosi, J.},
+  \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{A coupled {ALE}--{AMR} method for shock
+  hydrodynamics}.
+\newblock \bibinfo{journal}{Computers \& Fluids} \bibinfo{volume}{167},
+  \bibinfo{pages}{359--371}.
+%Type = Article
+\bibitem[{Wang(2010)}]{wang2010modeling}
+\bibinfo{author}{Wang, P.}, \bibinfo{year}{2010}.
+\newblock \bibinfo{title}{Modeling material responses by arbitrary {L}agrangian
+  {E}ulerian formulation and adaptive mesh refinement method}.
+\newblock \bibinfo{journal}{Journal of Computational Physics}
+  \bibinfo{volume}{229}, \bibinfo{pages}{1573--1599}.
+%Type = Article
+\bibitem[{Wilkins(1964)}]{wilkins1964calculation}
+\bibinfo{author}{Wilkins, M.L.}, \bibinfo{year}{1964}.
+\newblock \bibinfo{title}{Calculation of elastic-plastic flow}.
+\newblock \bibinfo{journal}{Methods in Computational Physics: Advances in
+  Research and Applications} \bibinfo{volume}{3}, \bibinfo{pages}{211--263}.
+
+\end{thebibliography}
